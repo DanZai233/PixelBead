@@ -1,0 +1,5 @@
+{
+  "name": "PixelBead - Perler Bead Simulator",
+  "description": "A sophisticated Perler bead simulator and pixel art creator. Generate custom patterns using AI, track bead counts, and edit pixel-by-pixel to create your perfect bead masterpiece.",
+  "requestFramePermissions": []
+}

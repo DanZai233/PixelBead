@@ -1,0 +1,439 @@
+
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { ToolType, DEFAULT_COLORS } from './types';
+import { generatePixelArtImage } from './services/geminiService';
+import { Bead } from './components/Bead';
+
+const App: React.FC = () => {
+  const [gridSize, setGridSize] = useState(32);
+  const [grid, setGrid] = useState<string[][]>(() => 
+    Array(32).fill(null).map(() => Array(32).fill('#FFFFFF'))
+  );
+  const [selectedColor, setSelectedColor] = useState(DEFAULT_COLORS[0]);
+  const [currentTool, setCurrentTool] = useState<ToolType>(ToolType.PENCIL);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [showGridLines, setShowGridLines] = useState(true);
+  const [zoom, setZoom] = useState(80);
+
+  // 图片处理相关状态
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 }); // 0 为居中, -1 为顶/左, 1 为底/右
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleResize = (newSize: number) => {
+    if (grid.some(row => row.some(c => c !== '#FFFFFF'))) {
+      if (!confirm("更改尺寸将清空当前画布，确定吗？")) return;
+    }
+    setGridSize(newSize);
+    setGrid(Array(newSize).fill(null).map(() => Array(newSize).fill('#FFFFFF')));
+    if (newSize >= 80) setZoom(35);
+    else if (newSize >= 48) setZoom(50);
+    else setZoom(80);
+  };
+
+  const resetGrid = () => {
+    if (confirm("确定要清空画布吗？")) {
+      setGrid(Array(gridSize).fill(null).map(() => Array(gridSize).fill('#FFFFFF')));
+    }
+  };
+
+  // 将图像转换为网格的核心逻辑
+  const processImageToGrid = useCallback((imageSrc: string, size: number, xAlign: number = 0, yAlign: number = 0) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // 计算 1:1 裁切
+      const sourceSize = Math.min(img.width, img.height);
+      let offsetX = (img.width - sourceSize) / 2;
+      let offsetY = (img.height - sourceSize) / 2;
+
+      // 根据用户选择调整对齐 (xAlign, yAlign 取值 -1, 0, 1)
+      if (img.width > img.height) {
+        // 横图，调整 X 偏移
+        if (xAlign === -1) offsetX = 0;
+        else if (xAlign === 1) offsetX = img.width - sourceSize;
+      } else {
+        // 纵图，调整 Y 偏移
+        if (yAlign === -1) offsetY = 0;
+        else if (yAlign === 1) offsetY = img.height - sourceSize;
+      }
+
+      ctx.drawImage(img, offsetX, offsetY, sourceSize, sourceSize, 0, 0, size, size);
+      const imageData = ctx.getImageData(0, 0, size, size).data;
+      
+      const newGrid: string[][] = [];
+      for (let i = 0; i < size; i++) {
+        const row: string[] = [];
+        for (let j = 0; j < size; j++) {
+          const index = (i * size + j) * 4;
+          const r = imageData[index];
+          const g = imageData[index + 1];
+          const b = imageData[index + 2];
+          const a = imageData[index + 3];
+
+          if (a < 128) {
+            row.push('#FFFFFF');
+          } else {
+            const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
+            row.push(hex);
+          }
+        }
+        newGrid.push(row);
+      }
+      setGrid(newGrid);
+      setPendingImage(null);
+      setIsProcessingImage(false);
+    };
+    img.src = imageSrc;
+  }, []);
+
+  // 绘图
+  const handleAction = useCallback((row: number, col: number) => {
+    if (currentTool === ToolType.PICKER) {
+      const colorAt = grid[row][col];
+      if (colorAt && colorAt !== '#FFFFFF') {
+        setSelectedColor(colorAt);
+        setCurrentTool(ToolType.PENCIL);
+      }
+      return;
+    }
+
+    setGrid(prev => {
+      if (prev[row][col] === selectedColor && currentTool === ToolType.PENCIL) return prev;
+      if (prev[row][col] === '#FFFFFF' && currentTool === ToolType.ERASER) return prev;
+
+      const newGrid = [...prev];
+      newGrid[row] = [...prev[row]];
+
+      if (currentTool === ToolType.PENCIL) {
+        newGrid[row][col] = selectedColor;
+      } else if (currentTool === ToolType.ERASER) {
+        newGrid[row][col] = '#FFFFFF';
+      } else if (currentTool === ToolType.FILL) {
+        const targetColor = prev[row][col];
+        const fillColor = selectedColor;
+        if (targetColor === fillColor) return prev;
+        
+        const freshGrid = prev.map(r => [...r]);
+        const stack = [[row, col]];
+        const visited = new Set();
+        while (stack.length > 0) {
+          const [r, c] = stack.pop()!;
+          const key = `${r},${c}`;
+          if (r < 0 || r >= gridSize || c < 0 || c >= gridSize || freshGrid[r][c] !== targetColor || visited.has(key)) continue;
+          freshGrid[r][c] = fillColor;
+          visited.add(key);
+          stack.push([r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]);
+        }
+        return freshGrid;
+      }
+      return newGrid;
+    });
+  }, [selectedColor, currentTool, gridSize, grid]);
+
+  useEffect(() => {
+    const handleGlobalUp = () => setIsDrawing(false);
+    window.addEventListener('pointerup', handleGlobalUp);
+    return () => window.removeEventListener('pointerup', handleGlobalUp);
+  }, []);
+
+  const stats = useMemo(() => {
+    const counts: Record<string, number> = {};
+    grid.forEach(row => {
+      row.forEach(color => {
+        if (color && color !== '#FFFFFF') {
+          counts[color] = (counts[color] || 0) + 1;
+        }
+      });
+    });
+    return Object.entries(counts).map(([hex, count]) => ({ hex, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [grid]);
+
+  const handleAiGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiPrompt.trim()) return;
+    setIsGenerating(true);
+    try {
+      const base64 = await generatePixelArtImage(aiPrompt);
+      // AI 生成的图片本身就是 1:1 的，直接转换
+      processImageToGrid(base64, gridSize, 0, 0);
+      setAiPrompt('');
+    } catch (error) {
+      alert("AI 生成失败，请重试。");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => setPendingImage(e.target?.result as string);
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  };
+
+  const baseBeadSize = 28;
+  const boardDimension = gridSize * (baseBeadSize * (zoom / 100));
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#F1F5F9] text-slate-900 select-none overflow-hidden h-screen">
+      {/* 顶部导航 */}
+      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between z-[100] shadow-sm shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+            <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><circle cx="12" cy="12" r="10"/></svg>
+          </div>
+          <h1 className="font-black text-xl text-slate-800 italic">PIXEL BEAD STUDIO</h1>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+            {[16, 32, 48, 64, 80, 100].map(size => (
+              <button
+                key={size}
+                onClick={() => handleResize(size)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${gridSize === size ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                {size}²
+              </button>
+            ))}
+          </div>
+
+          <button 
+            onClick={() => {
+              const data = JSON.stringify({ grid, gridSize });
+              const blob = new Blob([data], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `pixel-bead-${gridSize}.json`;
+              a.click();
+            }}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            导出图纸
+          </button>
+        </div>
+      </header>
+
+      <div className="flex-1 flex overflow-hidden">
+        {/* 左侧控制栏 */}
+        <aside className="w-72 border-r border-slate-200 bg-white overflow-y-auto no-scrollbar p-6 space-y-6 flex flex-col shrink-0">
+          {/* 工具 */}
+          <div className="space-y-3">
+            <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">基础工具</h2>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { type: ToolType.PENCIL, icon: '✏️', label: '画笔' },
+                { type: ToolType.ERASER, icon: '🧽', label: '橡皮' },
+                { type: ToolType.FILL, icon: '🪣', label: '填充' },
+                { type: ToolType.PICKER, icon: '🧪', label: '吸色' },
+              ].map(tool => (
+                <button
+                  key={tool.type}
+                  onClick={() => setCurrentTool(tool.type)}
+                  className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all ${currentTool === tool.type ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-100'}`}
+                >
+                  <span className="text-xl">{tool.icon}</span>
+                  <span className="text-[10px] font-bold uppercase">{tool.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 颜色 */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">调色盘</h2>
+              <div className="w-5 h-5 rounded-lg border shadow-inner" style={{ backgroundColor: selectedColor }}></div>
+            </div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {DEFAULT_COLORS.map(color => (
+                <button
+                  key={color}
+                  onClick={() => {
+                    setSelectedColor(color);
+                    if (currentTool === ToolType.ERASER || currentTool === ToolType.PICKER) setCurrentTool(ToolType.PENCIL);
+                  }}
+                  className={`aspect-square rounded-full border-2 transition-all hover:scale-110 ${selectedColor === color ? 'border-indigo-600 scale-110 ring-2 ring-indigo-100' : 'border-white'}`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* AI 功能 */}
+          <div className="bg-slate-900 rounded-3xl p-5 text-white shadow-xl space-y-3">
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-2">
+              <span className="animate-pulse">✨</span> AI 像素画生成
+            </h2>
+            <p className="text-[10px] text-slate-400 leading-tight">描述图案，AI 将生成高质量像素图并自动转换。</p>
+            <textarea
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="例如: 可爱的像素风猫咪"
+              className="w-full h-20 p-3 rounded-xl bg-white/5 border border-white/10 text-xs placeholder:text-white/20 focus:bg-white/10 outline-none resize-none"
+            />
+            <button
+              onClick={handleAiGenerate}
+              disabled={isGenerating || !aiPrompt.trim()}
+              className="w-full py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl font-black text-xs transition-all active:scale-95 flex justify-center items-center"
+            >
+              {isGenerating ? "正在魔法创作..." : "一键生成拼豆图"}
+            </button>
+          </div>
+
+          {/* 图片转换 */}
+          <div className="bg-emerald-600 rounded-3xl p-5 text-white shadow-xl space-y-3">
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-emerald-100">本地图片转换</h2>
+            <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={onFileChange} />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-2.5 bg-white text-emerald-600 rounded-xl font-black text-xs transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
+            >
+              上传照片
+            </button>
+          </div>
+
+          <button 
+            onClick={resetGrid}
+            className="w-full py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-all mt-auto"
+          >
+            清空当前画布
+          </button>
+        </aside>
+
+        {/* 主体画布 */}
+        <main className="flex-1 bg-[#EBEDF0] relative overflow-hidden">
+          {/* 缩放控制 */}
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/90 backdrop-blur-sm px-6 py-2 rounded-full shadow-2xl border border-white/50 z-50">
+            <button onClick={() => setZoom(z => Math.max(10, z - 5))} className="font-black text-slate-400 hover:text-indigo-600">－</button>
+            <input type="range" min="10" max="300" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} className="w-40 accent-indigo-600" />
+            <button onClick={() => setZoom(z => Math.min(400, z + 5))} className="font-black text-slate-400 hover:text-indigo-600">＋</button>
+            <span className="text-[10px] font-black w-8 text-slate-500 text-center">{zoom}%</span>
+            <div className="h-4 w-px bg-slate-200"></div>
+            <button onClick={() => setShowGridLines(!showGridLines)} className={`text-[10px] font-black uppercase px-3 py-1 rounded-lg ${showGridLines ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
+              网格: {showGridLines ? '开' : '关'}
+            </button>
+          </div>
+
+          <div 
+            ref={containerRef}
+            className="w-full h-full overflow-auto p-40 flex items-center justify-center no-scrollbar bg-dots"
+            onPointerDown={() => setIsDrawing(true)}
+          >
+            <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] bg-white border border-white/60 p-12">
+              <div 
+                className="grid"
+                style={{
+                  width: `${boardDimension}px`,
+                  height: `${boardDimension}px`,
+                  gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+                  gap: zoom > 60 ? '2px' : '0px',
+                  touchAction: 'none'
+                }}
+              >
+                {grid.map((row, r) => 
+                  row.map((color, c) => (
+                    <Bead
+                      key={`${r}-${c}`}
+                      color={color}
+                      showGrid={showGridLines}
+                      onPointerDown={() => handleAction(r, c)}
+                      onPointerEnter={() => isDrawing && handleAction(r, c)}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 信息统计 */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur text-white px-8 py-3 rounded-2xl shadow-2xl flex gap-10 text-[10px] font-black tracking-widest z-50">
+            <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridSize}x{gridSize}</div>
+            <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridSize * gridSize}</div>
+            <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
+          </div>
+        </main>
+
+        {/* 右侧清单 */}
+        <aside className="w-72 border-l border-slate-200 bg-white overflow-y-auto no-scrollbar p-6 shrink-0">
+          <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-6 flex justify-between">
+            所需拼豆清单 <span>数量</span>
+          </h2>
+          
+          <div className="space-y-3">
+            {stats.length > 0 ? stats.map((item) => (
+              <div 
+                key={item.hex} 
+                className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-100 group hover:bg-white hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => setSelectedColor(item.hex)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bead-shadow" style={{ backgroundColor: item.hex }}></div>
+                  <div>
+                    <div className="text-[9px] font-mono text-slate-300 leading-none mb-1 uppercase">{item.hex}</div>
+                    <div className="text-sm font-black text-slate-800">{item.count} <span className="text-[10px] font-medium opacity-40">颗</span></div>
+                  </div>
+                </div>
+              </div>
+            )) : (
+              <div className="py-20 text-center text-slate-200">
+                <p className="text-xs font-black uppercase italic tracking-widest">暂无记录</p>
+              </div>
+            )}
+          </div>
+        </aside>
+      </div>
+
+      {/* 图片裁切对齐对话框 */}
+      {pendingImage && (
+        <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-6 backdrop-blur-sm">
+          <div className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl space-y-8">
+            <div className="text-center space-y-2">
+              <h3 className="text-2xl font-black text-slate-900 italic">裁切选择</h3>
+              <p className="text-sm text-slate-400 font-medium">请选择图像在 1:1 画布中的对齐位置</p>
+            </div>
+            
+            <div className="aspect-square bg-slate-100 rounded-3xl overflow-hidden relative border-4 border-slate-200 flex items-center justify-center">
+               <img src={pendingImage} alt="Preview" className="max-w-none max-h-none opacity-50 absolute w-full h-full object-contain" />
+               <div className="z-10 text-[10px] font-black bg-slate-900 text-white px-4 py-2 rounded-full uppercase tracking-widest">预览 1:1 区域</div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <button onClick={() => setCropOffset({x: -1, y: -1})} className="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl font-bold text-xs">左上</button>
+              <button onClick={() => setCropOffset({x: 0, y: 0})} className="p-4 bg-indigo-50 border-2 border-indigo-500 text-indigo-700 rounded-2xl font-bold text-xs">居中</button>
+              <button onClick={() => setCropOffset({x: 1, y: 1})} className="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl font-bold text-xs">右下</button>
+            </div>
+
+            <div className="flex gap-4">
+              <button onClick={() => setPendingImage(null)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm">取消</button>
+              <button 
+                onClick={() => processImageToGrid(pendingImage, gridSize, cropOffset.x, cropOffset.y)} 
+                className="flex-[2] py-4 bg-emerald-500 text-white rounded-2xl font-black text-sm shadow-xl active:scale-95"
+              >
+                确认并转换
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default App;
