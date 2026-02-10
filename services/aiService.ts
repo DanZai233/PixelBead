@@ -56,6 +56,27 @@ const generateOpenAICompatible = async (
     throw new Error('No image generated');
   } catch (error) {
     console.error('Image generation error:', error);
+    
+    if (error instanceof Error) {
+      const errorMessage = error.message.toLowerCase();
+      
+      if (errorMessage.includes('size')) {
+        throw new Error('图像尺寸参数错误，请检查模型是否支持 1024x1024 尺寸');
+      }
+      
+      if (errorMessage.includes('model') || errorMessage.includes('not found')) {
+        throw new Error(`模型 "${imageUrlModel || model}" 不存在或不支持，请检查模型名称`);
+      }
+      
+      if (errorMessage.includes('invalid api key') || errorMessage.includes('unauthorized')) {
+        throw new Error('API Key 无效或已过期');
+      }
+      
+      if (errorMessage.includes('quota') || errorMessage.includes('limit') || errorMessage.includes('rate limit')) {
+        throw new Error('已达到 API 使用配额或速率限制');
+      }
+    }
+    
     throw error;
   }
 };

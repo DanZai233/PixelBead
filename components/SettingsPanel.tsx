@@ -138,7 +138,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 placeholder="https://api.example.com/v1"
                 className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium focus:border-indigo-500 outline-none"
               />
-              <p className="text-[10px] text-slate-400 mt-1">
+              <p className="text-[10px] text-slate-400">
                 {provider === AIProvider.VOLCENGINE && '火山引擎接入点：https://ark.cn-beijing.volces.com/api/v3'}
                 {provider === AIProvider.DEEPSEEK && 'DeepSeek 接入点：https://api.deepseek.com/v1'}
                 {provider === AIProvider.OPENAI && 'OpenAI 接入点：https://api.openai.com/v1'}
@@ -178,11 +178,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium focus:border-indigo-500 outline-none font-mono text-sm"
               />
               <p className="text-[10px] text-slate-400">
-                {provider === AIProvider.VOLCENGINE && '火山引擎示例: doubao-1-5-pro-32k-250115, doubao-pro-32k'}
-                {provider === AIProvider.DEEPSEEK && 'DeepSeek 示例: deepseek-chat, deepseek-coder'}
-                {provider === AIProvider.OPENAI && 'OpenAI 示例: gpt-4o, gpt-4o-mini'}
-                {provider === AIProvider.OPENROUTER && 'OpenRouter 示例: openai/gpt-4o, anthropic/claude-3.5-sonnet'}
-                {provider === AIProvider.CUSTOM && '请根据服务商文档填写模型名称'}
+                {provider === AIProvider.VOLCENGINE && '火山引擎: doubao-seedream-4-5-251128（推荐，支持图像生成）'}
+                {provider === AIProvider.DEEPSEEK && 'DeepSeek: deepseek-chat（仅文本模型，不支持图像生成）'}
+                {provider === AIProvider.OPENAI && 'OpenAI: dall-e-3（图像生成）或 gpt-4o（需结合图像生成接口）'}
+                {provider === AIProvider.OPENROUTER && 'OpenRouter: openai/dall-e-3 或其他图像生成模型'}
+                {provider === AIProvider.CUSTOM && '请根据服务商文档填写模型名称，确保支持图像生成'}
               </p>
             </div>
           </div>
