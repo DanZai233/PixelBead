@@ -1,11 +1,13 @@
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { ToolType, DEFAULT_COLORS } from './types';
-import { generatePixelArtImage } from './services/geminiService';
+import { ToolType, DEFAULT_COLORS, AIConfig, AIProvider } from './types';
+import { generatePixelArtImage } from './services/aiService';
 import { Bead } from './components/Bead';
+import { SettingsPanel } from './components/SettingsPanel';
 
 const App: React.FC = () => {
   const [gridSize, setGridSize] = useState(32);
+  const [customSize, setCustomSize] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
   const [grid, setGrid] = useState<string[][]>(() => 
     Array(32).fill(null).map(() => Array(32).fill('#FFFFFF'))
   );
@@ -17,15 +19,33 @@ const App: React.FC = () => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [showGridLines, setShowGridLines] = useState(true);
   const [zoom, setZoom] = useState(80);
+  
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
 
-  // 图片处理相关状态
   const [pendingImage, setPendingImage] = useState<string | null>(null);
-  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 }); // 0 为居中, -1 为顶/左, 1 为底/右
+  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleResize = (newSize: number) => {
+  useEffect(() => {
+    const savedConfig = localStorage.getItem('aiConfig');
+    if (savedConfig) {
+      try {
+        setAiConfig(JSON.parse(savedConfig));
+      } catch (e) {
+        console.error('Failed to parse saved AI config');
+      }
+    }
+  }, []);
+
+  const handleSaveSettings = useCallback((config: AIConfig) => {
+    setAiConfig(config);
+    localStorage.setItem('aiConfig', JSON.stringify(config));
+  }, []);
+
+  const handleResize = useCallback((newSize: number) => {
     if (grid.some(row => row.some(c => c !== '#FFFFFF'))) {
       if (!confirm("更改尺寸将清空当前画布，确定吗？")) return;
     }
@@ -34,15 +54,25 @@ const App: React.FC = () => {
     if (newSize >= 80) setZoom(35);
     else if (newSize >= 48) setZoom(50);
     else setZoom(80);
-  };
+    setShowCustomInput(false);
+    setCustomSize('');
+  }, [grid]);
 
-  const resetGrid = () => {
+  const handleCustomSize = useCallback(() => {
+    const size = parseInt(customSize);
+    if (isNaN(size) || size < 4 || size > 200) {
+      alert('请输入 4-200 之间的数字');
+      return;
+    }
+    handleResize(size);
+  }, [customSize, handleResize]);
+
+  const resetGrid = useCallback(() => {
     if (confirm("确定要清空画布吗？")) {
       setGrid(Array(gridSize).fill(null).map(() => Array(gridSize).fill('#FFFFFF')));
     }
-  };
+  }, [gridSize]);
 
-  // 将图像转换为网格的核心逻辑
   const processImageToGrid = useCallback((imageSrc: string, size: number, xAlign: number = 0, yAlign: number = 0) => {
     const img = new Image();
     img.onload = () => {
@@ -52,18 +82,14 @@ const App: React.FC = () => {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // 计算 1:1 裁切
       const sourceSize = Math.min(img.width, img.height);
       let offsetX = (img.width - sourceSize) / 2;
       let offsetY = (img.height - sourceSize) / 2;
 
-      // 根据用户选择调整对齐 (xAlign, yAlign 取值 -1, 0, 1)
       if (img.width > img.height) {
-        // 横图，调整 X 偏移
         if (xAlign === -1) offsetX = 0;
         else if (xAlign === 1) offsetX = img.width - sourceSize;
       } else {
-        // 纵图，调整 Y 偏移
         if (yAlign === -1) offsetY = 0;
         else if (yAlign === 1) offsetY = img.height - sourceSize;
       }
@@ -97,7 +123,6 @@ const App: React.FC = () => {
     img.src = imageSrc;
   }, []);
 
-  // 绘图
   const handleAction = useCallback((row: number, col: number) => {
     if (currentTool === ToolType.PICKER) {
       const colorAt = grid[row][col];
@@ -162,15 +187,24 @@ const App: React.FC = () => {
 
   const handleAiGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aiPrompt.trim()) return;
+    if (!aiPrompt.trim()) {
+      alert('请输入描述');
+      return;
+    }
+    if (!aiConfig?.apiKey) {
+      alert('请先在设置中配置 AI API Key');
+      setIsSettingsOpen(true);
+      return;
+    }
+    
     setIsGenerating(true);
     try {
-      const base64 = await generatePixelArtImage(aiPrompt);
-      // AI 生成的图片本身就是 1:1 的，直接转换
+      const base64 = await generatePixelArtImage(aiPrompt, aiConfig);
       processImageToGrid(base64, gridSize, 0, 0);
       setAiPrompt('');
     } catch (error) {
-      alert("AI 生成失败，请重试。");
+      console.error('AI generation error:', error);
+      alert(`AI 生成失败：${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
       setIsGenerating(false);
     }
@@ -188,9 +222,10 @@ const App: React.FC = () => {
   const baseBeadSize = 28;
   const boardDimension = gridSize * (baseBeadSize * (zoom / 100));
 
+  const presetSizes = [16, 32, 48, 64, 80, 100];
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F1F5F9] text-slate-900 select-none overflow-hidden h-screen">
-      {/* 顶部导航 */}
       <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between z-[100] shadow-sm shrink-0">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
@@ -201,7 +236,7 @@ const App: React.FC = () => {
         
         <div className="flex items-center gap-4">
           <div className="flex bg-slate-100 p-1 rounded-xl">
-            {[16, 32, 48, 64, 80, 100].map(size => (
+            {presetSizes.map(size => (
               <button
                 key={size}
                 onClick={() => handleResize(size)}
@@ -210,7 +245,33 @@ const App: React.FC = () => {
                 {size}²
               </button>
             ))}
+            <button
+              onClick={() => setShowCustomInput(!showCustomInput)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${showCustomInput ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              自定义
+            </button>
           </div>
+
+          {showCustomInput && (
+            <div className="flex items-center gap-2 bg-white p-1 rounded-xl shadow-sm">
+              <input
+                type="number"
+                min="4"
+                max="200"
+                value={customSize}
+                onChange={(e) => setCustomSize(e.target.value)}
+                placeholder="4-200"
+                className="w-16 px-2 py-1.5 text-xs font-black text-center border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
+              />
+              <button
+                onClick={handleCustomSize}
+                className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-black hover:bg-indigo-700 transition-all"
+              >
+                确定
+              </button>
+            </div>
+          )}
 
           <button 
             onClick={() => {
@@ -227,13 +288,22 @@ const App: React.FC = () => {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
             导出图纸
           </button>
+
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+            title="AI 设置"
+          >
+            <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
         </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* 左侧控制栏 */}
         <aside className="w-72 border-r border-slate-200 bg-white overflow-y-auto no-scrollbar p-6 space-y-6 flex flex-col shrink-0">
-          {/* 工具 */}
           <div className="space-y-3">
             <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">基础工具</h2>
             <div className="grid grid-cols-2 gap-2">
@@ -255,7 +325,6 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* 颜色 */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">调色盘</h2>
@@ -276,7 +345,6 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* AI 功能 */}
           <div className="bg-slate-900 rounded-3xl p-5 text-white shadow-xl space-y-3">
             <h2 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-2">
               <span className="animate-pulse">✨</span> AI 像素画生成
@@ -295,9 +363,11 @@ const App: React.FC = () => {
             >
               {isGenerating ? "正在魔法创作..." : "一键生成拼豆图"}
             </button>
+            {!aiConfig?.apiKey && (
+              <p className="text-[10px] text-yellow-400/80 text-center">请先配置 AI API Key</p>
+            )}
           </div>
 
-          {/* 图片转换 */}
           <div className="bg-emerald-600 rounded-3xl p-5 text-white shadow-xl space-y-3">
             <h2 className="text-[10px] font-black uppercase tracking-widest text-emerald-100">本地图片转换</h2>
             <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={onFileChange} />
@@ -317,9 +387,7 @@ const App: React.FC = () => {
           </button>
         </aside>
 
-        {/* 主体画布 */}
         <main className="flex-1 bg-[#EBEDF0] relative overflow-hidden">
-          {/* 缩放控制 */}
           <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/90 backdrop-blur-sm px-6 py-2 rounded-full shadow-2xl border border-white/50 z-50">
             <button onClick={() => setZoom(z => Math.max(10, z - 5))} className="font-black text-slate-400 hover:text-indigo-600">－</button>
             <input type="range" min="10" max="300" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} className="w-40 accent-indigo-600" />
@@ -362,7 +430,6 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* 信息统计 */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur text-white px-8 py-3 rounded-2xl shadow-2xl flex gap-10 text-[10px] font-black tracking-widest z-50">
             <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridSize}x{gridSize}</div>
             <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridSize * gridSize}</div>
@@ -370,7 +437,6 @@ const App: React.FC = () => {
           </div>
         </main>
 
-        {/* 右侧清单 */}
         <aside className="w-72 border-l border-slate-200 bg-white overflow-y-auto no-scrollbar p-6 shrink-0">
           <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-6 flex justify-between">
             所需拼豆清单 <span>数量</span>
@@ -400,7 +466,6 @@ const App: React.FC = () => {
         </aside>
       </div>
 
-      {/* 图片裁切对齐对话框 */}
       {pendingImage && (
         <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-6 backdrop-blur-sm">
           <div className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl space-y-8">
@@ -432,6 +497,13 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+
+      <SettingsPanel
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={handleSaveSettings}
+        currentConfig={aiConfig || undefined}
+      />
     </div>
   );
 };

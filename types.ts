@@ -1,4 +1,3 @@
-
 export type ColorHex = string;
 
 export interface BeadGrid {
@@ -21,6 +20,21 @@ export enum ToolType {
   PICKER = 'PICKER',
 }
 
+export enum AIProvider {
+  OPENAI = 'OPENAI',
+  OPENROUTER = 'OPENROUTER',
+  DEEPSEEK = 'DEEPSEEK',
+  VOLCENGINE = 'VOLCENGINE',
+  GEMINI = 'GEMINI',
+}
+
+export interface AIConfig {
+  provider: AIProvider;
+  apiKey: string;
+  model?: string;
+  baseUrl?: string;
+}
+
 export const DEFAULT_COLORS: ColorHex[] = [
   '#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', 
   '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080',
@@ -28,3 +42,28 @@ export const DEFAULT_COLORS: ColorHex[] = [
   '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#6366F1',
   '#8B5CF6', '#EC4899', '#F43F5E', '#14B8A6', '#F97316'
 ];
+
+export const AI_MODELS = {
+  [AIProvider.OPENAI]: [
+    { id: 'gpt-4o', name: 'GPT-4o' },
+    { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
+    { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
+  ],
+  [AIProvider.OPENROUTER]: [
+    { id: 'openai/gpt-4o', name: 'GPT-4o (via OpenRouter)' },
+    { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
+    { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5' },
+  ],
+  [AIProvider.DEEPSEEK]: [
+    { id: 'deepseek-chat', name: 'DeepSeek Chat' },
+    { id: 'deepseek-coder', name: 'DeepSeek Coder' },
+  ],
+  [AIProvider.VOLCENGINE]: [
+    { id: 'doubao-pro-32k', name: 'Doubao Pro 32K' },
+    { id: 'doubao-lite-32k', name: 'Doubao Lite 32K' },
+  ],
+  [AIProvider.GEMINI]: [
+    { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash' },
+    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+  ],
+};
