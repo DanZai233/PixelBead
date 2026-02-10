@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AIProvider, AIConfig, AI_MODELS } from '../types';
+import { AIProvider, AIConfig, AI_MODELS, DEFAULT_ENDPOINTS } from '../types';
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -16,8 +16,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 }) => {
   const [provider, setProvider] = useState<AIProvider>(currentConfig?.provider || AIProvider.OPENAI);
   const [apiKey, setApiKey] = useState(currentConfig?.apiKey || '');
-  const [model, setModel] = useState(currentConfig?.model || AI_MODELS[provider][0]?.id);
-  const [baseUrl, setBaseUrl] = useState(currentConfig?.baseUrl || '');
+  const [model, setModel] = useState(currentConfig?.model || AI_MODELS[AIProvider.OPENAI][0]?.id);
+  const [endpoint, setEndpoint] = useState(currentConfig?.endpoint || DEFAULT_ENDPOINTS[AIProvider.OPENAI]);
+  const [imageUrlModel, setImageUrlModel] = useState(currentConfig?.imageUrlModel || '');
   const [showApiKey, setShowApiKey] = useState(false);
 
   const models = AI_MODELS[provider] || [];
@@ -26,8 +27,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     if (currentConfig) {
       setProvider(currentConfig.provider);
       setApiKey(currentConfig.apiKey);
-      setModel(currentConfig.model || AI_MODELS[provider][0]?.id);
-      setBaseUrl(currentConfig.baseUrl || '');
+      setModel(currentConfig.model || AI_MODELS[currentConfig.provider][0]?.id);
+      setEndpoint(currentConfig.endpoint || DEFAULT_ENDPOINTS[currentConfig.provider] || '');
+      setImageUrlModel(currentConfig.imageUrlModel || '');
     }
   }, [currentConfig]);
 
@@ -37,10 +39,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     if (newModels.length > 0) {
       setModel(newModels[0].id);
     }
-    if (newProvider === AIProvider.OPENROUTER) {
-      setBaseUrl('https://openrouter.ai/api/v1');
+    const defaultEndpoint = DEFAULT_ENDPOINTS[newProvider];
+    setEndpoint(defaultEndpoint || '');
+    
+    if (newProvider === AIProvider.GEMINI) {
+      setImageUrlModel(newModels[0]?.id || '');
     } else {
-      setBaseUrl('');
+      const imageModel = newModels.find(m => (m as any).isImageModel);
+      setImageUrlModel(imageModel?.id || '');
     }
   };
 
@@ -49,11 +55,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       alert('请输入 API Key');
       return;
     }
+    if (!endpoint.trim() && provider !== AIProvider.GEMINI) {
+      alert('请输入 API 接入点');
+      return;
+    }
     onSave({
       provider,
       apiKey,
-      model,
-      baseUrl: baseUrl || undefined,
+      model: model || undefined,
+      endpoint: endpoint || undefined,
+      imageUrlModel: imageUrlModel || undefined,
     });
     onClose();
   };
@@ -62,7 +73,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl space-y-6">
+      <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-black text-slate-900 italic">AI 设置</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
@@ -73,7 +84,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
               AI 服务商
             </label>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {Object.entries(AI_MODELS).map(([key, _]) => (
                 <button
                   key={key}
@@ -85,45 +96,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold">{getProviderName(key as AIProvider)}</span>
+                    <span className="font-bold text-sm">{getProviderName(key as AIProvider)}</span>
                     {provider === key && <span className="text-indigo-500">✓</span>}
                   </div>
                 </button>
               ))}
             </div>
           </div>
-
-          <div>
-            <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
-              模型
-            </label>
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium focus:border-indigo-500 outline-none"
-            >
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {provider === AIProvider.OPENROUTER && (
-            <div>
-              <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
-                Base URL (可选)
-              </label>
-              <input
-                type="text"
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="https://openrouter.ai/api/v1"
-                className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium focus:border-indigo-500 outline-none"
-              />
-            </div>
-          )}
 
           <div>
             <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
@@ -146,6 +125,78 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               </button>
             </div>
           </div>
+
+          {provider !== AIProvider.GEMINI && (
+            <div>
+              <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
+                API 接入点 (Endpoint)
+              </label>
+              <input
+                type="text"
+                value={endpoint}
+                onChange={(e) => setEndpoint(e.target.value)}
+                placeholder="https://api.example.com/v1"
+                className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium focus:border-indigo-500 outline-none"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">
+                {provider === AIProvider.VOLCENGINE && '火山引擎接入点格式：https://ark.cn-beijing.volces.com/api/v3'}
+                {provider === AIProvider.DEEPSEEK && 'DeepSeek 接入点：https://api.deepseek.com/v1'}
+                {provider === AIProvider.OPENAI && 'OpenAI 接入点：https://api.openai.com/v1'}
+                {provider === AIProvider.CUSTOM && '自定义服务接入点'}
+              </p>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
+              聊天模型 (可选)
+            </label>
+            <select
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium focus:border-indigo-500 outline-none"
+            >
+              {models.length > 0 ? (
+                models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))
+              ) : (
+                <option value="">自定义模型</option>
+              )}
+            </select>
+          </div>
+
+          {provider !== AIProvider.GEMINI && (
+            <div>
+              <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
+                图像生成模型 (可选，如不填则使用聊天模型)
+              </label>
+              <input
+                type="text"
+                value={imageUrlModel}
+                onChange={(e) => setImageUrlModel(e.target.value)}
+                placeholder="例如: dall-e-3, stable-diffusion-xl"
+                className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium focus:border-indigo-500 outline-none"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">
+                如果服务商的图像生成模型与聊天模型不同，请在此指定
+              </p>
+            </div>
+          )}
+
+          {provider === AIProvider.CUSTOM && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <h3 className="font-bold text-amber-800 text-sm mb-2">自定义接入说明</h3>
+              <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
+                <li>确保你的服务商兼容 OpenAI API 格式</li>
+                <li>API 接入点需要包含完整路径，如：https://api.example.com/v1</li>
+                <li>图像生成模型请填写对应的模型 ID</li>
+                <li>火山引擎接入点示例：https://ark.cn-beijing.volces.com/api/v3</li>
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-4 pt-4">
@@ -174,6 +225,7 @@ function getProviderName(provider: AIProvider): string {
     [AIProvider.DEEPSEEK]: 'DeepSeek',
     [AIProvider.VOLCENGINE]: '火山引擎',
     [AIProvider.GEMINI]: 'Google Gemini',
+    [AIProvider.CUSTOM]: '自定义接入',
   };
   return names[provider];
 }

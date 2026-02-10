@@ -1,4 +1,4 @@
-import { AIProvider, AIConfig, AI_MODELS } from '../types';
+import { AIProvider, AIConfig, AI_MODELS, DEFAULT_ENDPOINTS } from '../types';
 import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
 
@@ -7,18 +7,16 @@ export const generatePixelArtImage = async (
   config: AIConfig
 ): Promise<string> => {
   const models = AI_MODELS[config.provider];
-  const model = config.model || models[0].id;
+  const model = config.model || models[0]?.id;
+  const endpoint = config.endpoint || DEFAULT_ENDPOINTS[config.provider] || '';
 
   switch (config.provider) {
     case AIProvider.OPENAI:
     case AIProvider.OPENROUTER:
-      return await generateOpenAI(prompt, config.apiKey, config.baseUrl, model);
-    
     case AIProvider.DEEPSEEK:
-      return await generateDeepSeek(prompt, config.apiKey, model);
-    
     case AIProvider.VOLCENGINE:
-      return await generateVolcEngine(prompt, config.apiKey, model);
+    case AIProvider.CUSTOM:
+      return await generateOpenAICompatible(prompt, config.apiKey, endpoint, model, config.imageUrlModel);
     
     case AIProvider.GEMINI:
       return await generateGemini(prompt, config.apiKey, model);
@@ -28,21 +26,22 @@ export const generatePixelArtImage = async (
   }
 };
 
-const generateOpenAI = async (
+const generateOpenAICompatible = async (
   prompt: string,
   apiKey: string,
-  baseUrl?: string,
-  model: string = 'gpt-4o'
+  baseUrl: string,
+  model: string = 'dall-e-3',
+  imageUrlModel?: string
 ): Promise<string> => {
   const client = new OpenAI({
     apiKey,
-    baseURL: baseUrl || 'https://api.openai.com/v1',
+    baseURL: baseUrl,
     dangerouslyAllowBrowser: true,
   });
 
   try {
     const response = await client.images.generate({
-      model: 'dall-e-3',
+      model: imageUrlModel || model,
       prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
       size: '1024x1024',
       response_format: 'b64_json',
@@ -56,71 +55,7 @@ const generateOpenAI = async (
     
     throw new Error('No image generated');
   } catch (error) {
-    console.error('OpenAI image generation error:', error);
-    throw error;
-  }
-};
-
-const generateDeepSeek = async (
-  prompt: string,
-  apiKey: string,
-  model: string = 'deepseek-chat'
-): Promise<string> => {
-  const client = new OpenAI({
-    apiKey,
-    baseURL: 'https://api.deepseek.com/v1',
-    dangerouslyAllowBrowser: true,
-  });
-
-  try {
-    const response = await client.images.generate({
-      model: 'dall-e-3',
-      prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-      size: '1024x1024',
-      response_format: 'b64_json',
-      n: 1,
-    });
-
-    const imageData = response.data[0]?.b64_json;
-    if (imageData) {
-      return `data:image/png;base64,${imageData}`;
-    }
-    
-    throw new Error('No image generated');
-  } catch (error) {
-    console.error('DeepSeek image generation error:', error);
-    throw error;
-  }
-};
-
-const generateVolcEngine = async (
-  prompt: string,
-  apiKey: string,
-  model: string = 'doubao-pro-32k'
-): Promise<string> => {
-  const client = new OpenAI({
-    apiKey,
-    baseURL: 'https://ark.cn-beijing.volces.com/api/v3',
-    dangerouslyAllowBrowser: true,
-  });
-
-  try {
-    const response = await client.images.generate({
-      model: 'dall-e-3',
-      prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-      size: '1024x1024',
-      response_format: 'b64_json',
-      n: 1,
-    });
-
-    const imageData = response.data[0]?.b64_json;
-    if (imageData) {
-      return `data:image/png;base64,${imageData}`;
-    }
-    
-    throw new Error('No image generated');
-  } catch (error) {
-    console.error('VolcEngine image generation error:', error);
+    console.error('Image generation error:', error);
     throw error;
   }
 };
@@ -134,7 +69,7 @@ const generateGemini = async (
     const ai = new GoogleGenAI({ apiKey });
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: model || 'gemini-2.0-flash-exp',
       contents: {
         parts: [
           {
@@ -164,10 +99,15 @@ const generateGemini = async (
 
 export const validateApiKey = async (
   provider: AIProvider,
-  apiKey: string
+  apiKey: string,
+  endpoint?: string
 ): Promise<boolean> => {
   try {
-    const config: AIConfig = { provider, apiKey };
+    const config: AIConfig = { 
+      provider, 
+      apiKey, 
+      endpoint: endpoint || DEFAULT_ENDPOINTS[provider]
+    };
     await generatePixelArtImage('test', config);
     return true;
   } catch (error) {

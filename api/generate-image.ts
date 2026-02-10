@@ -6,7 +6,8 @@ interface GenerateRequest {
   provider: string;
   apiKey: string;
   model?: string;
-  baseUrl?: string;
+  endpoint?: string;
+  imageUrlModel?: string;
 }
 
 export default async function handler(req: Request) {
@@ -18,7 +19,7 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const { prompt, provider, apiKey, model, baseUrl }: GenerateRequest = await req.json();
+    const { prompt, provider, apiKey, model, endpoint, imageUrlModel }: GenerateRequest = await req.json();
 
     if (!prompt || !provider || !apiKey) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), { 
@@ -32,13 +33,10 @@ export default async function handler(req: Request) {
     switch (provider) {
       case 'OPENAI':
       case 'OPENROUTER':
-        imageData = await generateOpenAI(prompt, apiKey, baseUrl, model);
-        break;
       case 'DEEPSEEK':
-        imageData = await generateDeepSeek(prompt, apiKey, model);
-        break;
       case 'VOLCENGINE':
-        imageData = await generateVolcEngine(prompt, apiKey, model);
+      case 'CUSTOM':
+        imageData = await generateOpenAICompatible(prompt, apiKey, endpoint, model, imageUrlModel);
         break;
       case 'GEMINI':
         imageData = await generateGemini(prompt, apiKey, model);
@@ -66,11 +64,12 @@ export default async function handler(req: Request) {
   }
 }
 
-async function generateOpenAI(
+async function generateOpenAICompatible(
   prompt: string,
   apiKey: string,
-  baseUrl?: string,
-  model: string = 'gpt-4o'
+  baseUrl: string = '',
+  model: string = 'dall-e-3',
+  imageUrlModel?: string
 ): Promise<string> {
   const client = new OpenAI({
     apiKey,
@@ -78,59 +77,7 @@ async function generateOpenAI(
   });
 
   const response = await client.images.generate({
-    model: 'dall-e-3',
-    prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-    size: '1024x1024',
-    response_format: 'b64_json',
-    n: 1,
-  });
-
-  const imageData = response.data[0]?.b64_json;
-  if (imageData) {
-    return `data:image/png;base64,${imageData}`;
-  }
-  
-  throw new Error('No image generated');
-}
-
-async function generateDeepSeek(
-  prompt: string,
-  apiKey: string,
-  model: string = 'deepseek-chat'
-): Promise<string> {
-  const client = new OpenAI({
-    apiKey,
-    baseURL: 'https://api.deepseek.com/v1',
-  });
-
-  const response = await client.images.generate({
-    model: 'dall-e-3',
-    prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-    size: '1024x1024',
-    response_format: 'b64_json',
-    n: 1,
-  });
-
-  const imageData = response.data[0]?.b64_json;
-  if (imageData) {
-    return `data:image/png;base64,${imageData}`;
-  }
-  
-  throw new Error('No image generated');
-}
-
-async function generateVolcEngine(
-  prompt: string,
-  apiKey: string,
-  model: string = 'doubao-pro-32k'
-): Promise<string> {
-  const client = new OpenAI({
-    apiKey,
-    baseURL: 'https://ark.cn-beijing.volces.com/api/v3',
-  });
-
-  const response = await client.images.generate({
-    model: 'dall-e-3',
+    model: imageUrlModel || model,
     prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
     size: '1024x1024',
     response_format: 'b64_json',
@@ -153,7 +100,7 @@ async function generateGemini(
   const ai = new GoogleGenAI({ apiKey });
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash-exp',
+    model: model || 'gemini-2.0-flash-exp',
     contents: {
       parts: [
         {

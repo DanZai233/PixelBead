@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { ToolType, DEFAULT_COLORS, AIConfig, AIProvider } from './types';
 import { generatePixelArtImage } from './services/aiService';
-import { Bead } from './components/Bead';
+import { BeadCanvas } from './components/BeadCanvas';
 import { SettingsPanel } from './components/SettingsPanel';
 
 const App: React.FC = () => {
@@ -16,7 +16,6 @@ const App: React.FC = () => {
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
-  const [isDrawing, setIsDrawing] = useState(false);
   const [showGridLines, setShowGridLines] = useState(true);
   const [zoom, setZoom] = useState(80);
   
@@ -26,7 +25,6 @@ const App: React.FC = () => {
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -123,7 +121,7 @@ const App: React.FC = () => {
     img.src = imageSrc;
   }, []);
 
-  const handleAction = useCallback((row: number, col: number) => {
+  const handleCanvasAction = useCallback((row: number, col: number) => {
     if (currentTool === ToolType.PICKER) {
       const colorAt = grid[row][col];
       if (colorAt && colorAt !== '#FFFFFF') {
@@ -134,43 +132,33 @@ const App: React.FC = () => {
     }
 
     setGrid(prev => {
-      if (prev[row][col] === selectedColor && currentTool === ToolType.PENCIL) return prev;
-      if (prev[row][col] === '#FFFFFF' && currentTool === ToolType.ERASER) return prev;
-
-      const newGrid = [...prev];
-      newGrid[row] = [...prev[row]];
-
+      const newGrid = prev.map(r => [...r]);
+      
       if (currentTool === ToolType.PENCIL) {
+        if (newGrid[row][col] === selectedColor) return prev;
         newGrid[row][col] = selectedColor;
       } else if (currentTool === ToolType.ERASER) {
+        if (newGrid[row][col] === '#FFFFFF') return prev;
         newGrid[row][col] = '#FFFFFF';
       } else if (currentTool === ToolType.FILL) {
         const targetColor = prev[row][col];
         const fillColor = selectedColor;
         if (targetColor === fillColor) return prev;
         
-        const freshGrid = prev.map(r => [...r]);
         const stack = [[row, col]];
-        const visited = new Set();
+        const visited = new Set<string>();
         while (stack.length > 0) {
           const [r, c] = stack.pop()!;
           const key = `${r},${c}`;
-          if (r < 0 || r >= gridSize || c < 0 || c >= gridSize || freshGrid[r][c] !== targetColor || visited.has(key)) continue;
-          freshGrid[r][c] = fillColor;
+          if (r < 0 || r >= gridSize || c < 0 || c >= gridSize || newGrid[r][c] !== targetColor || visited.has(key)) continue;
+          newGrid[r][c] = fillColor;
           visited.add(key);
           stack.push([r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]);
         }
-        return freshGrid;
       }
       return newGrid;
     });
   }, [selectedColor, currentTool, gridSize, grid]);
-
-  useEffect(() => {
-    const handleGlobalUp = () => setIsDrawing(false);
-    window.addEventListener('pointerup', handleGlobalUp);
-    return () => window.removeEventListener('pointerup', handleGlobalUp);
-  }, []);
 
   const stats = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -399,34 +387,17 @@ const App: React.FC = () => {
             </button>
           </div>
 
-          <div 
-            ref={containerRef}
-            className="w-full h-full overflow-auto p-40 flex items-center justify-center no-scrollbar bg-dots"
-            onPointerDown={() => setIsDrawing(true)}
-          >
+          <div className="w-full h-full overflow-auto p-40 flex items-center justify-center no-scrollbar bg-dots">
             <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] bg-white border border-white/60 p-12">
-              <div 
-                className="grid"
-                style={{
-                  width: `${boardDimension}px`,
-                  height: `${boardDimension}px`,
-                  gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-                  gap: zoom > 60 ? '2px' : '0px',
-                  touchAction: 'none'
-                }}
-              >
-                {grid.map((row, r) => 
-                  row.map((color, c) => (
-                    <Bead
-                      key={`${r}-${c}`}
-                      color={color}
-                      showGrid={showGridLines}
-                      onPointerDown={() => handleAction(r, c)}
-                      onPointerEnter={() => isDrawing && handleAction(r, c)}
-                    />
-                  ))
-                )}
-              </div>
+              <BeadCanvas
+                grid={grid}
+                gridSize={gridSize}
+                zoom={zoom}
+                showGridLines={showGridLines}
+                onPointerDown={handleCanvasAction}
+                onPointerMove={handleCanvasAction}
+                onPointerUp={() => {}}
+              />
             </div>
           </div>
 
