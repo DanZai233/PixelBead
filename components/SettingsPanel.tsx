@@ -139,33 +139,52 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium focus:border-indigo-500 outline-none"
               />
               <p className="text-[10px] text-slate-400 mt-1">
-                {provider === AIProvider.VOLCENGINE && '火山引擎接入点格式：https://ark.cn-beijing.volces.com/api/v3'}
+                {provider === AIProvider.VOLCENGINE && '火山引擎接入点：https://ark.cn-beijing.volces.com/api/v3'}
                 {provider === AIProvider.DEEPSEEK && 'DeepSeek 接入点：https://api.deepseek.com/v1'}
                 {provider === AIProvider.OPENAI && 'OpenAI 接入点：https://api.openai.com/v1'}
-                {provider === AIProvider.CUSTOM && '自定义服务接入点'}
+                {provider === AIProvider.OPENROUTER && 'OpenRouter 接入点：https://openrouter.ai/api/v1'}
+                {provider === AIProvider.CUSTOM && '自定义服务接入点（需兼容 OpenAI API 格式）'}
               </p>
             </div>
           )}
 
           <div>
             <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
-              聊天模型 (可选)
+              模型名称
             </label>
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium focus:border-indigo-500 outline-none"
-            >
-              {models.length > 0 ? (
-                models.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))
-              ) : (
-                <option value="">自定义模型</option>
+            <div className="space-y-2">
+              {models.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {models.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => setModel(m.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        model === m.id
+                          ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                          : 'bg-slate-50 text-slate-600 border border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      {m.name}
+                    </button>
+                  ))}
+                </div>
               )}
-            </select>
+              <input
+                type="text"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder="输入模型名称，例如: doubao-1-5-pro-32k-250115"
+                className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium focus:border-indigo-500 outline-none font-mono text-sm"
+              />
+              <p className="text-[10px] text-slate-400">
+                {provider === AIProvider.VOLCENGINE && '火山引擎示例: doubao-1-5-pro-32k-250115, doubao-pro-32k'}
+                {provider === AIProvider.DEEPSEEK && 'DeepSeek 示例: deepseek-chat, deepseek-coder'}
+                {provider === AIProvider.OPENAI && 'OpenAI 示例: gpt-4o, gpt-4o-mini'}
+                {provider === AIProvider.OPENROUTER && 'OpenRouter 示例: openai/gpt-4o, anthropic/claude-3.5-sonnet'}
+                {provider === AIProvider.CUSTOM && '请根据服务商文档填写模型名称'}
+              </p>
+            </div>
           </div>
 
           {provider !== AIProvider.GEMINI && (
