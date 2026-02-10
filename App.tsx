@@ -1,8 +1,13 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { ToolType, DEFAULT_COLORS, AIConfig, AIProvider } from './types';
+import { 
+  ToolType, DEFAULT_COLORS, AIConfig, AIProvider, PixelStyle, 
+  TOOLS_INFO, PIXEL_STYLES, ColorHex 
+} from './types';
 import { generatePixelArtImage } from './services/aiService';
 import { BeadCanvas } from './components/BeadCanvas';
 import { SettingsPanel } from './components/SettingsPanel';
+import { ColorPicker } from './components/ColorPicker';
+import { ShortcutsPanel } from './components/ShortcutsPanel';
 
 const App: React.FC = () => {
   const [gridSize, setGridSize] = useState(32);
@@ -13,13 +18,17 @@ const App: React.FC = () => {
   );
   const [selectedColor, setSelectedColor] = useState(DEFAULT_COLORS[0]);
   const [currentTool, setCurrentTool] = useState<ToolType>(ToolType.PENCIL);
+  const [pixelStyle, setPixelStyle] = useState<PixelStyle>(PixelStyle.CIRCLE);
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [showGridLines, setShowGridLines] = useState(true);
   const [zoom, setZoom] = useState(80);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
 
   const [pendingImage, setPendingImage] = useState<string | null>(null);
@@ -38,6 +47,42 @@ const App: React.FC = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isSettingsOpen || isColorPickerOpen || isShortcutsOpen) return;
+
+      if (e.ctrlKey && e.key === 'z') {
+        e.preventDefault();
+        return;
+      }
+      if (e.ctrlKey && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        return;
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        return;
+      }
+      if (e.key === '[') {
+        e.preventDefault();
+        return;
+      }
+      if (e.key === ']') {
+        e.preventDefault();
+        return;
+      }
+
+      const tool = TOOLS_INFO.find(t => t.shortcut.toLowerCase() === e.key.toLowerCase());
+      if (tool && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        setCurrentTool(tool.type);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSettingsOpen, isColorPickerOpen, isShortcutsOpen]);
+
   const handleSaveSettings = useCallback((config: AIConfig) => {
     setAiConfig(config);
     localStorage.setItem('aiConfig', JSON.stringify(config));
@@ -49,6 +94,7 @@ const App: React.FC = () => {
     }
     setGridSize(newSize);
     setGrid(Array(newSize).fill(null).map(() => Array(newSize).fill('#FFFFFF')));
+    setPanOffset({ x: 0, y: 0 });
     if (newSize >= 80) setZoom(35);
     else if (newSize >= 48) setZoom(50);
     else setZoom(80);
@@ -68,6 +114,7 @@ const App: React.FC = () => {
   const resetGrid = useCallback(() => {
     if (confirm("确定要清空画布吗？")) {
       setGrid(Array(gridSize).fill(null).map(() => Array(gridSize).fill('#FFFFFF')));
+      setPanOffset({ x: 0, y: 0 });
     }
   }, [gridSize]);
 
@@ -160,6 +207,13 @@ const App: React.FC = () => {
     });
   }, [selectedColor, currentTool, gridSize, grid]);
 
+  const handleMiddleButtonDrag = useCallback((deltaX: number, deltaY: number) => {
+    setPanOffset(prev => ({
+      x: prev.x + deltaX,
+      y: prev.y + deltaY,
+    }));
+  }, []);
+
   const stats = useMemo(() => {
     const counts: Record<string, number> = {};
     grid.forEach(row => {
@@ -212,6 +266,12 @@ const App: React.FC = () => {
 
   const presetSizes = [16, 32, 48, 64, 80, 100];
 
+  const allColors = useMemo(() => {
+    const colorSet = new Set<ColorHex>([...DEFAULT_COLORS]);
+    stats.forEach(item => colorSet.add(item.hex));
+    return Array.from(colorSet);
+  }, [stats]);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F1F5F9] text-slate-900 select-none overflow-hidden h-screen">
       <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between z-[100] shadow-sm shrink-0">
@@ -261,6 +321,19 @@ const App: React.FC = () => {
             </div>
           )}
 
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+            {PIXEL_STYLES.map(style => (
+              <button
+                key={style.value}
+                onClick={() => setPixelStyle(style.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${pixelStyle === style.value ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                title={style.name}
+              >
+                <span>{style.icon}</span>
+              </button>
+            ))}
+          </div>
+
           <button 
             onClick={() => {
               const data = JSON.stringify({ grid, gridSize });
@@ -274,40 +347,55 @@ const App: React.FC = () => {
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            导出图纸
+            导出
           </button>
 
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
-            title="AI 设置"
-          >
-            <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsShortcutsOpen(true)}
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+              title="快捷键说明"
+            >
+              <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+              title="AI 设置"
+            >
+              <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className="w-72 border-r border-slate-200 bg-white overflow-y-auto no-scrollbar p-6 space-y-6 flex flex-col shrink-0">
+        <aside className="w-80 border-r border-slate-200 bg-white overflow-y-auto no-scrollbar p-6 space-y-6 flex flex-col shrink-0">
           <div className="space-y-3">
-            <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">基础工具</h2>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { type: ToolType.PENCIL, icon: '✏️', label: '画笔' },
-                { type: ToolType.ERASER, icon: '🧽', label: '橡皮' },
-                { type: ToolType.FILL, icon: '🪣', label: '填充' },
-                { type: ToolType.PICKER, icon: '🧪', label: '吸色' },
-              ].map(tool => (
+            <div className="flex justify-between items-center">
+              <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">工具</h2>
+              <button
+                onClick={() => setIsShortcutsOpen(true)}
+                className="text-[10px] text-indigo-600 hover:text-indigo-700 font-black"
+              >
+                查看快捷键
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {TOOLS_INFO.map(tool => (
                 <button
                   key={tool.type}
                   onClick={() => setCurrentTool(tool.type)}
-                  className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all ${currentTool === tool.type ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-100'}`}
+                  className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${currentTool === tool.type ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-100'}`}
+                  title={`${tool.name} (${tool.shortcut})`}
                 >
                   <span className="text-xl">{tool.icon}</span>
-                  <span className="text-[10px] font-bold uppercase">{tool.label}</span>
+                  <span className="text-[9px] font-bold uppercase">{tool.name}</span>
                 </button>
               ))}
             </div>
@@ -316,9 +404,32 @@ const App: React.FC = () => {
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">调色盘</h2>
-              <div className="w-5 h-5 rounded-lg border shadow-inner" style={{ backgroundColor: selectedColor }}></div>
+              <button
+                onClick={() => setIsColorPickerOpen(true)}
+                className="text-[10px] text-indigo-600 hover:text-indigo-700 font-black flex items-center gap-1"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4" />
+                </svg>
+                更多颜色
+              </button>
             </div>
-            <div className="grid grid-cols-5 gap-1.5">
+            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+              <div className="w-8 h-8 rounded-lg border-2 border-slate-200" style={{ backgroundColor: selectedColor }}></div>
+              <input
+                type="text"
+                value={selectedColor}
+                onChange={(e) => {
+                  const hex = e.target.value;
+                  if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+                    setSelectedColor(hex);
+                  }
+                }}
+                className="flex-1 px-2 py-1 text-sm font-mono border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
+                placeholder="#RRGGBB"
+              />
+            </div>
+            <div className="grid grid-cols-6 gap-1.5">
               {DEFAULT_COLORS.map(color => (
                 <button
                   key={color}
@@ -337,7 +448,6 @@ const App: React.FC = () => {
             <h2 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-2">
               <span className="animate-pulse">✨</span> AI 像素画生成
             </h2>
-            <p className="text-[10px] text-slate-400 leading-tight">描述图案，AI 将生成高质量像素图并自动转换。</p>
             <textarea
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
@@ -380,24 +490,52 @@ const App: React.FC = () => {
             <button onClick={() => setZoom(z => Math.max(10, z - 5))} className="font-black text-slate-400 hover:text-indigo-600">－</button>
             <input type="range" min="10" max="300" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} className="w-40 accent-indigo-600" />
             <button onClick={() => setZoom(z => Math.min(400, z + 5))} className="font-black text-slate-400 hover:text-indigo-600">＋</button>
-            <span className="text-[10px] font-black w-8 text-slate-500 text-center">{zoom}%</span>
+            <span className="text-[10px] font-black w-12 text-slate-500 text-center">{zoom}%</span>
+            <div className="h-4 w-px bg-slate-200"></div>
+            <button 
+              onClick={() => setPanOffset({ x: 0, y: 0 })}
+              className="text-[10px] font-black uppercase px-3 py-1 rounded-lg text-slate-400 hover:text-indigo-600"
+              title="重置画布位置"
+            >
+              重置
+            </button>
             <div className="h-4 w-px bg-slate-200"></div>
             <button onClick={() => setShowGridLines(!showGridLines)} className={`text-[10px] font-black uppercase px-3 py-1 rounded-lg ${showGridLines ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
-              网格: {showGridLines ? '开' : '关'}
+              网格
             </button>
           </div>
 
-          <div className="w-full h-full overflow-auto p-40 flex items-center justify-center no-scrollbar bg-dots">
-            <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] bg-white border border-white/60 p-12">
-              <BeadCanvas
-                grid={grid}
-                gridSize={gridSize}
-                zoom={zoom}
-                showGridLines={showGridLines}
-                onPointerDown={handleCanvasAction}
-                onPointerMove={handleCanvasAction}
-                onPointerUp={() => {}}
-              />
+          <div className="w-full h-full overflow-auto no-scrollbar bg-dots">
+            <div 
+              className="min-w-full min-h-full"
+              style={{
+                paddingTop: 'calc(50vh - 200px)',
+                paddingBottom: 'calc(50vh - 200px)',
+                paddingLeft: 'calc(50vw - 200px)',
+                paddingRight: 'calc(50vw - 200px)',
+              }}
+            >
+              <div 
+                className="relative transition-transform duration-75"
+                style={{
+                  transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+                }}
+              >
+                <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] bg-white border border-white/60 p-12">
+                  <BeadCanvas
+                    grid={grid}
+                    gridSize={gridSize}
+                    zoom={zoom}
+                    showGridLines={showGridLines}
+                    pixelStyle={pixelStyle}
+                    onPointerDown={handleCanvasAction}
+                    onPointerMove={handleCanvasAction}
+                    onPointerUp={() => {}}
+                    onMiddleButtonDrag={handleMiddleButtonDrag}
+                    onZoomChange={setZoom}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -408,7 +546,7 @@ const App: React.FC = () => {
           </div>
         </main>
 
-        <aside className="w-72 border-l border-slate-200 bg-white overflow-y-auto no-scrollbar p-6 shrink-0">
+        <aside className="w-80 border-l border-slate-200 bg-white overflow-y-auto no-scrollbar p-6 shrink-0">
           <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-6 flex justify-between">
             所需拼豆清单 <span>数量</span>
           </h2>
@@ -474,6 +612,18 @@ const App: React.FC = () => {
         onClose={() => setIsSettingsOpen(false)}
         onSave={handleSaveSettings}
         currentConfig={aiConfig || undefined}
+      />
+
+      <ColorPicker
+        isOpen={isColorPickerOpen}
+        onClose={() => setIsColorPickerOpen(false)}
+        selectedColor={selectedColor}
+        onColorChange={setSelectedColor}
+      />
+
+      <ShortcutsPanel
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
       />
     </div>
   );

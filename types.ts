@@ -18,6 +18,23 @@ export enum ToolType {
   ERASER = 'ERASER',
   FILL = 'FILL',
   PICKER = 'PICKER',
+  LINE = 'LINE',
+  RECT = 'RECT',
+  CIRCLE = 'CIRCLE',
+}
+
+export enum PixelStyle {
+  CIRCLE = 'CIRCLE',
+  SQUARE = 'SQUARE',
+  ROUNDED = 'ROUNDED',
+}
+
+export interface ToolInfo {
+  type: ToolType;
+  name: string;
+  icon: string;
+  shortcut: string;
+  description: string;
 }
 
 export enum AIProvider {
@@ -84,3 +101,37 @@ export const DEFAULT_ENDPOINTS = {
   [AIProvider.GEMINI]: '',
   [AIProvider.CUSTOM]: '',
 };
+
+export const TOOLS_INFO: ToolInfo[] = [
+  { type: ToolType.PENCIL, name: '画笔', icon: '✏️', shortcut: 'B', description: '单击或拖动绘制单个像素' },
+  { type: ToolType.ERASER, name: '橡皮', icon: '🧽', shortcut: 'E', description: '擦除像素，使其变为透明' },
+  { type: ToolType.FILL, name: '填充', icon: '🪣', shortcut: 'G', description: '填充相连的同色区域' },
+  { type: ToolType.PICKER, name: '吸色', icon: '🧪', shortcut: 'I', description: '吸取像素颜色' },
+  { type: ToolType.LINE, name: '直线', icon: '📏', shortcut: 'L', description: '绘制直线' },
+  { type: ToolType.RECT, name: '矩形', icon: '⬜', shortcut: 'R', description: '绘制矩形' },
+  { type: ToolType.CIRCLE, name: '圆形', icon: '⭕', shortcut: 'C', description: '绘制圆形' },
+];
+
+export const PIXEL_STYLES = [
+  { value: PixelStyle.CIRCLE, name: '圆形', icon: '⚪' },
+  { value: PixelStyle.SQUARE, name: '方形', icon: '⬜' },
+  { value: PixelStyle.ROUNDED, name: '圆角', icon: '🔵' },
+];
+
+export const SHORTCUTS = [
+  { key: 'B', action: '画笔工具' },
+  { key: 'E', action: '橡皮工具' },
+  { key: 'G', action: '填充工具' },
+  { key: 'I', action: '吸色工具' },
+  { key: 'L', action: '直线工具' },
+  { key: 'R', action: '矩形工具' },
+  { key: 'C', action: '圆形工具' },
+  { key: 'Ctrl + 滚轮', action: '缩放画布' },
+  { key: '中键拖动', action: '移动画布' },
+  { key: 'Space + 拖动', action: '移动画布' },
+  { key: 'Ctrl + Z', action: '撤销' },
+  { key: 'Ctrl + Shift + Z', action: '重做' },
+  { key: 'Delete / Backspace', action: '清空选区' },
+  { key: '[', action: '减小画笔大小' },
+  { key: ']', action: '增大画笔大小' },
+];

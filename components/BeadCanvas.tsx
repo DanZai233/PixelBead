@@ -1,30 +1,117 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { PixelStyle } from '../types';
 
 interface BeadCanvasProps {
   grid: string[][];
   gridSize: number;
   zoom: number;
   showGridLines: boolean;
+  pixelStyle: PixelStyle;
   onPointerDown: (row: number, col: number) => void;
   onPointerMove: (row: number, col: number) => void;
   onPointerUp: () => void;
+  onMiddleButtonDrag: (deltaX: number, deltaY: number) => void;
+  onZoomChange: (zoom: number) => void;
 }
 
 export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   grid,
   gridSize,
-  zoom,
+  zoom: propZoom,
   showGridLines,
+  pixelStyle,
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onMiddleButtonDrag,
+  onZoomChange,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const isDrawingRef = useRef(false);
+  const isMiddleButtonDraggingRef = useRef(false);
+  const lastMousePosRef = useRef({ x: 0, y: 0 });
   const baseBeadSize = 28;
 
-  const cellSize = baseBeadSize * (zoom / 100);
+  const cellSize = baseBeadSize * (propZoom / 100);
   const canvasSize = gridSize * cellSize;
+
+  const drawPixel = useCallback((
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    size: number,
+    color: string,
+    isTransparent: boolean
+  ) => {
+    if (isTransparent) {
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.3)';
+      ctx.strokeStyle = showGridLines ? 'rgba(148, 163, 184, 0.4)' : 'transparent';
+      ctx.lineWidth = 1;
+    } else {
+      ctx.fillStyle = color;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.lineWidth = 1;
+    }
+
+    const padding = isTransparent ? 0 : 1;
+
+    switch (pixelStyle) {
+      case PixelStyle.CIRCLE:
+        ctx.beginPath();
+        ctx.arc(x + size / 2, y + size / 2, (size / 2) - padding, 0, Math.PI * 2);
+        ctx.fill();
+        if (!isTransparent) {
+          const shadowGradient = ctx.createRadialGradient(
+            x + size / 2 - size / 6,
+            y + size / 2 - size / 6,
+            0,
+            x + size / 2,
+            y + size / 2,
+            size / 2
+          );
+          shadowGradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+          shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0.1)');
+          ctx.fillStyle = shadowGradient;
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+          ctx.stroke();
+        } else if (showGridLines) {
+          ctx.stroke();
+        }
+        break;
+
+      case PixelStyle.SQUARE:
+        ctx.beginPath();
+        ctx.rect(x + padding, y + padding, size - padding * 2, size - padding * 2);
+        ctx.fill();
+        if (!isTransparent) {
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+          ctx.stroke();
+        } else if (showGridLines) {
+          ctx.stroke();
+        }
+        break;
+
+      case PixelStyle.ROUNDED:
+        const radius = size / 4;
+        ctx.beginPath();
+        ctx.roundRect(x + padding, y + padding, size - padding * 2, size - padding * 2, radius);
+        ctx.fill();
+        if (!isTransparent) {
+          const shadowGradient = ctx.createLinearGradient(x, y, x + size, y + size);
+          shadowGradient.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+          shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0.1)');
+          ctx.fillStyle = shadowGradient;
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+          ctx.stroke();
+        } else if (showGridLines) {
+          ctx.stroke();
+        }
+        break;
+    }
+  }, [pixelStyle, showGridLines]);
 
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -41,43 +128,11 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         const x = col * cellSize;
         const y = row * cellSize;
 
-        ctx.beginPath();
-        ctx.arc(x + cellSize / 2, y + cellSize / 2, (cellSize / 2) - 1, 0, Math.PI * 2);
-
         const isTransparent = color === 'transparent' || color === '#FFFFFF' || color === '';
-        if (!isTransparent) {
-          ctx.fillStyle = color;
-          ctx.fill();
-
-          const shadowGradient = ctx.createRadialGradient(
-            x + cellSize / 2 - cellSize / 6,
-            y + cellSize / 2 - cellSize / 6,
-            0,
-            x + cellSize / 2,
-            y + cellSize / 2,
-            cellSize / 2
-          );
-          shadowGradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
-          shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0.1)');
-          ctx.fillStyle = shadowGradient;
-          ctx.fill();
-
-          ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
-          ctx.lineWidth = 1;
-          ctx.stroke();
-        } else {
-          ctx.fillStyle = 'rgba(148, 163, 184, 0.3)';
-          ctx.fill();
-
-          if (showGridLines) {
-            ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-          }
-        }
+        drawPixel(ctx, x, y, cellSize, color, isTransparent);
       }
     }
-  }, [grid, gridSize, cellSize, showGridLines]);
+  }, [grid, gridSize, cellSize, showGridLines, pixelStyle, drawPixel]);
 
   useEffect(() => {
     drawCanvas();
@@ -104,6 +159,14 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   }, [gridSize, cellSize]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.button === 1) {
+      e.preventDefault();
+      isMiddleButtonDraggingRef.current = true;
+      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      canvasRef.current?.setPointerCapture(e.pointerId);
+      return;
+    }
+
     e.preventDefault();
     const { row, col } = getCellFromEvent(e);
     if (row >= 0 && col >= 0) {
@@ -114,6 +177,15 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   }, [getCellFromEvent, onPointerDown]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (isMiddleButtonDraggingRef.current) {
+      e.preventDefault();
+      const deltaX = e.clientX - lastMousePosRef.current.x;
+      const deltaY = e.clientY - lastMousePosRef.current.y;
+      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      onMiddleButtonDrag(deltaX, deltaY);
+      return;
+    }
+
     if (isDrawingRef.current) {
       e.preventDefault();
       const { row, col } = getCellFromEvent(e);
@@ -121,27 +193,43 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         onPointerMove(row, col);
       }
     }
-  }, [getCellFromEvent, onPointerMove]);
+  }, [getCellFromEvent, onPointerMove, onMiddleButtonDrag]);
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.button === 1) {
+      isMiddleButtonDraggingRef.current = false;
+      return;
+    }
     isDrawingRef.current = false;
     onPointerUp();
   }, [onPointerUp]);
 
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
+    if (e.ctrlKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -5 : 5;
+      const newZoom = Math.min(Math.max(propZoom + delta, 10), 400);
+      onZoomChange(newZoom);
+    }
+  }, [propZoom, onZoomChange]);
+
   return (
-    <canvas
-      ref={canvasRef}
-      width={canvasSize}
-      height={canvasSize}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerUp}
-      className="cursor-crosshair touch-none"
-      style={{
-        width: `${canvasSize}px`,
-        height: `${canvasSize}px`,
-      }}
-    />
+    <div ref={containerRef} className="relative">
+      <canvas
+        ref={canvasRef}
+        width={canvasSize}
+        height={canvasSize}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        onWheel={handleWheel}
+        className="cursor-crosshair touch-none"
+        style={{
+          width: `${canvasSize}px`,
+          height: `${canvasSize}px`,
+        }}
+      />
+    </div>
   );
 };
