@@ -62,7 +62,7 @@ npm run preview
 
 ### 方式一：通过 Vercel 部署按钮（推荐）
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/pixelbead)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/DanZai233/PixelBead)
 
 ### 方式二：通过 Vercel CLI 部署
 
