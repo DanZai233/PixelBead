@@ -83,6 +83,17 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSettingsOpen, isColorPickerOpen, isShortcutsOpen]);
 
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, []);
+
   const handleSaveSettings = useCallback((config: AIConfig) => {
     setAiConfig(config);
     localStorage.setItem('aiConfig', JSON.stringify(config));
@@ -506,15 +517,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="w-full h-full overflow-auto no-scrollbar bg-dots">
-            <div 
-              className="min-w-full min-h-full"
-              style={{
-                paddingTop: 'calc(50vh - 200px)',
-                paddingBottom: 'calc(50vh - 200px)',
-                paddingLeft: 'calc(50vw - 200px)',
-                paddingRight: 'calc(50vw - 200px)',
-              }}
-            >
+            <div className="min-w-full min-h-full flex items-center justify-center p-40">
               <div 
                 className="relative transition-transform duration-75"
                 style={{
