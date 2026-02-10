@@ -40,30 +40,25 @@ const generateOpenAI = async (
     dangerouslyAllowBrowser: true,
   });
 
-  const response = await client.responses.create({
-    model: 'gpt-4o',
-    input: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'input_text',
-            text: `Generate a high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-          },
-        ],
-      },
-    ],
-  });
+  try {
+    const response = await client.images.generate({
+      model: 'dall-e-3',
+      prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
+      size: '1024x1024',
+      response_format: 'b64_json',
+      n: 1,
+    });
 
-  const outputItem = response.output[0];
-  if (outputItem && 'content' in outputItem && outputItem.content[0]) {
-    const content = outputItem.content[0];
-    if ('image_url' in content) {
-      return (content as any).image_url.url;
+    const imageData = response.data[0]?.b64_json;
+    if (imageData) {
+      return `data:image/png;base64,${imageData}`;
     }
+    
+    throw new Error('No image generated');
+  } catch (error) {
+    console.error('OpenAI image generation error:', error);
+    throw error;
   }
-  
-  throw new Error('No image generated');
 };
 
 const generateDeepSeek = async (
@@ -77,19 +72,25 @@ const generateDeepSeek = async (
     dangerouslyAllowBrowser: true,
   });
 
-  const response = await client.images.generate({
-    model: 'dall-e-3',
-    prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-    size: '1024x1024',
-    response_format: 'b64_json',
-  });
+  try {
+    const response = await client.images.generate({
+      model: 'dall-e-3',
+      prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
+      size: '1024x1024',
+      response_format: 'b64_json',
+      n: 1,
+    });
 
-  const imageData = response.data[0]?.b64_json;
-  if (imageData) {
-    return `data:image/png;base64,${imageData}`;
+    const imageData = response.data[0]?.b64_json;
+    if (imageData) {
+      return `data:image/png;base64,${imageData}`;
+    }
+    
+    throw new Error('No image generated');
+  } catch (error) {
+    console.error('DeepSeek image generation error:', error);
+    throw error;
   }
-  
-  throw new Error('No image generated');
 };
 
 const generateVolcEngine = async (
@@ -103,19 +104,25 @@ const generateVolcEngine = async (
     dangerouslyAllowBrowser: true,
   });
 
-  const response = await client.images.generate({
-    model: 'dall-e-3',
-    prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-    size: '1024x1024',
-    response_format: 'b64_json',
-  });
+  try {
+    const response = await client.images.generate({
+      model: 'dall-e-3',
+      prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
+      size: '1024x1024',
+      response_format: 'b64_json',
+      n: 1,
+    });
 
-  const imageData = response.data[0]?.b64_json;
-  if (imageData) {
-    return `data:image/png;base64,${imageData}`;
+    const imageData = response.data[0]?.b64_json;
+    if (imageData) {
+      return `data:image/png;base64,${imageData}`;
+    }
+    
+    throw new Error('No image generated');
+  } catch (error) {
+    console.error('VolcEngine image generation error:', error);
+    throw error;
   }
-  
-  throw new Error('No image generated');
 };
 
 const generateGemini = async (
@@ -123,31 +130,36 @@ const generateGemini = async (
   apiKey: string,
   model: string = 'gemini-2.0-flash-exp'
 ): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey });
+  try {
+    const ai = new GoogleGenAI({ apiKey });
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash-exp',
-    contents: {
-      parts: [
-        {
-          text: `Generate a high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash-exp',
+      contents: {
+        parts: [
+          {
+            text: `Generate a high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
+          }
+        ]
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1"
         }
-      ]
-    },
-    config: {
-      imageConfig: {
-        aspectRatio: "1:1"
+      }
+    });
+
+    for (const part of response.candidates?.[0].content.parts || []) {
+      if (part.inlineData) {
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
       }
     }
-  });
 
-  for (const part of response.candidates?.[0].content.parts || []) {
-    if (part.inlineData) {
-      return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-    }
+    throw new Error("No valid image part returned.");
+  } catch (error) {
+    console.error('Gemini image generation error:', error);
+    throw error;
   }
-
-  throw new Error("No valid image part returned.");
 };
 
 export const validateApiKey = async (

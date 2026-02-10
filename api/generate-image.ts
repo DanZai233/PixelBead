@@ -77,27 +77,17 @@ async function generateOpenAI(
     baseURL: baseUrl || 'https://api.openai.com/v1',
   });
 
-  const response = await client.responses.create({
-    model: 'gpt-4o',
-    input: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'input_text',
-            text: `Generate a high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-          },
-        ],
-      },
-    ],
+  const response = await client.images.generate({
+    model: 'dall-e-3',
+    prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
+    size: '1024x1024',
+    response_format: 'b64_json',
+    n: 1,
   });
 
-  const outputItem = response.output[0];
-  if (outputItem && 'content' in outputItem && outputItem.content[0]) {
-    const content = outputItem.content[0];
-    if ('image_url' in content) {
-      return (content as any).image_url.url;
-    }
+  const imageData = response.data[0]?.b64_json;
+  if (imageData) {
+    return `data:image/png;base64,${imageData}`;
   }
   
   throw new Error('No image generated');
@@ -118,6 +108,7 @@ async function generateDeepSeek(
     prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
     size: '1024x1024',
     response_format: 'b64_json',
+    n: 1,
   });
 
   const imageData = response.data[0]?.b64_json;
@@ -143,6 +134,7 @@ async function generateVolcEngine(
     prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
     size: '1024x1024',
     response_format: 'b64_json',
+    n: 1,
   });
 
   const imageData = response.data[0]?.b64_json;
