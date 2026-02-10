@@ -53,6 +53,15 @@ const App: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isSettingsOpen || isColorPickerOpen || isShortcutsOpen) return;
 
+      const activeElement = document.activeElement;
+      const isInputFocused = 
+        activeElement?.tagName === 'INPUT' ||
+        activeElement?.tagName === 'TEXTAREA' ||
+        activeElement?.tagName === 'SELECT' ||
+        (activeElement as HTMLElement)?.isContentEditable;
+
+      if (isInputFocused) return;
+
       if (e.ctrlKey && e.key === 'z') {
         e.preventDefault();
         return;
@@ -61,7 +70,11 @@ const App: React.FC = () => {
         e.preventDefault();
         return;
       }
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        return;
+      }
+      if (e.key === 'Backspace') {
         e.preventDefault();
         return;
       }
@@ -75,7 +88,7 @@ const App: React.FC = () => {
       }
 
       const tool = TOOLS_INFO.find(t => t.shortcut.toLowerCase() === e.key.toLowerCase());
-      if (tool && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+      if (tool) {
         e.preventDefault();
         setCurrentTool(tool.type);
       }
