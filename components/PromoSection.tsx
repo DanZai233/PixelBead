@@ -22,12 +22,18 @@ const promoLinks = [
     type: 'web' as const,
   },
   {
+    id: 'color-danzai',
+    title: '灵韵配色',
+    subtitle: 'AI 配色灵感',
+    url: 'https://color.danzaii.cn/',
+    type: 'palette' as const,
+  },
+  {
     id: 'time-countdown',
     title: '屏幕倒计时',
     subtitle: '让同事知道你去哪了',
     url: 'https://time.danzaii.cn',
-    icon: 'https://time.danzaii.cn/favicon.ico',
-    type: 'web' as const,
+    type: 'palmtree' as const,
   },
   {
     id: 'github',
@@ -38,6 +44,25 @@ const promoLinks = [
     type: 'github' as const,
   },
 ];
+
+const PaletteIcon = () => (
+  <svg className="w-5 h-5 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"></path>
+    <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
+    <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
+    <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
+    <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
+  </svg>
+);
+
+const PalmtreeIcon = () => (
+  <svg className="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4"></path>
+    <path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3"></path>
+    <path d="M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35z"></path>
+    <path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14"></path>
+  </svg>
+);
 
 const GitHubIcon = () => (
   <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
@@ -65,7 +90,7 @@ export const PromoSection: React.FC = () => {
       </div>
       <div className="space-y-2">
         {promoLinks.map((item) => {
-          const iconSrc = item.type === 'app' ? appIconUrl : item.type === 'github' ? null : item.icon;
+          const iconSrc = item.type === 'app' ? appIconUrl : item.type === 'web' ? (item as { icon?: string }).icon : null;
           return (
             <a
               key={item.id}
@@ -79,6 +104,10 @@ export const PromoSection: React.FC = () => {
                   <span className="text-slate-600 group-hover:text-slate-900">
                     <GitHubIcon />
                   </span>
+                ) : item.type === 'palette' ? (
+                  <span className="group-hover:text-indigo-700"><PaletteIcon /></span>
+                ) : item.type === 'palmtree' ? (
+                  <span className="group-hover:text-emerald-700"><PalmtreeIcon /></span>
                 ) : iconSrc ? (
                   <img
                     src={iconSrc}

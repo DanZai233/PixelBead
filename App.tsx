@@ -301,7 +301,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F1F5F9] text-slate-900 select-none overflow-hidden h-screen">
-      <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-[100] shadow-sm shrink-0">
+      <header className="bg-white border-b border-slate-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between gap-2 z-[100] shadow-sm shrink-0 overflow-x-auto overflow-y-hidden no-scrollbar">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsMobileLeftOpen(!isMobileLeftOpen)}
@@ -422,6 +422,24 @@ const App: React.FC = () => {
             </button>
           </div>
 
+          <div className="space-y-3 md:hidden">
+            <div className="flex justify-between items-center">
+              <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">像素样式</h2>
+            </div>
+            <div className="flex bg-slate-100 p-1 rounded-xl">
+              {PIXEL_STYLES.map(style => (
+                <button
+                  key={style.value}
+                  onClick={() => setPixelStyle(style.value)}
+                  className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 touch-manipulation ${pixelStyle === style.value ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                  title={style.name}
+                >
+                  <span>{style.icon}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">工具</h2>
@@ -535,27 +553,28 @@ const App: React.FC = () => {
         </aside>
 
         <main className="flex-1 bg-[#EBEDF0] relative overflow-hidden">
-          <div className="absolute top-3 md:top-6 left-1/2 -translate-x-1/2 flex items-center gap-2 md:gap-4 bg-white/90 backdrop-blur-sm px-3 md:px-6 py-2 rounded-full shadow-2xl border border-white/50 z-50">
-            <button onClick={() => setZoom(z => Math.max(10, z - 5))} className="font-black text-slate-400 hover:text-indigo-600 text-lg">－</button>
-            <input type="range" min="10" max="300" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} className="w-24 md:w-40 accent-indigo-600" />
-            <button onClick={() => setZoom(z => Math.min(400, z + 5))} className="font-black text-slate-400 hover:text-indigo-600 text-lg">＋</button>
-            <span className="text-[10px] font-black w-8 md:w-12 text-slate-500 text-center">{zoom}%</span>
-            <div className="h-4 w-px bg-slate-200"></div>
+          <div className="absolute top-2 left-2 right-2 md:top-6 md:left-1/2 md:right-auto md:-translate-x-1/2 flex items-center justify-center gap-2 md:gap-4 bg-white/95 backdrop-blur-sm px-3 md:px-6 py-2 rounded-2xl md:rounded-full shadow-xl border border-white/50 z-50 md:max-w-fit">
+            <button onClick={() => setZoom(z => Math.max(10, z - 5))} className="p-1.5 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-lg min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation">－</button>
+            <input type="range" min="10" max="300" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} className="w-16 md:w-40 h-3 accent-indigo-600 touch-manipulation flex-1 md:flex-initial" />
+            <button onClick={() => setZoom(z => Math.min(400, z + 5))} className="p-1.5 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-lg min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation">＋</button>
+            <span className="text-[10px] font-black w-10 md:w-12 text-slate-500 text-center shrink-0">{zoom}%</span>
+            <div className="h-4 w-px bg-slate-200 hidden md:block"></div>
             <button 
               onClick={() => setPanOffset({ x: 0, y: 0 })}
-              className="text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1 rounded-lg text-slate-400 hover:text-indigo-600"
+              className="text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg text-slate-400 hover:text-indigo-600 touch-manipulation hidden md:block"
               title="重置画布位置"
             >
               重置
             </button>
-            <div className="h-4 w-px bg-slate-200"></div>
-            <button onClick={() => setShowGridLines(!showGridLines)} className={`text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1 rounded-lg ${showGridLines ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
+            <div className="h-4 w-px bg-slate-200 hidden md:block"></div>
+            <button onClick={() => setShowGridLines(!showGridLines)} className={`text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg touch-manipulation ${showGridLines ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
               网格
             </button>
+            <span className="md:hidden text-[9px] text-slate-400 ml-1">双指缩放/拖动</span>
           </div>
 
           <div className="w-full h-full overflow-auto no-scrollbar bg-dots">
-            <div className="min-w-full min-h-full flex items-center justify-center p-8 md:p-40">
+            <div className="min-w-full min-h-full flex items-center justify-center p-4 md:p-40 pt-16 md:pt-8">
               <div 
                 className="relative transition-transform duration-75"
                 style={{
@@ -574,13 +593,14 @@ const App: React.FC = () => {
                     onPointerUp={() => {}}
                     onMiddleButtonDrag={handleMiddleButtonDrag}
                     onZoomChange={setZoom}
+                    onTouchPan={handleMiddleButtonDrag}
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="absolute bottom-3 md:bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-6 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-50">
+          <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-50 max-w-fit md:max-w-none">
             <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridSize}x{gridSize}</div>
             <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridSize * gridSize}</div>
             <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
@@ -588,7 +608,7 @@ const App: React.FC = () => {
 
           <button
             onClick={() => setIsMobileRightOpen(!isMobileRightOpen)}
-            className="lg:hidden fixed bottom-4 right-4 z-40 w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center"
+            className="lg:hidden fixed right-4 z-40 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center touch-manipulation safe-area-bottom"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
