@@ -82,10 +82,10 @@ export const AI_MODELS = {
     { id: 'deepseek-aider', name: 'DeepSeek Aider' },
   ],
   [AIProvider.VOLCENGINE]: [
-    { id: 'doubao-seedream-4-5-251128', name: 'Doubao Seedream 4K' },
-    { id: 'doubao-seedream-4-5-241024', name: 'Doubao Seedream 2K' },
-    { id: 'doubao-pro-32k', name: 'Doubao Pro 32K' },
-    { id: 'doubao-lite-32k', name: 'Doubao Lite 32K' },
+    { id: 'doubao-seedream-4-5-251128', name: 'Doubao Seedream 4K', isImageModel: true },
+    { id: 'doubao-seedream-4-5-241024', name: 'Doubao Seedream 2K', isImageModel: true },
+    { id: 'doubao-pro-32k', name: 'Doubao Pro 32K', isImageModel: false },
+    { id: 'doubao-lite-32k', name: 'Doubao Lite 32K', isImageModel: false },
   ],
   [AIProvider.GEMINI]: [
     { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', isImageModel: true },
