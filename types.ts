@@ -7,6 +7,24 @@ export interface BeadGrid {
   size: number;
 }
 
+export interface Bead3DLayer {
+  grid: ColorHex[][];
+  size: number;
+  zIndex: number;
+}
+
+export interface Bead3D {
+  layers: Bead3DLayer[];
+  size: number;
+  totalLayers: number;
+}
+
+export enum ViewType {
+  TWO_D = 'TWO_D',
+  THREE_D = 'THREE_D',
+  SLICES = 'SLICES',
+}
+
 export interface ColorInfo {
   hex: ColorHex;
   name: string;
@@ -135,4 +153,10 @@ export const SHORTCUTS = [
   { key: 'Delete / Backspace', action: '清空选区' },
   { key: '[', action: '减小画笔大小' },
   { key: ']', action: '增大画笔大小' },
+];
+
+export const VIEW_TYPES = [
+  { value: ViewType.TWO_D, name: '2D视图', icon: '⬜' },
+  { value: ViewType.THREE_D, name: '3D立体', icon: '🧊' },
+  { value: ViewType.SLICES, name: '分层切片', icon: '📚' },
 ];

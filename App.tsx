@@ -1,10 +1,12 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { 
   ToolType, DEFAULT_COLORS, AIConfig, AIProvider, PixelStyle, 
-  TOOLS_INFO, PIXEL_STYLES, ColorHex 
+  TOOLS_INFO, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES 
 } from './types';
 import { generatePixelArtImage } from './services/aiService';
 import { BeadCanvas } from './components/BeadCanvas';
+import { Bead3DViewer } from './components/Bead3DViewer';
+import { BeadSliceViewer } from './components/BeadSliceViewer';
 import { SettingsPanel } from './components/SettingsPanel';
 import { ColorPicker } from './components/ColorPicker';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
@@ -33,6 +35,8 @@ const App: React.FC = () => {
   const [isMobileLeftOpen, setIsMobileLeftOpen] = useState(false);
   const [isMobileRightOpen, setIsMobileRightOpen] = useState(false);
   const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
+  const [viewType, setViewType] = useState<ViewType>(ViewType.TWO_D);
+  const [layers, setLayers] = useState(3);
 
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
@@ -480,6 +484,20 @@ const App: React.FC = () => {
             ))}
           </div>
 
+          <div className="hidden md:flex bg-slate-100 p-1 rounded-xl">
+            {VIEW_TYPES.map(view => (
+              <button
+                key={view.value}
+                onClick={() => setViewType(view.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${viewType === view.value ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                title={view.name}
+              >
+                <span>{view.icon}</span>
+                <span className="hidden xl:inline">{view.name}</span>
+              </button>
+            ))}
+          </div>
+
           <div className="flex gap-1 md:gap-2">
             <button
               onClick={undo}
@@ -566,6 +584,24 @@ const App: React.FC = () => {
                   title={style.name}
                 >
                   <span>{style.icon}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3 md:hidden">
+            <div className="flex justify-between items-center">
+              <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">视图模式</h2>
+            </div>
+            <div className="flex bg-slate-100 p-1 rounded-xl">
+              {VIEW_TYPES.map(view => (
+                <button
+                  key={view.value}
+                  onClick={() => setViewType(view.value)}
+                  className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 touch-manipulation ${viewType === view.value ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                  title={view.name}
+                >
+                  <span>{view.icon}</span>
                 </button>
               ))}
             </div>
@@ -704,31 +740,57 @@ const App: React.FC = () => {
             <span className="md:hidden text-[9px] text-slate-400 ml-1">双指缩放/拖动</span>
           </div>
 
-          <div className="w-full h-full overflow-auto no-scrollbar bg-dots">
-            <div className="min-w-full min-h-full flex items-center justify-center p-4 md:p-40 pt-16 md:pt-8">
-              <div 
-                className="relative transition-transform duration-75"
-                style={{
-                  transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
-                }}
-              >
-                <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] bg-white border border-white/60 p-6 md:p-12">
-                  <BeadCanvas
-                    grid={grid}
-                    gridSize={gridSize}
-                    zoom={zoom}
-                    showGridLines={showGridLines}
-                    pixelStyle={pixelStyle}
-                    onPointerDown={handleCanvasAction}
-                    onPointerMove={handleCanvasAction}
-                    onPointerUp={() => {}}
-                    onMiddleButtonDrag={handleMiddleButtonDrag}
-                    onZoomChange={setZoom}
-                    onTouchPan={handleMiddleButtonDrag}
-                  />
+           <div className="w-full h-full overflow-auto no-scrollbar bg-dots">
+            {viewType === ViewType.TWO_D ? (
+              <div className="min-w-full min-h-full flex items-center justify-center p-4 md:p-40 pt-16 md:pt-8">
+                <div 
+                  className="relative transition-transform duration-75"
+                  style={{
+                    transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+                  }}
+                >
+                  <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] bg-white border border-white/60 p-6 md:p-12">
+                    <BeadCanvas
+                      grid={grid}
+                      gridSize={gridSize}
+                      zoom={zoom}
+                      showGridLines={showGridLines}
+                      pixelStyle={pixelStyle}
+                      onPointerDown={handleCanvasAction}
+                      onPointerMove={handleCanvasAction}
+                      onPointerUp={() => {}}
+                      onMiddleButtonDrag={handleMiddleButtonDrag}
+                      onZoomChange={setZoom}
+                      onTouchPan={handleMiddleButtonDrag}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : viewType === ViewType.THREE_D ? (
+              <div className="min-w-full min-h-full">
+                <Bead3DViewer
+                  grid={grid}
+                  gridSize={gridSize}
+                  zoom={zoom}
+                  pixelStyle={pixelStyle}
+                  showGridLines={showGridLines}
+                  layers={layers}
+                  onLayerCountChange={setLayers}
+                />
+              </div>
+            ) : viewType === ViewType.SLICES ? (
+              <div className="min-w-full min-h-full">
+                <BeadSliceViewer
+                  grid={grid}
+                  gridSize={gridSize}
+                  zoom={zoom}
+                  pixelStyle={pixelStyle}
+                  showGridLines={showGridLines}
+                  layers={layers}
+                  onLayerCountChange={setLayers}
+                />
+              </div>
+            ) : null}
           </div>
 
           <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-50 max-w-fit md:max-w-none">
