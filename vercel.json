@@ -1,4 +1,4 @@
-{
+  {
   "version": 2,
   "builds": [
     {
@@ -11,20 +11,8 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
       "src": "/(.*)",
       "dest": "/$1"
     }
-  ],
-  "functions": {
-    "api/**/*.ts": {
-      "maxDuration": 60
-    }
-  }
+  ]
 }
