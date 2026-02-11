@@ -187,10 +187,12 @@ const generateVolcEngine = async (
     }
 
     const data = await response.json();
-    if (data.output?.b64_json) {
-      return `data:image/png;base64,${data.output.b64_json}`;
+    // VolcEngine 返回格式与 OpenAI 类似：data.data[0].b64_json
+    const b64Json = data.data?.[0]?.b64_json ?? data.output?.b64_json;
+    if (b64Json) {
+      return `data:image/png;base64,${b64Json}`;
     }
-    
+
     throw new Error('No image generated');
   } catch (error) {
     console.error('VolcEngine image generation error:', error);
