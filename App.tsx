@@ -36,8 +36,79 @@ const App: React.FC = () => {
 
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+  const [shapeStart, setShapeStart] = useState<{ row: number; col: number } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const getLineCells = useCallback((r1: number, c1: number, r2: number, c2: number) => {
+    const cells: [number, number][] = [];
+    const dr = Math.abs(r2 - r1);
+    const dc = Math.abs(c2 - c1);
+    const sr = r1 < r2 ? 1 : -1;
+    const sc = c1 < c2 ? 1 : -1;
+    let r = r1, c = c1;
+    cells.push([r, c]);
+    if (dr > dc) {
+      let err = dr / 2;
+      while (r !== r2) {
+        err -= dc;
+        if (err < 0) { c += sc; err += dr; }
+        r += sr;
+        cells.push([r, c]);
+      }
+    } else {
+      let err = dc / 2;
+      while (c !== c2) {
+        err -= dr;
+        if (err < 0) { r += sr; err += dc; }
+        c += sc;
+        cells.push([r, c]);
+      }
+    }
+    return cells;
+  }, []);
+
+  const getRectCells = useCallback((r1: number, c1: number, r2: number, c2: number) => {
+    const cells: [number, number][] = [];
+    const [rMin, rMax] = [Math.min(r1, r2), Math.max(r1, r2)];
+    const [cMin, cMax] = [Math.min(c1, c2), Math.max(c1, c2)];
+    for (let c = cMin; c <= cMax; c++) {
+      cells.push([rMin, c]);
+      if (rMax > rMin) cells.push([rMax, c]);
+    }
+    for (let r = rMin + 1; r < rMax; r++) {
+      cells.push([r, cMin]);
+      if (cMax > cMin) cells.push([r, cMax]);
+    }
+    return cells;
+  }, []);
+
+  const getCircleCells = useCallback((r1: number, c1: number, r2: number, c2: number) => {
+    const cells: [number, number][] = [];
+    const cx = (c1 + c2) / 2;
+    const cy = (r1 + r2) / 2;
+    const radius = Math.max(0, Math.hypot(c2 - c1, r2 - r1) / 2);
+    const r = Math.round(radius);
+    let x = r, y = 0, err = 1 - r;
+    const add = (dx: number, dy: number) => {
+      const row = Math.round(cy + dy);
+      const col = Math.round(cx + dx);
+      if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) cells.push([row, col]);
+    };
+    while (x >= y) {
+      add(x, y); add(-x, y); add(x, -y); add(-x, -y);
+      add(y, x); add(-y, x); add(y, -x); add(-y, -x);
+      y++;
+      if (err < 0) err += 2 * y + 1;
+      else { x--; err += 2 * (y - x) + 1; }
+    }
+    return cells;
+  }, [gridSize]);
+
+  useEffect(() => {
+    const shapeTools = [ToolType.LINE, ToolType.RECT, ToolType.CIRCLE];
+    if (!shapeTools.includes(currentTool)) setShapeStart(null);
+  }, [currentTool]);
 
   useEffect(() => {
     const savedConfig = localStorage.getItem('aiConfig');
@@ -205,6 +276,28 @@ const App: React.FC = () => {
       return;
     }
 
+    const shapeTools = [ToolType.LINE, ToolType.RECT, ToolType.CIRCLE];
+    if (shapeTools.includes(currentTool)) {
+      if (!shapeStart) {
+        setShapeStart({ row, col });
+        return;
+      }
+      const { row: r1, col: c1 } = shapeStart;
+      const cells = currentTool === ToolType.LINE ? getLineCells(r1, c1, row, col)
+        : currentTool === ToolType.RECT ? getRectCells(r1, c1, row, col)
+        : getCircleCells(r1, c1, row, col);
+      setGrid(prev => {
+        const newGrid = prev.map(r => [...r]);
+        const color = selectedColor;
+        for (const [r, c] of cells) {
+          if (r >= 0 && r < gridSize && c >= 0 && c < gridSize) newGrid[r][c] = color;
+        }
+        return newGrid;
+      });
+      setShapeStart(null);
+      return;
+    }
+
     setGrid(prev => {
       const newGrid = prev.map(r => [...r]);
       
@@ -232,7 +325,7 @@ const App: React.FC = () => {
       }
       return newGrid;
     });
-  }, [selectedColor, currentTool, gridSize, grid]);
+  }, [selectedColor, currentTool, gridSize, grid, shapeStart, getLineCells, getRectCells, getCircleCells]);
 
   const handleMiddleButtonDrag = useCallback((deltaX: number, deltaY: number) => {
     setPanOffset(prev => ({
