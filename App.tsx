@@ -39,6 +39,18 @@ const App: React.FC = () => {
   const [shapeStart, setShapeStart] = useState<{ row: number; col: number } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const undoStackRef = useRef<string[][][]>([]);
+  const redoStackRef = useRef<string[][][]>([]);
+  const gridRef = useRef(grid);
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const MAX_HISTORY = 50;
+
+  useEffect(() => {
+    gridRef.current = grid;
+  }, [grid]);
+
+  const canUndo = undoStackRef.current.length > 0;
+  const canRedo = redoStackRef.current.length > 0;
 
   const getLineCells = useCallback((r1: number, c1: number, r2: number, c2: number) => {
     const cells: [number, number][] = [];
@@ -122,55 +134,6 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (isSettingsOpen || isColorPickerOpen || isShortcutsOpen) return;
-
-      const activeElement = document.activeElement;
-      const isInputFocused = 
-        activeElement?.tagName === 'INPUT' ||
-        activeElement?.tagName === 'TEXTAREA' ||
-        activeElement?.tagName === 'SELECT' ||
-        (activeElement as HTMLElement)?.isContentEditable;
-
-      if (isInputFocused) return;
-
-      if (e.ctrlKey && e.key === 'z') {
-        e.preventDefault();
-        return;
-      }
-      if (e.ctrlKey && e.shiftKey && e.key === 'z') {
-        e.preventDefault();
-        return;
-      }
-      if (e.key === 'Delete') {
-        e.preventDefault();
-        return;
-      }
-      if (e.key === 'Backspace') {
-        e.preventDefault();
-        return;
-      }
-      if (e.key === '[') {
-        e.preventDefault();
-        return;
-      }
-      if (e.key === ']') {
-        e.preventDefault();
-        return;
-      }
-
-      const tool = TOOLS_INFO.find(t => t.shortcut.toLowerCase() === e.key.toLowerCase());
-      if (tool) {
-        e.preventDefault();
-        setCurrentTool(tool.type);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSettingsOpen, isColorPickerOpen, isShortcutsOpen]);
-
-  useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       if (e.ctrlKey) {
         e.preventDefault();
@@ -186,10 +149,60 @@ const App: React.FC = () => {
     localStorage.setItem('aiConfig', JSON.stringify(config));
   }, []);
 
+  const pushUndo = useCallback((prev: string[][]) => {
+    undoStackRef.current = [...undoStackRef.current.slice(-(MAX_HISTORY - 1)), prev.map(r => [...r])];
+    redoStackRef.current = [];
+    setHistoryVersion(v => v + 1);
+  }, []);
+
+  const undo = useCallback(() => {
+    if (undoStackRef.current.length === 0) return;
+    const prev = undoStackRef.current.pop()!;
+    redoStackRef.current = [...redoStackRef.current, grid.map(r => [...r])];
+    setGrid(prev);
+    setHistoryVersion(v => v + 1);
+  }, [grid]);
+
+  const redo = useCallback(() => {
+    if (redoStackRef.current.length === 0) return;
+    const next = redoStackRef.current.pop()!;
+    undoStackRef.current = [...undoStackRef.current, grid.map(r => [...r])];
+    setGrid(next);
+    setHistoryVersion(v => v + 1);
+  }, [grid]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isSettingsOpen || isColorPickerOpen || isShortcutsOpen) return;
+      const activeElement = document.activeElement;
+      const isInputFocused = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA' || activeElement?.tagName === 'SELECT' || (activeElement as HTMLElement)?.isContentEditable;
+      if (isInputFocused) return;
+      if (e.ctrlKey && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace' || e.key === '[' || e.key === ']') {
+        e.preventDefault();
+        return;
+      }
+      const tool = TOOLS_INFO.find(t => t.shortcut.toLowerCase() === e.key.toLowerCase());
+      if (tool) {
+        e.preventDefault();
+        setCurrentTool(tool.type);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSettingsOpen, isColorPickerOpen, isShortcutsOpen, undo, redo]);
+
   const handleResize = useCallback((newSize: number) => {
     if (grid.some(row => row.some(c => c !== '#FFFFFF'))) {
       if (!confirm("更改尺寸将清空当前画布，确定吗？")) return;
     }
+    undoStackRef.current = [];
+    redoStackRef.current = [];
     setGridSize(newSize);
     setGrid(Array(newSize).fill(null).map(() => Array(newSize).fill('#FFFFFF')));
     setPanOffset({ x: 0, y: 0 });
@@ -211,10 +224,11 @@ const App: React.FC = () => {
 
   const resetGrid = useCallback(() => {
     if (confirm("确定要清空画布吗？")) {
+      pushUndo(gridRef.current);
       setGrid(Array(gridSize).fill(null).map(() => Array(gridSize).fill('#FFFFFF')));
       setPanOffset({ x: 0, y: 0 });
     }
-  }, [gridSize]);
+  }, [gridSize, pushUndo]);
 
   const processImageToGrid = useCallback((imageSrc: string, size: number, xAlign: number = 0, yAlign: number = 0) => {
     const img = new Image();
@@ -259,12 +273,13 @@ const App: React.FC = () => {
         }
         newGrid.push(row);
       }
+      pushUndo(gridRef.current);
       setGrid(newGrid);
       setPendingImage(null);
       setIsProcessingImage(false);
     };
     img.src = imageSrc;
-  }, []);
+  }, [pushUndo]);
 
   const handleCanvasAction = useCallback((row: number, col: number) => {
     if (currentTool === ToolType.PICKER) {
@@ -287,6 +302,7 @@ const App: React.FC = () => {
         : currentTool === ToolType.RECT ? getRectCells(r1, c1, row, col)
         : getCircleCells(r1, c1, row, col);
       setGrid(prev => {
+        pushUndo(prev);
         const newGrid = prev.map(r => [...r]);
         const color = selectedColor;
         for (const [r, c] of cells) {
@@ -303,15 +319,17 @@ const App: React.FC = () => {
       
       if (currentTool === ToolType.PENCIL) {
         if (newGrid[row][col] === selectedColor) return prev;
+        pushUndo(prev);
         newGrid[row][col] = selectedColor;
       } else if (currentTool === ToolType.ERASER) {
         if (newGrid[row][col] === '#FFFFFF') return prev;
+        pushUndo(prev);
         newGrid[row][col] = '#FFFFFF';
       } else if (currentTool === ToolType.FILL) {
         const targetColor = prev[row][col];
         const fillColor = selectedColor;
         if (targetColor === fillColor) return prev;
-        
+        pushUndo(prev);
         const stack = [[row, col]];
         const visited = new Set<string>();
         while (stack.length > 0) {
@@ -325,7 +343,7 @@ const App: React.FC = () => {
       }
       return newGrid;
     });
-  }, [selectedColor, currentTool, gridSize, grid, shapeStart, getLineCells, getRectCells, getCircleCells]);
+  }, [selectedColor, currentTool, gridSize, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo]);
 
   const handleMiddleButtonDrag = useCallback((deltaX: number, deltaY: number) => {
     setPanOffset(prev => ({
@@ -463,6 +481,26 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex gap-1 md:gap-2">
+            <button
+              onClick={undo}
+              disabled={!canUndo}
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
+              title="撤销 (Ctrl+Z)"
+            >
+              <svg className="w-4 h-4 md:w-5 md:h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+              </svg>
+            </button>
+            <button
+              onClick={redo}
+              disabled={!canRedo}
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
+              title="重做 (Ctrl+Shift+Z)"
+            >
+              <svg className="w-4 h-4 md:w-5 md:h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
+              </svg>
+            </button>
             <button 
               onClick={() => {
                 const data = JSON.stringify({ grid, gridSize });
@@ -653,11 +691,11 @@ const App: React.FC = () => {
             <span className="text-[10px] font-black w-10 md:w-12 text-slate-500 text-center shrink-0">{zoom}%</span>
             <div className="h-4 w-px bg-slate-200 hidden md:block"></div>
             <button 
-              onClick={() => setPanOffset({ x: 0, y: 0 })}
-              className="text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg text-slate-400 hover:text-indigo-600 touch-manipulation hidden md:block"
-              title="重置画布位置"
+              onClick={resetGrid}
+              className="text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg text-slate-400 hover:text-red-500 touch-manipulation hidden md:block"
+              title="清空画布"
             >
-              重置
+              清空
             </button>
             <div className="h-4 w-px bg-slate-200 hidden md:block"></div>
             <button onClick={() => setShowGridLines(!showGridLines)} className={`text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg touch-manipulation ${showGridLines ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
