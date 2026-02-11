@@ -8,6 +8,7 @@ import { BeadCanvas } from './components/BeadCanvas';
 import { SettingsPanel } from './components/SettingsPanel';
 import { ColorPicker } from './components/ColorPicker';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
+import { PromoSection } from './components/PromoSection';
 
 const App: React.FC = () => {
   const [gridSize, setGridSize] = useState(32);
@@ -522,12 +523,15 @@ const App: React.FC = () => {
             </button>
           </div>
 
-          <button 
-            onClick={resetGrid}
-            className="w-full py-3 md:py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-all mt-auto"
-          >
-            清空当前画布
-          </button>
+          <div className="mt-auto pt-4 space-y-0">
+            <button 
+              onClick={resetGrid}
+              className="w-full py-3 md:py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-all"
+            >
+              清空当前画布
+            </button>
+            <PromoSection />
+          </div>
         </aside>
 
         <main className="flex-1 bg-[#EBEDF0] relative overflow-hidden">
