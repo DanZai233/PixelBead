@@ -851,9 +851,10 @@ const App: React.FC = () => {
                     value={selectedPalettePreset}
                     onChange={(e) => handlePalettePresetChange(e.target.value)}
                     className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-[10px] font-bold outline-none focus:border-white/40"
+                    style={{ color: 'white' }}
                   >
                     {PALETTE_PRESETS.map(preset => (
-                      <option key={preset.id} value={preset.id}>
+                      <option key={preset.id} value={preset.id} style={{ backgroundColor: 'white', color: '#4c1d95' }}>
                         {preset.name}
                       </option>
                     ))}
@@ -866,9 +867,10 @@ const App: React.FC = () => {
                     value={selectedColorSystem}
                     onChange={(e) => setSelectedColorSystem(e.target.value as ColorSystem)}
                     className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-[10px] font-bold outline-none focus:border-white/40"
+                    style={{ color: 'white' }}
                   >
                     {colorSystemOptions.map(system => (
-                      <option key={system.key} value={system.key}>
+                      <option key={system.key} value={system.key} style={{ backgroundColor: 'white', color: '#4c1d95' }}>
                         {system.name}
                       </option>
                     ))}
