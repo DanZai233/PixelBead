@@ -198,10 +198,17 @@ export function createPaletteFromGrid(grid: string[][], maxColors?: number): Pal
 
 export function createFullPaletteFromMapping(
   mapping: Record<string, Record<ColorSystem, string>>,
-  colorSystem?: ColorSystem
+  colorSystem?: ColorSystem,
+  maxColors?: number
 ): PaletteColor[] {
-  return Object.entries(mapping).map(([hex, colorData]) => ({
+  const allColors = Object.entries(mapping).map(([hex, colorData]) => ({
     hex,
     key: colorSystem ? colorData[colorSystem] : hex,
   }));
+
+  if (maxColors && allColors.length > maxColors) {
+    return allColors.slice(0, maxColors);
+  }
+
+  return allColors;
 }

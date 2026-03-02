@@ -535,11 +535,17 @@ const App: React.FC = () => {
   const handleMapToPalette = useCallback(() => {
     if (!confirm('映射到色板将把所有颜色转换为色板中最接近的颜色，确定吗？')) return;
 
-    const fullPalette = createFullPaletteFromMapping(colorSystemMapping, selectedColorSystem);
+    // 根据选择的色板预设确定最大颜色数
+    let maxColors: number | undefined;
+    if (selectedPalettePreset !== 'all' && selectedPalettePreset !== 'custom') {
+      maxColors = parseInt(selectedPalettePreset);
+    }
+
+    const fullPalette = createFullPaletteFromMapping(colorSystemMapping, selectedColorSystem, maxColors);
 
     setGrid(prev => mapColorsToPalette(prev, fullPalette));
     pushUndo(gridRef.current);
-  }, [selectedColorSystem, pushUndo]);
+  }, [selectedPalettePreset, selectedColorSystem, pushUndo]);
 
   const handleShare = useCallback(async () => {
     const hasContent = grid.some(row => row.some(c => c !== '#FFFFFF'));
@@ -575,19 +581,18 @@ const App: React.FC = () => {
 
   const handlePalettePresetChange = useCallback((preset: string) => {
     setSelectedPalettePreset(preset);
-    
+
     if (preset !== 'custom' && preset !== 'all') {
       const maxColors = parseInt(preset);
-      const currentColors = createPaletteFromGrid(grid);
-      
-      if (currentColors.length > maxColors) {
-        if (confirm(`当前使用了 ${currentColors.length} 种颜色，是否合并到 ${maxColors} 种？`)) {
-          setGrid(prev => mapColorsToPalette(prev, currentColors.slice(0, maxColors)));
-          pushUndo(gridRef.current);
-        }
+
+      if (confirm(`当前颜色将被映射到 ${maxColors} 色的色板，确定吗？`)) {
+        // 从色板映射数据中创建指定数量的色板
+        const targetPalette = createFullPaletteFromMapping(colorSystemMapping, selectedColorSystem, maxColors);
+        setGrid(prev => mapColorsToPalette(prev, targetPalette));
+        pushUndo(gridRef.current);
       }
     }
-  }, [grid, pushUndo]);
+  }, [grid, selectedColorSystem, pushUndo]);
 
   const displayStats = useMemo(() => {
     return stats.map(item => ({
