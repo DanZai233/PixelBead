@@ -195,3 +195,13 @@ export function createPaletteFromGrid(grid: string[][], maxColors?: number): Pal
   
   return colors;
 }
+
+export function createFullPaletteFromMapping(
+  mapping: Record<string, Record<ColorSystem, string>>,
+  colorSystem?: ColorSystem
+): PaletteColor[] {
+  return Object.entries(mapping).map(([hex, colorData]) => ({
+    hex,
+    key: colorSystem ? colorData[colorSystem] : hex,
+  }));
+}

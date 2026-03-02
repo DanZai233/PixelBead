@@ -17,6 +17,7 @@ import {
   mergeSimilarColors,
   mapColorsToPalette,
   createPaletteFromGrid,
+  createFullPaletteFromMapping,
   colorSystemOptions,
 } from './utils/colorSystemUtils';
 import colorSystemMapping from './colorSystemMapping.json';
@@ -489,13 +490,22 @@ const App: React.FC = () => {
 
   const handleMergeSimilarColors = useCallback(() => {
     if (!confirm('合并相似颜色将修改当前画布，确定吗？')) return;
-    
+
     const currentColors = createPaletteFromGrid(grid);
     const mergedColors = mergeSimilarColors(currentColors, mergeThreshold);
-    
+
     setGrid(prev => mapColorsToPalette(prev, mergedColors));
     pushUndo(gridRef.current);
   }, [grid, mergeThreshold, pushUndo]);
+
+  const handleMapToPalette = useCallback(() => {
+    if (!confirm('映射到色板将把所有颜色转换为色板中最接近的颜色，确定吗？')) return;
+
+    const fullPalette = createFullPaletteFromMapping(colorSystemMapping, selectedColorSystem);
+
+    setGrid(prev => mapColorsToPalette(prev, fullPalette));
+    pushUndo(gridRef.current);
+  }, [selectedColorSystem, pushUndo]);
 
   const handlePalettePresetChange = useCallback((preset: string) => {
     setSelectedPalettePreset(preset);
@@ -912,6 +922,16 @@ const App: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   合并相似颜色
+                </button>
+
+                <button
+                  onClick={handleMapToPalette}
+                  className="w-full py-2 md:py-2.5 bg-purple-200 text-purple-800 rounded-xl font-black text-xs transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                  </svg>
+                  映射到色板
                 </button>
               </div>
             )}
