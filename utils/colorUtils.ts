@@ -56,7 +56,7 @@ export function colorDistance(hex1: string, hex2: string): number {
   return dh * 2 + ds * 1 + dl * 3;
 }
 
-export function clusterColors(colors: ColorHex[], threshold: number = 30): Map<ColorHex, ColorHex> {
+export function clusterColors(colors: ColorHex[], threshold: number = 0.15): Map<ColorHex, ColorHex> {
   const colorToCluster = new Map<ColorHex, ColorHex>();
   const sortedColors = [...colors].sort((a, b) => {
     const rgbA = hexToRgb(a) || { r: 0, g: 0, b: 0 };
