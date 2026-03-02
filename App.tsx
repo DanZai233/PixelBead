@@ -609,7 +609,7 @@ const App: React.FC = () => {
           <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
             <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><circle cx="12" cy="12" r="10"/></svg>
           </div>
-          <h1 className="font-black text-lg md:text-xl text-slate-800 italic hidden sm:block">PIXEL BEAD STUDIO</h1>
+          <h1 className="font-black text-lg md:text-xl text-slate-800 italic hidden sm:block">拼豆糕手</h1>
         </div>
         
         <div className="flex items-center gap-2 md:gap-4">

@@ -37,7 +37,7 @@ const promoLinks = [
   },
   {
     id: 'github',
-    title: 'PixelBead',
+    title: '拼豆糕手',
     subtitle: '开源项目 · GitHub',
     url: 'https://github.com/DanZai233/PixelBead',
     icon: '',

@@ -127,7 +127,7 @@ const generateOpenRouter = async (
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://pixelbead.studio',
+        'HTTP-Referer': 'https://pindou.danzaii.cn',
       },
       body: JSON.stringify({
         model: imageUrlModel || 'openai/dall-e-3',

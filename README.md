@@ -1,4 +1,4 @@
-# Pixel Bead Studio
+# 拼豆糕手
 
 一个功能强大的拼豆（Perler Beads/Hama Beads）像素画设计工具，支持 AI 生成、图片转换等功能。
 
@@ -77,7 +77,7 @@
 
 ```bash
 # 克隆项目
-git clone <your-repo-url>
+git clone https://github.com/DanZai233/PixelBead.git
 cd PixelBead
 
 # 安装依赖
