@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { 
-  ToolType, DEFAULT_COLORS, AIConfig, PixelStyle, 
+import {
+  ToolType, DEFAULT_COLORS, AIConfig, PixelStyle,
   TOOLS_INFO, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES,
   ColorSystem, PaletteColor, PALETTE_PRESETS
 } from './types';
 import { generatePixelArtImage } from './services/aiService';
+import { saveToUpstash, generateShareUrl, getShareKeyFromUrl, loadFromUpstash } from './services/upstashService';
 import { BeadCanvas } from './components/BeadCanvas';
 import { Bead3DViewer } from './components/Bead3DViewer';
 import { BeadSliceViewer } from './components/BeadSliceViewer';
@@ -47,7 +48,7 @@ const App: React.FC = () => {
   const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
   const [viewType, setViewType] = useState<ViewType>(ViewType.TWO_D);
   const [layers, setLayers] = useState(3);
-  
+
   const [selectedPalettePreset, setSelectedPalettePreset] = useState('all');
   const [mergeThreshold, setMergeThreshold] = useState(0.15);
   const [showColorKeys, setShowColorKeys] = useState(true);
@@ -57,6 +58,10 @@ const App: React.FC = () => {
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
   const [shapeStart, setShapeStart] = useState<{ row: number; col: number } | null>(null);
+
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -142,6 +147,33 @@ const App: React.FC = () => {
     const shapeTools = [ToolType.LINE, ToolType.RECT, ToolType.CIRCLE];
     if (!shapeTools.includes(currentTool)) setShapeStart(null);
   }, [currentTool]);
+
+  // 加载分享的拼豆数据
+  useEffect(() => {
+    const loadSharedData = async () => {
+      const shareKey = getShareKeyFromUrl();
+      if (shareKey) {
+        try {
+          const shareData = await loadFromUpstash(shareKey);
+          if (shareData) {
+            setGridSize(shareData.gridSize);
+            setGrid(shareData.grid);
+            setPixelStyle(shareData.pixelStyle as PixelStyle);
+            setShareModalOpen(true);
+
+            // 清除 URL 中的分享参数
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            alert('已加载分享的拼豆图纸！');
+          }
+        } catch (error) {
+          console.error('加载分享数据失败:', error);
+        }
+      }
+    };
+
+    loadSharedData();
+  }, []);
 
   useEffect(() => {
     const savedConfig = localStorage.getItem('aiConfig');
@@ -507,6 +539,38 @@ const App: React.FC = () => {
     pushUndo(gridRef.current);
   }, [selectedColorSystem, pushUndo]);
 
+  const handleShare = useCallback(async () => {
+    const hasContent = grid.some(row => row.some(c => c !== '#FFFFFF'));
+    if (!hasContent) {
+      alert('画布为空，无法分享');
+      return;
+    }
+
+    setIsSharing(true);
+    try {
+      const key = await saveToUpstash(grid, gridSize, pixelStyle);
+      if (key) {
+        const url = generateShareUrl(key, 'https://pindou.danzaii.cn');
+        setShareUrl(url);
+        setShareModalOpen(true);
+      } else {
+        alert('分享失败，请检查网络连接或稍后重试');
+      }
+    } catch (error) {
+      console.error('分享失败:', error);
+      alert('分享失败，请稍后重试');
+    } finally {
+      setIsSharing(false);
+    }
+  }, [grid, gridSize, pixelStyle]);
+
+  const copyShareUrl = useCallback(() => {
+    if (shareUrl) {
+      navigator.clipboard.writeText(shareUrl);
+      alert('链接已复制到剪贴板！');
+    }
+  }, [shareUrl]);
+
   const handlePalettePresetChange = useCallback((preset: string) => {
     setSelectedPalettePreset(preset);
     
@@ -660,13 +724,24 @@ const App: React.FC = () => {
               <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
               <span className="hidden sm:inline">导出</span>
             </button>
-            <button 
+            <button
               onClick={handleExportImage}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 md:px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 flex items-center gap-2"
               title="导出图片"
             >
               <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               <span className="hidden sm:inline">导出图片</span>
+            </button>
+            <button
+              onClick={handleShare}
+              disabled={isSharing}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 md:px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="分享链接"
+            >
+              <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              <span className="hidden sm:inline">{isSharing ? '生成中...' : '分享'}</span>
             </button>
 
             <div className="flex gap-1 md:gap-2">
@@ -1150,6 +1225,49 @@ const App: React.FC = () => {
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}
       />
+
+      {shareModalOpen && (
+        <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 md:p-6 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 max-w-lg w-full shadow-2xl space-y-6 md:space-y-8">
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 bg-emerald-500 rounded-full mx-auto flex items-center justify-center">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-xl md:text-2xl font-black text-slate-900 italic">分享成功！</h3>
+              <p className="text-xs md:text-sm text-slate-400 font-medium">你的拼豆图纸已保存，链接7天内有效</p>
+            </div>
+
+            {shareUrl && (
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">分享链接</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={shareUrl}
+                    readOnly
+                    className="flex-1 px-3 py-2 md:py-3 text-xs md:text-sm font-mono bg-slate-50 border border-slate-200 rounded-lg outline-none"
+                  />
+                  <button
+                    onClick={copyShareUrl}
+                    className="px-4 py-2 md:py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-black text-xs transition-all active:scale-95"
+                  >
+                    复制
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => setShareModalOpen(false)}
+              className="w-full py-3 md:py-4 bg-slate-100 text-slate-700 rounded-xl md:rounded-2xl font-black text-sm hover:bg-slate-200 transition-all"
+            >
+              关闭
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
