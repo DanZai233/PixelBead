@@ -51,7 +51,7 @@ const App: React.FC = () => {
   const [mergeThreshold, setMergeThreshold] = useState(0.15);
   const [showColorKeys, setShowColorKeys] = useState(true);
   const [selectedColorSystem, setSelectedColorSystem] = useState<ColorSystem>('MARD');
-  const [isPalettePanelOpen, setIsPalettePanelOpen] = useState(false);
+  const [isPalettePanelOpen, setIsPalettePanelOpen] = useState(true);
 
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
