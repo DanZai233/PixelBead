@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { 
-  ToolType, DEFAULT_COLORS, AIConfig, AIProvider, PixelStyle, 
+  ToolType, DEFAULT_COLORS, AIConfig, PixelStyle, 
   TOOLS_INFO, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES 
 } from './types';
 import { generatePixelArtImage } from './services/aiService';
@@ -11,6 +11,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { ColorPicker } from './components/ColorPicker';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { PromoSection } from './components/PromoSection';
+import { generateExportImage } from './utils/colorUtils';
 
 const App: React.FC = () => {
   const [gridSize, setGridSize] = useState(32);
@@ -43,6 +44,7 @@ const App: React.FC = () => {
   const [shapeStart, setShapeStart] = useState<{ row: number; col: number } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
   const undoStackRef = useRef<string[][][]>([]);
   const redoStackRef = useRef<string[][][]>([]);
   const gridRef = useRef(grid);
@@ -403,6 +405,58 @@ const App: React.FC = () => {
     event.target.value = '';
   };
 
+  const onImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const data = JSON.parse(content);
+        
+        if (data.grid && data.gridSize) {
+          if (data.gridSize !== gridSize) {
+            if (!confirm(`导入的画布大小为 ${data.gridSize}x${data.gridSize}，当前为 ${gridSize}x${gridSize}。是否切换尺寸并导入？`)) {
+              return;
+            }
+            setGridSize(data.gridSize);
+          }
+          pushUndo(gridRef.current);
+          setGrid(data.grid);
+          setPanOffset({ x: 0, y: 0 });
+        } else {
+          alert('无效的文件格式');
+        }
+      } catch (error) {
+        alert('导入失败：文件格式不正确');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
+
+  const handleExportImage = useCallback(() => {
+    const hasContent = grid.some(row => row.some(c => c !== '#FFFFFF'));
+    if (!hasContent) {
+      alert('画布为空，无法导出图片');
+      return;
+    }
+    
+    const canvas = generateExportImage({
+      grid,
+      gridSize,
+      pixelStyle,
+      colorThreshold: 30,
+    });
+    
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pixel-bead-${gridSize}.png`;
+    a.click();
+  }, [grid, gridSize, pixelStyle]);
+
   const baseBeadSize = 28;
   const boardDimension = gridSize * (baseBeadSize * (zoom / 100));
 
@@ -519,6 +573,15 @@ const App: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
               </svg>
             </button>
+            <input type="file" accept=".json" className="hidden" ref={importFileRef} onChange={onImportFile} />
+            <button 
+              onClick={() => importFileRef.current?.click()}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2"
+              title="导入项目"
+            >
+              <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              <span className="hidden sm:inline">导入</span>
+            </button>
             <button 
               onClick={() => {
                 const data = JSON.stringify({ grid, gridSize });
@@ -529,10 +592,19 @@ const App: React.FC = () => {
                 a.download = `pixel-bead-${gridSize}.json`;
                 a.click();
               }}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 md:px-6 py-2 rounded-xl font-bold text-xs md:text-sm transition-all shadow-md active:scale-95 flex items-center gap-2"
+              className="bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2"
+              title="导出项目"
             >
               <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
               <span className="hidden sm:inline">导出</span>
+            </button>
+            <button 
+              onClick={handleExportImage}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 md:px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 flex items-center gap-2"
+              title="导出图片"
+            >
+              <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span className="hidden sm:inline">导出图片</span>
             </button>
 
             <div className="flex gap-1 md:gap-2">
