@@ -11,7 +11,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { ColorPicker } from './components/ColorPicker';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { PromoSection } from './components/PromoSection';
-import { generateExportImage, clusterColors } from './utils/colorUtils';
+import { generateExportImage } from './utils/colorUtils';
 
 const App: React.FC = () => {
   const [gridSize, setGridSize] = useState(32);
@@ -38,7 +38,6 @@ const App: React.FC = () => {
   const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
   const [viewType, setViewType] = useState<ViewType>(ViewType.TWO_D);
   const [layers, setLayers] = useState(3);
-  const [colorThreshold, setColorThreshold] = useState(0.15);
 
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
@@ -372,27 +371,6 @@ const App: React.FC = () => {
       .sort((a, b) => b.count - a.count);
   }, [grid]);
 
-  const handleColorMerge = useCallback(() => {
-    const sortedColors = [...stats].sort((a, b) => b.count - a.count);
-    const colorMapping = clusterColors(sortedColors.map(item => item.hex), colorThreshold);
-    
-    setGrid(prev => {
-      const newGrid = prev.map(row => [...row]);
-      for (let row = 0; row < gridSize; row++) {
-        for (let col = 0; col < gridSize; col++) {
-          const color = newGrid[row][col];
-          if (color && color !== '#FFFFFF') {
-            const mergedColor = colorMapping.get(color);
-            if (mergedColor && mergedColor !== color) {
-              newGrid[row][col] = mergedColor;
-            }
-          }
-        }
-      }
-      return newGrid;
-    });
-  }, [gridSize, colorThreshold, stats]);
-
   const handleAiGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!aiPrompt.trim()) {
@@ -469,7 +447,6 @@ const App: React.FC = () => {
       grid,
       gridSize,
       pixelStyle,
-      colorThreshold: 0,
     });
     
     const url = canvas.toDataURL('image/png');
@@ -832,32 +809,6 @@ const App: React.FC = () => {
               网格
             </button>
             <span className="md:hidden text-[9px] text-slate-400 ml-1">双指缩放/拖动</span>
-          </div>
-
-          <div className="absolute bottom-[calc(9rem+env(safe-area-inset-bottom,0px))] md:bottom-20 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-white/95 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-2xl shadow-xl border border-white/50 z-40 max-w-fit">
-            <div className="flex items-center gap-3 md:gap-4">
-              <div className="flex flex-col">
-                <label className="text-[8px] md:text-[9px] font-black uppercase text-slate-400 mb-1">颜色合并阈值</label>
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="0.5" 
-                    step="0.01" 
-                    value={colorThreshold} 
-                    onChange={(e) => setColorThreshold(parseFloat(e.target.value))}
-                    className="w-24 md:w-32 h-2 accent-indigo-600 touch-manipulation"
-                  />
-                  <span className="text-[10px] md:text-xs font-bold text-slate-700 w-10">{(colorThreshold * 100).toFixed(0)}%</span>
-                </div>
-              </div>
-              <button 
-                onClick={handleColorMerge}
-                className="px-3 md:px-4 py-2 bg-indigo-600 text-white rounded-lg text-[10px] md:text-xs font-black hover:bg-indigo-700 transition-all touch-manipulation"
-              >
-                合并颜色
-              </button>
-            </div>
           </div>
 
            <div className="w-full h-full overflow-auto no-scrollbar bg-dots">

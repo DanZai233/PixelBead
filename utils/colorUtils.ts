@@ -56,32 +56,6 @@ export function colorDistance(hex1: string, hex2: string): number {
   return dh * 2 + ds * 1 + dl * 3;
 }
 
-export function clusterColors(colors: ColorHex[], threshold: number = 0.15): Map<ColorHex, ColorHex> {
-  const colorToCluster = new Map<ColorHex, ColorHex>();
-  const processed = new Set<ColorHex>();
-  
-  for (let i = 0; i < colors.length; i++) {
-    const current = colors[i];
-    if (processed.has(current)) continue;
-    
-    processed.add(current);
-    colorToCluster.set(current, current);
-    
-    for (let j = i + 1; j < colors.length; j++) {
-      const candidate = colors[j];
-      if (processed.has(candidate)) continue;
-      
-      const distance = colorDistance(current, candidate);
-      if (distance < threshold) {
-        processed.add(candidate);
-        colorToCluster.set(candidate, current);
-      }
-    }
-  }
-  
-  return colorToCluster;
-}
-
 export const SYMBOLS = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿ⒶⒷⒸⒹⒺⒻⒼⒽⒾⒿⓀⓁⓂⓃⓄⓅⓆⓇⓈⓉⓊⓋⓌⓍⓎⓏⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ';
 
 export function getSymbol(index: number): string {
@@ -107,15 +81,12 @@ export interface ExportImageData {
   grid: ColorHex[][];
   gridSize: number;
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
-  colorThreshold: number;
 }
 
 export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
-  const { grid, gridSize, pixelStyle, colorThreshold } = data;
+  const { grid, gridSize, pixelStyle } = data;
   
   const uniqueColors = getUniqueColors(grid);
-  const colorMapping = colorThreshold > 0 ? clusterColors(uniqueColors, colorThreshold) : new Map<ColorHex, ColorHex>();
-  const clusterColorsList = colorThreshold > 0 ? Array.from(new Set(colorMapping.values())) : uniqueColors;
   
   const cellSize = 30;
   const canvasWidth = gridSize * cellSize;
@@ -133,7 +104,7 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
   ctx.lineWidth = 1;
   
   const colorToSymbolIndex = new Map<ColorHex, number>();
-  clusterColorsList.forEach((color, index) => {
+  uniqueColors.forEach((color, index) => {
     colorToSymbolIndex.set(color, index);
   });
   
@@ -144,8 +115,7 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
       const y = row * cellSize;
       
       if (color && color !== '#FFFFFF') {
-        const clusterColor = colorThreshold > 0 ? (colorMapping.get(color) || color) : color;
-        ctx.fillStyle = clusterColor;
+        ctx.fillStyle = color;
         
         if (pixelStyle === 'CIRCLE') {
           ctx.beginPath();
@@ -161,10 +131,10 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
           ctx.strokeRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
         }
         
-        const symbolIndex = colorToSymbolIndex.get(clusterColor) || 0;
+        const symbolIndex = colorToSymbolIndex.get(color) || 0;
         const symbol = getSymbol(symbolIndex);
         
-        ctx.fillStyle = getContrastColor(clusterColor);
+        ctx.fillStyle = getContrastColor(color);
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -186,7 +156,7 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
   ctx.textAlign = 'left';
   ctx.fillText('颜色图例:', legendPadding, legendStartY);
   
-  clusterColorsList.forEach((color, index) => {
+  uniqueColors.forEach((color, index) => {
     const itemIndex = index;
     const row = Math.floor(itemIndex / itemsPerRow);
     const col = itemIndex % itemsPerRow;
