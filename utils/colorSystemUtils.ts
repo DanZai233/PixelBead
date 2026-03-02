@@ -60,32 +60,7 @@ export function rgbToHsl(r: number, g: number, b: number): { h: number; s: numbe
   return { h: h * 360, s: s * 100, l: l * 100 };
 }
 
-// RGB 转 CIELAB Delta E 2000（对拼豆颜色更准确）
-export function rgbToLab(r: number, g: number, b: number): { l: number; a: number; b: number } {
-  let rr = r / 255;
-  let gg = g / 255;
-  let bb = b / 255;
-
-  rr = rr > 0.04045 ? Math.pow((rr + 0.055) / 1.055, 2.4) : rr / 12.92;
-  gg = gg > 0.04045 ? Math.pow((gg + 0.055) / 1.055, 2.4) : gg / 12.92;
-  bb = bb > 0.04045 ? Math.pow((bb + 0.055) / 1.055, 2.4) : bb / 12.92;
-
-  rr *= 100;
-  gg *= 100;
-  bb *= 100;
-
-  let x = rr * 0.4124 + gg * 0.3576 + bb * 0.1804;
-  let y = rr * 0.2126 + gg * 0.7152 + bb * 0.0722;
-  let z = rr * 0.0193 + gg * 0.1192 + bb * 0.9505;
-
-  return {
-    l: 116.2479 + Math.sqrt(x) - 16.2479,
-    a: 500 - (500 * Math.sqrt(y) - 16.2479) / (z),
-    b: 200 - (200 * Math.sqrt(y) - 16.2479) / (x),
-  };
-}
-
-// RGB 欧几里得距离算法（对拼豆颜色更准确）
+// RGB 欧几里得距离算法
 export function colorDistance(hex1: string, hex2: string): number {
   const rgb1 = hexToRgb(hex1);
   const rgb2 = hexToRgb(hex2);
@@ -96,7 +71,7 @@ export function colorDistance(hex1: string, hex2: string): number {
   const dg = rgb1.g - rgb2.g;
   const db = rgb1.b - rgb2.b;
 
-  return Math.sqrt(dr * dr * 2 + dg * dg * db);
+  return Math.sqrt(dr * dr + dg * dg + db * db);
 }
 
 // 寻找最近的颜色
