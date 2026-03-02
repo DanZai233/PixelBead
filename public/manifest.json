@@ -1,0 +1,24 @@
+{
+  "name": "拼豆糕手",
+  "short_name": "拼豆糕手",
+  "description": "智能拼豆设计工具，支持AI生成、多色板、云端分享",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "2048x2048",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "2048x2048",
+      "type": "image/jpeg",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -608,8 +608,8 @@ const App: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-            <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><circle cx="12" cy="12" r="10"/></svg>
+          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg overflow-hidden">
+            <img src="/logo.jpg" alt="拼豆糕手 Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="font-black text-lg md:text-xl text-slate-800 italic hidden sm:block">拼豆糕手</h1>
         </div>
