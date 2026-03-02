@@ -119,8 +119,8 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
   const { grid, gridSize, pixelStyle, colorThreshold } = data;
   
   const uniqueColors = getUniqueColors(grid);
-  const colorMapping = clusterColors(uniqueColors, colorThreshold);
-  const clusterColorsList = Array.from(new Set(colorMapping.values()));
+  const colorMapping = colorThreshold > 0 ? clusterColors(uniqueColors, colorThreshold) : new Map<ColorHex, ColorHex>();
+  const clusterColorsList = colorThreshold > 0 ? Array.from(new Set(colorMapping.values())) : uniqueColors;
   
   const cellSize = 30;
   const canvasWidth = gridSize * cellSize;
@@ -149,7 +149,7 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
       const y = row * cellSize;
       
       if (color && color !== '#FFFFFF') {
-        const clusterColor = colorMapping.get(color) || color;
+        const clusterColor = colorThreshold > 0 ? (colorMapping.get(color) || color) : color;
         ctx.fillStyle = clusterColor;
         
         if (pixelStyle === 'CIRCLE') {

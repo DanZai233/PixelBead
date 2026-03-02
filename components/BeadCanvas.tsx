@@ -63,7 +63,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       ctx.lineWidth = 1;
     }
 
-    const padding = isTransparent ? 0 : 1;
+    const padding = showGridLines ? (isTransparent ? 0 : 1) : 0;
 
     switch (pixelStyle) {
       case PixelStyle.CIRCLE:
