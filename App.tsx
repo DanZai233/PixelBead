@@ -373,8 +373,8 @@ const App: React.FC = () => {
   }, [grid]);
 
   const handleColorMerge = useCallback(() => {
-    const uniqueColors = stats.map(item => item.hex);
-    const colorMapping = clusterColors(uniqueColors, colorThreshold);
+    const sortedColors = [...stats].sort((a, b) => b.count - a.count);
+    const colorMapping = clusterColors(sortedColors.map(item => item.hex), colorThreshold);
     
     setGrid(prev => {
       const newGrid = prev.map(row => [...row]);

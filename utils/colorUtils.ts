@@ -58,32 +58,27 @@ export function colorDistance(hex1: string, hex2: string): number {
 
 export function clusterColors(colors: ColorHex[], threshold: number = 0.15): Map<ColorHex, ColorHex> {
   const colorToCluster = new Map<ColorHex, ColorHex>();
-  const sortedColors = [...colors].sort((a, b) => {
-    const rgbA = hexToRgb(a) || { r: 0, g: 0, b: 0 };
-    const rgbB = hexToRgb(b) || { r: 0, g: 0, b: 0 };
-    const hslA = rgbToHsl(rgbA.r, rgbA.g, rgbA.b);
-    const hslB = rgbToHsl(rgbB.r, rgbB.g, rgbB.b);
-    return hslA.h - hslB.h;
-  });
-
-  const clusters: { representative: ColorHex; members: ColorHex[] }[] = [];
-
-  for (const color of sortedColors) {
-    let foundCluster = false;
-    for (const cluster of clusters) {
-      if (colorDistance(color, cluster.representative) < threshold) {
-        cluster.members.push(color);
-        colorToCluster.set(color, cluster.representative);
-        foundCluster = true;
-        break;
+  const processed = new Set<ColorHex>();
+  
+  for (let i = 0; i < colors.length; i++) {
+    const current = colors[i];
+    if (processed.has(current)) continue;
+    
+    processed.add(current);
+    colorToCluster.set(current, current);
+    
+    for (let j = i + 1; j < colors.length; j++) {
+      const candidate = colors[j];
+      if (processed.has(candidate)) continue;
+      
+      const distance = colorDistance(current, candidate);
+      if (distance < threshold) {
+        processed.add(candidate);
+        colorToCluster.set(candidate, current);
       }
     }
-    if (!foundCluster) {
-      clusters.push({ representative: color, members: [color] });
-      colorToCluster.set(color, color);
-    }
   }
-
+  
   return colorToCluster;
 }
 
