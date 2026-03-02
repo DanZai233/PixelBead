@@ -1,5 +1,13 @@
 export type ColorHex = string;
 
+export type ColorSystem = 'MARD' | 'COCO' | '漫漫' | '盼盼' | '咪小窝';
+
+export interface PaletteColor {
+  hex: string;
+  key: string;
+  count?: number;
+}
+
 export interface BeadGrid {
   name: string;
   description: string;
@@ -160,3 +168,20 @@ export const VIEW_TYPES = [
   { value: ViewType.THREE_D, name: '3D立体', icon: '🧊' },
   { value: ViewType.SLICES, name: '分层切片', icon: '📚' },
 ];
+
+export const PALETTE_PRESETS = [
+  { id: 'all', name: '全色板', count: 0 },
+  { id: '168', name: '168色', count: 168 },
+  { id: '144', name: '144色', count: 144 },
+  { id: '96', name: '96色', count: 96 },
+  { id: '48', name: '48色', count: 48 },
+  { id: 'custom', name: '自定义', count: 0 },
+];
+
+export interface PaletteConfig {
+  selectedPreset: string;
+  maxColors: number;
+  mergeThreshold: number;
+  showColorKeys: boolean;
+  selectedColorSystem: ColorSystem;
+}

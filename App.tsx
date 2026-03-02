@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { 
   ToolType, DEFAULT_COLORS, AIConfig, PixelStyle, 
-  TOOLS_INFO, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES 
+  TOOLS_INFO, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES,
+  ColorSystem, PaletteColor, PALETTE_PRESETS
 } from './types';
 import { generatePixelArtImage } from './services/aiService';
 import { BeadCanvas } from './components/BeadCanvas';
@@ -12,6 +13,13 @@ import { ColorPicker } from './components/ColorPicker';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { PromoSection } from './components/PromoSection';
 import { generateExportImage } from './utils/colorUtils';
+import {
+  mergeSimilarColors,
+  mapColorsToPalette,
+  createPaletteFromGrid,
+  colorSystemOptions,
+} from './utils/colorSystemUtils';
+import colorSystemMapping from './colorSystemMapping.json';
 
 const App: React.FC = () => {
   const [gridSize, setGridSize] = useState(32);
@@ -38,6 +46,12 @@ const App: React.FC = () => {
   const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
   const [viewType, setViewType] = useState<ViewType>(ViewType.TWO_D);
   const [layers, setLayers] = useState(3);
+  
+  const [selectedPalettePreset, setSelectedPalettePreset] = useState('all');
+  const [mergeThreshold, setMergeThreshold] = useState(0.15);
+  const [showColorKeys, setShowColorKeys] = useState(true);
+  const [selectedColorSystem, setSelectedColorSystem] = useState<ColorSystem>('MARD');
+  const [isPalettePanelOpen, setIsPalettePanelOpen] = useState(false);
 
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
@@ -467,6 +481,45 @@ const App: React.FC = () => {
     return Array.from(colorSet);
   }, [stats]);
 
+  const getColorKey = useCallback((hex: string): string => {
+    if (!showColorKeys || hex === '#FFFFFF') return '';
+    const mapping = colorSystemMapping[hex];
+    return mapping ? mapping[selectedColorSystem] || hex : hex;
+  }, [showColorKeys, selectedColorSystem]);
+
+  const handleMergeSimilarColors = useCallback(() => {
+    if (!confirm('合并相似颜色将修改当前画布，确定吗？')) return;
+    
+    const currentColors = createPaletteFromGrid(grid);
+    const mergedColors = mergeSimilarColors(currentColors, mergeThreshold);
+    
+    setGrid(prev => mapColorsToPalette(prev, mergedColors));
+    pushUndo(gridRef.current);
+  }, [grid, mergeThreshold, pushUndo]);
+
+  const handlePalettePresetChange = useCallback((preset: string) => {
+    setSelectedPalettePreset(preset);
+    
+    if (preset !== 'custom' && preset !== 'all') {
+      const maxColors = parseInt(preset);
+      const currentColors = createPaletteFromGrid(grid);
+      
+      if (currentColors.length > maxColors) {
+        if (confirm(`当前使用了 ${currentColors.length} 种颜色，是否合并到 ${maxColors} 种？`)) {
+          setGrid(prev => mapColorsToPalette(prev, currentColors.slice(0, maxColors)));
+          pushUndo(gridRef.current);
+        }
+      }
+    }
+  }, [grid, pushUndo]);
+
+  const displayStats = useMemo(() => {
+    return stats.map(item => ({
+      ...item,
+      key: getColorKey(item.hex),
+    }));
+  }, [stats, getColorKey]);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F1F5F9] text-slate-900 select-none overflow-hidden h-screen">
       <header className="bg-white border-b border-slate-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between gap-2 z-[100] shadow-sm shrink-0 overflow-x-auto overflow-y-hidden no-scrollbar">
@@ -779,6 +832,89 @@ const App: React.FC = () => {
             </button>
           </div>
 
+          <div className="bg-purple-600 rounded-3xl p-4 md:p-5 text-white shadow-xl space-y-2 md:space-y-3">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-[10px] font-black uppercase tracking-widest text-purple-100">色板设置</h2>
+              <button
+                onClick={() => setIsPalettePanelOpen(!isPalettePanelOpen)}
+                className="text-[8px] text-purple-200 hover:text-white transition-all"
+              >
+                {isPalettePanelOpen ? '▼' : '▶'}
+              </button>
+            </div>
+            
+            {isPalettePanelOpen && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[9px] font-bold text-purple-100 mb-1 block">色板预设</label>
+                  <select
+                    value={selectedPalettePreset}
+                    onChange={(e) => handlePalettePresetChange(e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-[10px] font-bold outline-none focus:border-white/40"
+                  >
+                    {PALETTE_PRESETS.map(preset => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[9px] font-bold text-purple-100 mb-1 block">色号系统</label>
+                  <select
+                    value={selectedColorSystem}
+                    onChange={(e) => setSelectedColorSystem(e.target.value as ColorSystem)}
+                    className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-[10px] font-bold outline-none focus:border-white/40"
+                  >
+                    {colorSystemOptions.map(system => (
+                      <option key={system.key} value={system.key}>
+                        {system.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[9px] font-bold text-purple-100">合并阈值</label>
+                    <span className="text-[9px] text-purple-200">{Math.round(mergeThreshold * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="0.5"
+                    step="0.01"
+                    value={mergeThreshold}
+                    onChange={(e) => setMergeThreshold(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="showColorKeys"
+                    checked={showColorKeys}
+                    onChange={(e) => setShowColorKeys(e.target.checked)}
+                    className="w-3 h-3 rounded border-2 border-white/40"
+                  />
+                  <label htmlFor="showColorKeys" className="text-[9px] font-bold text-purple-100">显示色号</label>
+                </div>
+
+                <button
+                  onClick={handleMergeSimilarColors}
+                  className="w-full py-2 md:py-2.5 bg-white text-purple-600 rounded-xl font-black text-xs transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  合并相似颜色
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="mt-auto pt-4 space-y-0">
             <button 
               onClick={resetGrid}
@@ -895,16 +1031,26 @@ const App: React.FC = () => {
           </h2>
           
           <div className="space-y-2 md:space-y-3">
-            {stats.length > 0 ? stats.map((item) => (
+            {displayStats.length > 0 ? displayStats.map((item) => (
               <div 
                 key={item.hex} 
                 className="flex items-center justify-between bg-slate-50 p-2 md:p-3 rounded-2xl border border-slate-100 group hover:bg-white hover:shadow-lg transition-all cursor-pointer"
                 onClick={() => setSelectedColor(item.hex)}
               >
                 <div className="flex items-center gap-2 md:gap-3">
-                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bead-shadow" style={{ backgroundColor: item.hex }}></div>
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bead-shadow relative" style={{ backgroundColor: item.hex }}>
+                    {showColorKeys && item.key && (
+                      <span className="absolute inset-0 flex items-center justify-center text-[8px] md:text-[9px] font-black text-white" style={{ textShadow: '0 0 2px rgba(0,0,0,0.5)' }}>
+                        {item.key}
+                      </span>
+                    )}
+                  </div>
                   <div>
-                    <div className="text-[8px] md:text-[9px] font-mono text-slate-300 leading-none mb-1 uppercase">{item.hex}</div>
+                    {showColorKeys && item.key ? (
+                      <div className="text-[8px] md:text-[9px] font-mono text-slate-500 leading-none mb-1">{item.key}</div>
+                    ) : (
+                      <div className="text-[8px] md:text-[9px] font-mono text-slate-300 leading-none mb-1 uppercase">{item.hex}</div>
+                    )}
                     <div className="text-xs md:text-sm font-black text-slate-800">{item.count} <span className="text-[9px] md:text-[10px] font-medium opacity-40">颗</span></div>
                   </div>
                 </div>
