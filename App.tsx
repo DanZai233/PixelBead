@@ -63,6 +63,8 @@ const App: React.FC = () => {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
+  const [showRuler, setShowRuler] = useState(true);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const undoStackRef = useRef<string[][][]>([]);
@@ -1041,6 +1043,9 @@ const App: React.FC = () => {
             <button onClick={() => setShowGridLines(!showGridLines)} className={`text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg touch-manipulation ${showGridLines ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
               网格
             </button>
+            <button onClick={() => setShowRuler(!showRuler)} className={`text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg touch-manipulation ${showRuler ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
+              标尺
+            </button>
             <span className="md:hidden text-[9px] text-slate-400 ml-1">双指缩放/拖动</span>
           </div>
 
@@ -1059,6 +1064,7 @@ const App: React.FC = () => {
                       gridSize={gridSize}
                       zoom={zoom}
                       showGridLines={showGridLines}
+                      showRuler={showRuler}
                       pixelStyle={pixelStyle}
                       onPointerDown={handleCanvasAction}
                       onPointerMove={handleCanvasAction}

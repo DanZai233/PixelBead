@@ -6,6 +6,7 @@ interface BeadCanvasProps {
   gridSize: number;
   zoom: number;
   showGridLines: boolean;
+  showRuler: boolean;
   pixelStyle: PixelStyle;
   onPointerDown: (row: number, col: number) => void;
   onPointerMove: (row: number, col: number) => void;
@@ -20,6 +21,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   gridSize,
   zoom: propZoom,
   showGridLines,
+  showRuler,
   pixelStyle,
   onPointerDown,
   onPointerMove,
@@ -43,7 +45,8 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   }, [propZoom]);
 
   const cellSize = baseBeadSize * (propZoom / 100);
-  const canvasSize = gridSize * cellSize;
+  const rulerSize = showRuler ? Math.max(20, cellSize * 0.5) : 0;
+  const canvasSize = gridSize * cellSize + rulerSize;
 
   const drawPixel = useCallback((
     ctx: CanvasRenderingContext2D,
@@ -131,6 +134,58 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    if (showRuler) {
+      const rulerSize = Math.max(20, cellSize * 0.5);
+      const fontSize = Math.max(10, cellSize * 0.3);
+
+      ctx.font = `${fontSize}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, rulerSize, rulerSize);
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('0', rulerSize / 2, rulerSize / 2);
+
+      for (let col = 0; col < gridSize; col++) {
+        if (col % 5 === 0) {
+          const x = rulerSize + col * cellSize + cellSize / 2;
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(rulerSize + col * cellSize, 0, cellSize, rulerSize);
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText(col.toString(), x, rulerSize / 2);
+
+          ctx.strokeStyle = '#e2e8f0';
+          ctx.beginPath();
+          ctx.moveTo(x, rulerSize);
+          ctx.lineTo(x, rulerSize + 3);
+          ctx.stroke();
+        }
+      }
+
+      for (let row = 0; row < gridSize; row++) {
+        if (row % 5 === 0) {
+          const y = rulerSize + row * cellSize + cellSize / 2;
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(0, rulerSize + row * cellSize, rulerSize, cellSize);
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText(row.toString(), rulerSize / 2, y);
+
+          ctx.strokeStyle = '#e2e8f0';
+          ctx.beginPath();
+          ctx.moveTo(rulerSize, y);
+          ctx.lineTo(rulerSize + 3, y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    const offsetX = showRuler ? Math.max(20, cellSize * 0.5) : 0;
+    const offsetY = showRuler ? Math.max(20, cellSize * 0.5) : 0;
+
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+
     for (let row = 0; row < gridSize; row++) {
       for (let col = 0; col < gridSize; col++) {
         const color = grid[row][col];
@@ -141,7 +196,9 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         drawPixel(ctx, x, y, cellSize, color, isTransparent);
       }
     }
-  }, [grid, gridSize, cellSize, showGridLines, pixelStyle, drawPixel]);
+
+    ctx.restore();
+  }, [grid, gridSize, cellSize, showGridLines, showRuler, rulerSize, pixelStyle, drawPixel]);
 
   useEffect(() => {
     drawCanvas();
