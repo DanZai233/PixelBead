@@ -834,19 +834,19 @@ const App: React.FC = () => {
 
           <div className="bg-purple-600 rounded-3xl p-4 md:p-5 text-white shadow-xl space-y-2 md:space-y-3">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-[10px] font-black uppercase tracking-widest text-purple-100">色板设置</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-widest text-white">色板设置</h2>
               <button
                 onClick={() => setIsPalettePanelOpen(!isPalettePanelOpen)}
-                className="text-[8px] text-purple-200 hover:text-white transition-all"
+                className="text-[8px] text-white/80 hover:text-white transition-all"
               >
                 {isPalettePanelOpen ? '▼' : '▶'}
               </button>
             </div>
-            
+
             {isPalettePanelOpen && (
               <div className="space-y-3">
                 <div>
-                  <label className="text-[9px] font-bold text-purple-100 mb-1 block">色板预设</label>
+                  <label className="text-[9px] font-bold text-white mb-1 block">色板预设</label>
                   <select
                     value={selectedPalettePreset}
                     onChange={(e) => handlePalettePresetChange(e.target.value)}
@@ -861,7 +861,7 @@ const App: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-[9px] font-bold text-purple-100 mb-1 block">色号系统</label>
+                  <label className="text-[9px] font-bold text-white mb-1 block">色号系统</label>
                   <select
                     value={selectedColorSystem}
                     onChange={(e) => setSelectedColorSystem(e.target.value as ColorSystem)}
@@ -877,8 +877,8 @@ const App: React.FC = () => {
 
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label className="text-[9px] font-bold text-purple-100">合并阈值</label>
-                    <span className="text-[9px] text-purple-200">{Math.round(mergeThreshold * 100)}%</span>
+                    <label className="text-[9px] font-bold text-white">合并阈值</label>
+                    <span className="text-[9px] text-white/90">{Math.round(mergeThreshold * 100)}%</span>
                   </div>
                   <input
                     type="range"
@@ -899,7 +899,7 @@ const App: React.FC = () => {
                     onChange={(e) => setShowColorKeys(e.target.checked)}
                     className="w-3 h-3 rounded border-2 border-white/40"
                   />
-                  <label htmlFor="showColorKeys" className="text-[9px] font-bold text-purple-100">显示色号</label>
+                  <label htmlFor="showColorKeys" className="text-[9px] font-bold text-white">显示色号</label>
                 </div>
 
                 <button
