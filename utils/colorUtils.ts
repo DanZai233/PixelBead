@@ -81,10 +81,12 @@ export interface ExportImageData {
   grid: ColorHex[][];
   gridSize: number;
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
+  colorSystem?: string;
+  colorSystemMapping?: Record<string, Record<string, string>>;
 }
 
 export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
-  const { grid, gridSize, pixelStyle } = data;
+  const { grid, gridSize, pixelStyle, colorSystem, colorSystemMapping } = data;
   
   const uniqueColors = getUniqueColors(grid);
   
@@ -179,7 +181,15 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
     ctx.fillStyle = '#6B7280';
     ctx.font = '9px monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(color, x + 24, y + 14);
+    
+    let colorLabel = color;
+    if (colorSystem && colorSystemMapping) {
+      const mapping = colorSystemMapping[color.toUpperCase()];
+      if (mapping && mapping[colorSystem]) {
+        colorLabel = mapping[colorSystem];
+      }
+    }
+    ctx.fillText(colorLabel, x + 24, y + 14);
   });
   
   return canvas;

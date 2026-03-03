@@ -491,11 +491,13 @@ const App: React.FC = () => {
       alert('画布为空，无法导出图片');
       return;
     }
-    
+
     const canvas = generateExportImage({
       grid,
       gridSize,
       pixelStyle,
+      colorSystem: selectedColorSystem,
+      colorSystemMapping: colorSystemMapping as Record<string, Record<string, string>>,
     });
     
     const url = canvas.toDataURL('image/png');
