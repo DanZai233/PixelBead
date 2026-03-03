@@ -1,32 +1,45 @@
 import { AIProvider, AIConfig, AI_MODELS, DEFAULT_ENDPOINTS } from '../types';
 
 export const generatePixelArtImage = async (
-  prompt: string,
-  config: AIConfig
-): Promise<string> => {
+   prompt: string,
+   config: AIConfig,
+   referenceImage?: string
+ ): Promise<string> => {
   const models = AI_MODELS[config.provider];
   const model = config.model || models[0]?.id;
   const endpoint = config.endpoint || DEFAULT_ENDPOINTS[config.provider] || '';
 
   switch (config.provider) {
     case AIProvider.OPENAI:
+      if (referenceImage) {
+        throw new Error('OpenAI 的 DALL-E 不支持图片输入，请使用 Gemini 或上传后手动转换');
+      }
       return await generateOpenAI(prompt, config.apiKey, endpoint, model);
-    
+
     case AIProvider.OPENROUTER:
+      if (referenceImage) {
+        throw new Error('OpenRouter 的图像生成不支持图片输入，请使用 Gemini 或上传后手动转换');
+      }
       return await generateOpenRouter(prompt, config.apiKey, endpoint, model, config.imageUrlModel);
-    
+
     case AIProvider.DEEPSEEK:
       throw new Error('DeepSeek 目前不支持图像生成，请使用其他服务商');
-    
+
     case AIProvider.VOLCENGINE:
+      if (referenceImage) {
+        throw new Error('火山引擎不支持图片输入，请使用 Gemini 或上传后手动转换');
+      }
       return await generateVolcEngine(prompt, config.apiKey, endpoint, model);
-    
+
     case AIProvider.GEMINI:
-      return await generateGemini(prompt, config.apiKey, model);
-    
+      return await generateGemini(prompt, config.apiKey, model, referenceImage);
+
     case AIProvider.CUSTOM:
+      if (referenceImage) {
+        throw new Error('自定义服务不支持图片输入，请使用 Gemini 或上传后手动转换');
+      }
       return await generateOpenAI(prompt, config.apiKey, endpoint, model);
-    
+
     default:
       throw new Error(`Unsupported AI provider: ${config.provider}`);
   }
@@ -229,50 +242,65 @@ const parseVolcEngineError = (error: any): string => {
 };
 
 const generateGemini = async (
-  prompt: string,
-  apiKey: string,
-  model: string = 'gemini-2.0-flash-exp'
-): Promise<string> => {
-  try {
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: {
-          parts: [
-            {
-              text: `Generate a high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-            }
-          ]
-        },
-        generationConfig: {
-          responseModalities: ['text', 'image'],
-          imageGenerationConfig: {
-            aspectRatio: "1:1"
-          }
-        }
-      }),
-    });
+   prompt: string,
+   apiKey: string,
+   model: string = 'gemini-2.0-flash-exp',
+   referenceImage?: string
+ ): Promise<string> => {
+   try {
+     const parts: any[] = [];
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to generate image');
-    }
+     if (referenceImage) {
+       parts.push({
+         inlineData: {
+           mimeType: "image/jpeg",
+           data: referenceImage.split(',')[1]
+         }
+       });
+       parts.push({
+         text: `Convert this image to a clean 1:1 square pixel art suitable for Perler beads (hama beads). ${prompt ? 'Additional guidance: ' + prompt : ''}. The style should be clean, vibrant, limited color palette, solid white background, clear and bold outlines, centered subject.`
+       });
+     } else {
+       parts.push({
+         text: `Generate a high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`
+       });
+     }
 
-    const data = await response.json();
-    for (const part of data.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-      }
-    }
+     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+       },
+       body: JSON.stringify({
+         contents: {
+           parts
+         },
+         generationConfig: {
+           responseModalities: ['text', 'image'],
+           imageGenerationConfig: {
+             aspectRatio: "1:1"
+           }
+         }
+       }),
+     });
 
-    throw new Error("No valid image part returned.");
-  } catch (error) {
-    console.error('Gemini image generation error:', error);
-    throw error;
-  }
+     if (!response.ok) {
+       const error = await response.json();
+       throw new Error(error.error?.message || 'Failed to generate image');
+     }
+
+     const data = await response.json();
+     for (const part of data.candidates?.[0]?.content?.parts || []) {
+       if (part.inlineData) {
+         return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+       }
+     }
+
+     throw new Error("No valid image part returned.");
+   } catch (error) {
+     console.error('Gemini image generation error:', error);
+     throw error;
+   }
 };
 
 export const validateApiKey = async (

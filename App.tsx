@@ -36,6 +36,8 @@ const App: React.FC = () => {
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [aiReferenceImage, setAiReferenceImage] = useState<string | null>(null);
+  const [aiGeneratedImage, setAiGeneratedImage] = useState<string | null>(null);
   const [showGridLines, setShowGridLines] = useState(true);
   const [zoom, setZoom] = useState(80);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -67,6 +69,7 @@ const App: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
+  const aiReferenceImageRef = useRef<HTMLInputElement>(null);
   const undoStackRef = useRef<string[][][]>([]);
   const redoStackRef = useRef<string[][][]>([]);
   const gridRef = useRef(grid);
@@ -422,8 +425,8 @@ const App: React.FC = () => {
 
   const handleAiGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aiPrompt.trim()) {
-      alert('请输入描述');
+    if (!aiPrompt.trim() && !aiReferenceImage) {
+      alert('请输入描述或上传参考图片');
       return;
     }
     if (!aiConfig?.apiKey) {
@@ -431,17 +434,40 @@ const App: React.FC = () => {
       setIsSettingsOpen(true);
       return;
     }
-    
+
     setIsGenerating(true);
     try {
-      const base64 = await generatePixelArtImage(aiPrompt, aiConfig);
+      const base64 = await generatePixelArtImage(aiPrompt, aiConfig, aiReferenceImage || undefined);
       processImageToGrid(base64, gridSize, 0, 0);
+      setAiGeneratedImage(base64);
       setAiPrompt('');
+      setAiReferenceImage(null);
     } catch (error) {
       console.error('AI generation error:', error);
       alert(`AI 生成失败：${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleAiReferenceImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setAiReferenceImage(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+    event.target.value = '';
+  };
+
+  const handleSaveGeneratedImage = () => {
+    if (aiGeneratedImage) {
+      const a = document.createElement('a');
+      a.href = aiGeneratedImage;
+      a.download = `pixel-bead-ai-generated-${Date.now()}.png`;
+      a.click();
     }
   };
 
@@ -897,22 +923,63 @@ const App: React.FC = () => {
             <h2 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-2">
               <span className="animate-pulse">✨</span> AI 像素画生成
             </h2>
+            {aiReferenceImage && (
+              <div className="relative">
+                <img
+                  src={aiReferenceImage}
+                  alt="参考图片"
+                  className="w-full h-24 object-contain rounded-lg bg-white/10"
+                />
+                <button
+                  onClick={() => setAiReferenceImage(null)}
+                  className="absolute top-1 right-1 bg-red-500 hover:bg-red-400 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                >
+                  ×
+                </button>
+              </div>
+            )}
             <textarea
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
-              placeholder="例如: 可爱的像素风猫咪"
+              placeholder={aiReferenceImage ? "描述如何修改这张图片（可选）" : "例如: 可爱的像素风猫咪"}
               className="w-full h-16 md:h-20 p-2 md:p-3 rounded-xl bg-white/5 border border-white/10 text-xs placeholder:text-white/20 focus:bg-white/10 outline-none resize-none"
             />
-            <button
-              onClick={handleAiGenerate}
-              disabled={isGenerating || !aiPrompt.trim()}
-              className="w-full py-2 md:py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl font-black text-xs transition-all active:scale-95 flex justify-center items-center"
-            >
-              {isGenerating ? "正在魔法创作..." : "一键生成拼豆图"}
-            </button>
+            <div className="flex gap-2">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                ref={aiReferenceImageRef}
+                onChange={handleAiReferenceImageUpload}
+              />
+              <button
+                onClick={() => aiReferenceImageRef.current?.click()}
+                className="flex-1 py-2 md:py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-black text-xs transition-all active:scale-95 flex items-center justify-center gap-1"
+              >
+                📷 {aiReferenceImage ? '更换图片' : '上传参考图'}
+              </button>
+              <button
+                onClick={handleAiGenerate}
+                disabled={isGenerating || (!aiPrompt.trim() && !aiReferenceImage)}
+                className="flex-1 py-2 md:py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl font-black text-xs transition-all active:scale-95 flex justify-center items-center"
+              >
+                {isGenerating ? "正在魔法创作..." : "一键生成拼豆图"}
+              </button>
+            </div>
+            {aiGeneratedImage && (
+              <button
+                onClick={handleSaveGeneratedImage}
+                className="w-full py-2 md:py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-black text-xs transition-all active:scale-95 flex items-center justify-center gap-1"
+              >
+                💾 保存生成原图
+              </button>
+            )}
             {!aiConfig?.apiKey && (
               <p className="text-[10px] text-yellow-400/80 text-center">请先配置 AI API Key</p>
             )}
+            <p className="text-[9px] text-white/50 text-center">
+              提示: 上传参考图片仅 Gemini 支持，其他服务商请使用文字描述
+            </p>
           </div>
 
           <div className="bg-emerald-600 rounded-3xl p-4 md:p-5 text-white shadow-xl space-y-2 md:space-y-3">
