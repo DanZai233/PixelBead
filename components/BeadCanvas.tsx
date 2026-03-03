@@ -225,14 +225,18 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    const col = Math.floor(x / cellSize);
-    const row = Math.floor(y / cellSize);
+    // 减去标尺偏移量，避免光标错位
+    const offsetX = showRuler ? Math.max(20, cellSize * 0.5) : 0;
+    const offsetY = showRuler ? Math.max(20, cellSize * 0.5) : 0;
+
+    const col = Math.floor((x - offsetX) / cellSize);
+    const row = Math.floor((y - offsetY) / cellSize);
 
     if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) {
       return { row, col };
     }
     return { row: -1, col: -1 };
-  }, [gridSize, cellSize]);
+  }, [gridSize, cellSize, showRuler]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (e.button === 1) {
