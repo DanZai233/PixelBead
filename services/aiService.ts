@@ -26,10 +26,7 @@ export const generatePixelArtImage = async (
       throw new Error('DeepSeek 目前不支持图像生成，请使用其他服务商');
 
     case AIProvider.VOLCENGINE:
-      if (referenceImage) {
-        throw new Error('火山引擎不支持图片输入，请使用 Gemini 或上传后手动转换');
-      }
-      return await generateVolcEngine(prompt, config.apiKey, endpoint, model);
+      return await generateVolcEngine(prompt, config.apiKey, endpoint, model, referenceImage);
 
     case AIProvider.GEMINI:
       return await generateGemini(prompt, config.apiKey, model, referenceImage);
@@ -170,23 +167,32 @@ const generateVolcEngine = async (
   prompt: string,
   apiKey: string,
   baseUrl: string,
-  model: string = 'doubao-seedream-4-5-251128'
+  model: string = 'doubao-seedream-4-5-251128',
+  referenceImage?: string
 ): Promise<string> => {
   try {
+    const requestBody: any = {
+      model,
+      size: '2K',
+      response_format: 'b64_json',
+      n: 1,
+      watermark: false,
+    };
+
+    if (referenceImage) {
+      requestBody.reference_images = [referenceImage];
+      requestBody.prompt = prompt || 'Convert this image to a clean 1:1 square pixel art suitable for Perler beads (hama beads). The style should be clean, vibrant, limited color palette, solid white background, clear and bold outlines, centered subject.';
+    } else {
+      requestBody.prompt = `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`;
+    }
+
     const response = await fetch(`${baseUrl}/images/generations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model,
-        prompt: `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-        size: '2K',
-        response_format: 'b64_json',
-        n: 1,
-        watermark: false,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

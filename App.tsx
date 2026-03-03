@@ -977,9 +977,15 @@ const App: React.FC = () => {
             {!aiConfig?.apiKey && (
               <p className="text-[10px] text-yellow-400/80 text-center">请先配置 AI API Key</p>
             )}
-            <p className="text-[9px] text-white/50 text-center">
-              提示: 上传参考图片仅 Gemini 支持，其他服务商请使用文字描述
-            </p>
+            {aiConfig?.provider === 'VOLCENGINE' && aiReferenceImage ? (
+              <p className="text-[9px] text-emerald-400/80 text-center">
+                ✓ 火山引擎支持图片转像素画
+              </p>
+            ) : (
+              <p className="text-[9px] text-white/50 text-center">
+                提示: 上传参考图片支持火山引擎和 Gemini
+              </p>
+            )}
           </div>
 
           <div className="bg-emerald-600 rounded-3xl p-4 md:p-5 text-white shadow-xl space-y-2 md:space-y-3">
