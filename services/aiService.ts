@@ -11,16 +11,10 @@ export const generatePixelArtImage = async (
 
   switch (config.provider) {
     case AIProvider.OPENAI:
-      if (referenceImage) {
-        throw new Error('OpenAI 的 DALL-E 不支持图片输入，请使用 Gemini 或上传后手动转换');
-      }
-      return await generateOpenAI(prompt, config.apiKey, endpoint, model);
+      return await generateOpenAI(prompt, config.apiKey, endpoint, model, referenceImage);
 
     case AIProvider.OPENROUTER:
-      if (referenceImage) {
-        throw new Error('OpenRouter 的图像生成不支持图片输入，请使用 Gemini 或上传后手动转换');
-      }
-      return await generateOpenRouter(prompt, config.apiKey, endpoint, model, config.imageUrlModel);
+      return await generateOpenRouter(prompt, config.apiKey, endpoint, model, config.imageUrlModel, referenceImage);
 
     case AIProvider.DEEPSEEK:
       throw new Error('DeepSeek 目前不支持图像生成，请使用其他服务商');
@@ -32,10 +26,7 @@ export const generatePixelArtImage = async (
       return await generateGemini(prompt, config.apiKey, model, referenceImage);
 
     case AIProvider.CUSTOM:
-      if (referenceImage) {
-        throw new Error('自定义服务不支持图片输入，请使用 Gemini 或上传后手动转换');
-      }
-      return await generateOpenAI(prompt, config.apiKey, endpoint, model);
+      return await generateOpenAI(prompt, config.apiKey, endpoint, model, referenceImage);
 
     default:
       throw new Error(`Unsupported AI provider: ${config.provider}`);
@@ -46,9 +37,36 @@ const generateOpenAI = async (
   prompt: string,
   apiKey: string,
   baseUrl: string,
-  model: string = 'gpt-4o'
+  model: string = 'gpt-4o',
+  referenceImage?: string
 ): Promise<string> => {
   try {
+    const messages: any[] = [
+      {
+        role: 'user',
+        content: `Generate a high-quality 1:1 square pixel art image of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
+      }
+    ];
+
+    // 如果有参考图片，尝试添加到消息中（部分模型支持）
+    if (referenceImage) {
+      messages[0].content = {
+        role: 'user',
+        content: [
+          {
+            type: 'image_url',
+            image_url: {
+              url: referenceImage.startsWith('data:') ? referenceImage : `data:image/jpeg;base64,${referenceImage.split(',')[1]}`
+            }
+          },
+          {
+            type: 'text',
+            text: `Generate a high-quality 1:1 square pixel art based on this image${prompt ? ': ' + prompt : ''}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`
+          }
+        ]
+      };
+    }
+
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -57,12 +75,7 @@ const generateOpenAI = async (
       },
       body: JSON.stringify({
         model,
-        messages: [
-          {
-            role: 'user',
-            content: `Generate a high-quality 1:1 square pixel art image of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-          }
-        ],
+        messages,
       }),
     });
 
@@ -129,9 +142,36 @@ const generateOpenRouter = async (
   apiKey: string,
   baseUrl: string,
   model: string,
-  imageUrlModel?: string
+  imageUrlModel?: string,
+  referenceImage?: string
 ): Promise<string> => {
   try {
+    const messages: any[] = [
+      {
+        role: 'user',
+        content: `Generate a high-quality 1:1 square pixel art image of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
+      }
+    ];
+
+    // 如果有参考图片，尝试添加到消息中（部分模型支持）
+    if (referenceImage) {
+      messages[0].content = {
+        role: 'user',
+        content: [
+          {
+            type: 'image_url',
+            image_url: {
+              url: referenceImage.startsWith('data:') ? referenceImage : `data:image/jpeg;base64,${referenceImage.split(',')[1]}`
+            }
+          },
+          {
+            type: 'text',
+            text: `Generate a high-quality 1:1 square pixel art based on this image${prompt ? ': ' + prompt : ''}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`
+          }
+        ]
+      };
+    }
+
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -141,12 +181,7 @@ const generateOpenRouter = async (
       },
       body: JSON.stringify({
         model: imageUrlModel || 'openai/dall-e-3',
-        messages: [
-          {
-            role: 'user',
-            content: `Generate a high-quality 1:1 square pixel art image of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-          }
-        ],
+        messages,
       }),
     });
 

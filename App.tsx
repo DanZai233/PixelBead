@@ -977,13 +977,17 @@ const App: React.FC = () => {
             {!aiConfig?.apiKey && (
               <p className="text-[10px] text-yellow-400/80 text-center">请先配置 AI API Key</p>
             )}
-            {aiConfig?.provider === 'VOLCENGINE' && aiReferenceImage ? (
+            {aiConfig?.provider === 'DEEPSEEK' ? (
+              <p className="text-[10px] text-red-400/80 text-center">
+                DeepSeek 暂不支持图像生成
+              </p>
+            ) : aiReferenceImage ? (
               <p className="text-[9px] text-emerald-400/80 text-center">
-                ✓ 火山引擎支持图片转像素画
+                ✓ 已上传参考图片，AI 将尝试根据图片生成
               </p>
             ) : (
               <p className="text-[9px] text-white/50 text-center">
-                提示: 上传参考图片支持火山引擎和 Gemini
+                提示: 上传参考图片可让 AI 更好地理解你的需求
               </p>
             )}
           </div>
