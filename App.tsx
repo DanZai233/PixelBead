@@ -67,6 +67,8 @@ const App: React.FC = () => {
 
   const [showRuler, setShowRuler] = useState(true);
 
+  const [showGuideLines, setShowGuideLines] = useState(false);
+
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportPixelStyle, setExportPixelStyle] = useState<PixelStyle>(PixelStyle.CIRCLE);
   const [exportShowGuideLines, setExportShowGuideLines] = useState(false);
@@ -1142,6 +1144,9 @@ const App: React.FC = () => {
             <button onClick={() => setShowRuler(!showRuler)} className={`text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg touch-manipulation ${showRuler ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
               标尺
             </button>
+            <button onClick={() => setShowGuideLines(!showGuideLines)} className={`text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg touch-manipulation ${showGuideLines ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
+              参考
+            </button>
             <span className="md:hidden text-[9px] text-slate-400 ml-1">双指缩放/拖动</span>
           </div>
 
@@ -1161,6 +1166,7 @@ const App: React.FC = () => {
                       zoom={zoom}
                       showGridLines={showGridLines}
                       showRuler={showRuler}
+                      showGuideLines={showGuideLines}
                       pixelStyle={pixelStyle}
                       onPointerDown={handleCanvasAction}
                       onPointerMove={handleCanvasAction}

@@ -7,6 +7,7 @@ interface BeadCanvasProps {
   zoom: number;
   showGridLines: boolean;
   showRuler: boolean;
+  showGuideLines: boolean;
   pixelStyle: PixelStyle;
   onPointerDown: (row: number, col: number) => void;
   onPointerMove: (row: number, col: number) => void;
@@ -22,6 +23,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   zoom: propZoom,
   showGridLines,
   showRuler,
+  showGuideLines,
   pixelStyle,
   onPointerDown,
   onPointerMove,
@@ -200,8 +202,28 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       }
     }
 
+    if (showGuideLines) {
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.lineWidth = Math.max(1, cellSize * 0.05);
+      ctx.setLineDash([]);
+
+      for (let i = 5; i < gridSize; i += 5) {
+        const pos = i * cellSize;
+        
+        ctx.beginPath();
+        ctx.moveTo(pos, 0);
+        ctx.lineTo(pos, gridSize * cellSize);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(0, pos);
+        ctx.lineTo(gridSize * cellSize, pos);
+        ctx.stroke();
+      }
+    }
+
     ctx.restore();
-  }, [grid, gridSize, cellSize, showGridLines, showRuler, rulerSize, pixelStyle, drawPixel]);
+  }, [grid, gridSize, cellSize, showGridLines, showRuler, rulerSize, pixelStyle, showGuideLines, drawPixel]);
 
   useEffect(() => {
     drawCanvas();
