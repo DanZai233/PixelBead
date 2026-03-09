@@ -34,6 +34,9 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const isDrawingRef = useRef(false);
   const isMiddleButtonDraggingRef = useRef(false);
+  const isPinchingRef = useRef(false);
+  const isTouchPanningRef = useRef(false);
+  const touchStartTimeRef = useRef(0);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
   const lastPinchDistanceRef = useRef(0);
   const lastPinchCenterRef = useRef({ x: 0, y: 0 });
@@ -239,6 +242,22 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   }, [gridSize, cellSize, showRuler]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (isPinchingRef.current) return;
+    
+    if (e.pointerType === 'touch') {
+      touchStartTimeRef.current = Date.now();
+      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      isTouchPanningRef.current = false;
+      isDrawingRef.current = true;
+      canvasRef.current?.setPointerCapture(e.pointerId);
+      
+      const { row, col } = getCellFromEvent(e);
+      if (row >= 0 && col >= 0) {
+        onPointerDown(row, col);
+      }
+      return;
+    }
+    
     if (e.button === 1) {
       e.preventDefault();
       isMiddleButtonDraggingRef.current = true;
@@ -257,6 +276,25 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   }, [getCellFromEvent, onPointerDown]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (isPinchingRef.current) return;
+    
+    if (e.pointerType === 'touch' && isDrawingRef.current) {
+      const deltaX = e.clientX - lastMousePosRef.current.x;
+      const deltaY = e.clientY - lastMousePosRef.current.y;
+      const distance = Math.hypot(deltaX, deltaY);
+      const timeDiff = Date.now() - touchStartTimeRef.current;
+      
+      if (timeDiff > 200 || distance > 10) {
+        if (!isTouchPanningRef.current) {
+          isTouchPanningRef.current = true;
+        }
+        e.preventDefault();
+        onMiddleButtonDrag(deltaX, deltaY);
+        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+        return;
+      }
+    }
+    
     if (isMiddleButtonDraggingRef.current) {
       e.preventDefault();
       const deltaX = e.clientX - lastMousePosRef.current.x;
@@ -266,7 +304,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       return;
     }
 
-    if (isDrawingRef.current) {
+    if (isDrawingRef.current && !isTouchPanningRef.current) {
       e.preventDefault();
       const { row, col } = getCellFromEvent(e);
       if (row >= 0 && col >= 0) {
@@ -276,6 +314,10 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   }, [getCellFromEvent, onPointerMove, onMiddleButtonDrag]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType === 'touch') {
+      isTouchPanningRef.current = false;
+    }
+    
     if (e.button === 1) {
       isMiddleButtonDraggingRef.current = false;
       return;
@@ -303,9 +345,14 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
       if (e.touches.length === 2) {
+        isPinchingRef.current = true;
+        isDrawingRef.current = false;
+        isMiddleButtonDraggingRef.current = false;
         lastZoomRef.current = propZoom;
         lastPinchDistanceRef.current = getTouchDistance(e.touches[0], e.touches[1]);
         lastPinchCenterRef.current = getTouchCenter(e.touches[0], e.touches[1]);
+      } else if (e.touches.length === 1) {
+        isPinchingRef.current = false;
       }
     },
     [propZoom]
@@ -331,6 +378,15 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     [onZoomChange, onTouchPan]
   );
 
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 0) {
+      isPinchingRef.current = false;
+      isDrawingRef.current = false;
+      isMiddleButtonDraggingRef.current = false;
+      isTouchPanningRef.current = false;
+    }
+  }, []);
+
   return (
     <div ref={containerRef} className="relative">
       <canvas
@@ -344,6 +400,8 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         onWheel={handleWheel}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
         className="cursor-crosshair touch-none"
         style={{
           width: `${canvasSize}px`,

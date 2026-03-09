@@ -92,7 +92,7 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
   
   const cellSize = 30;
   const canvasWidth = gridSize * cellSize;
-  const canvasHeight = gridSize * cellSize + 150;
+  const canvasHeight = gridSize * cellSize + 80;
   
   const canvas = document.createElement('canvas');
   canvas.width = canvasWidth;
@@ -108,6 +108,11 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
   const colorToSymbolIndex = new Map<ColorHex, number>();
   uniqueColors.forEach((color, index) => {
     colorToSymbolIndex.set(color, index);
+  });
+  
+  const allColorsAreHex = !colorSystem || !colorSystemMapping || uniqueColors.every(color => {
+    const mapping = colorSystemMapping[color.toUpperCase()];
+    return !mapping || !mapping[colorSystem] || mapping[colorSystem].startsWith('#');
   });
   
   for (let row = 0; row < gridSize; row++) {
@@ -133,14 +138,26 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
           ctx.strokeRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
         }
         
-        const symbolIndex = colorToSymbolIndex.get(color) || 0;
-        const symbol = getSymbol(symbolIndex);
+        let label: string;
+        if (allColorsAreHex) {
+          const symbolIndex = colorToSymbolIndex.get(color) || 0;
+          label = getSymbol(symbolIndex);
+        } else {
+          let colorLabel = color;
+          if (colorSystem && colorSystemMapping) {
+            const mapping = colorSystemMapping[color.toUpperCase()];
+            if (mapping && mapping[colorSystem]) {
+              colorLabel = mapping[colorSystem];
+            }
+          }
+          label = colorLabel;
+        }
         
         ctx.fillStyle = getContrastColor(color);
-        ctx.font = 'bold 14px Arial';
+        ctx.font = 'bold 10px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(symbol, x + cellSize / 2, y + cellSize / 2);
+        ctx.fillText(label, x + cellSize / 2, y + cellSize / 2);
       } else {
         ctx.strokeStyle = '#F3F4F6';
         ctx.strokeRect(x, y, cellSize, cellSize);
@@ -148,49 +165,47 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
     }
   }
   
-  const legendStartY = gridSize * cellSize + 20;
-  const legendPadding = 10;
-  const legendItemWidth = 60;
-  const itemsPerRow = Math.floor((canvasWidth - legendPadding * 2) / legendItemWidth);
+  const legendY = gridSize * cellSize + 10;
+  const legendHeight = 50;
+  const barWidth = canvasWidth - 20;
+  const barX = 10;
   
-  ctx.fillStyle = '#1F2937';
-  ctx.font = 'bold 12px Arial';
-  ctx.textAlign = 'left';
-  ctx.fillText('颜色图例:', legendPadding, legendStartY);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(barX, legendY, barWidth, legendHeight);
   
-  uniqueColors.forEach((color, index) => {
-    const itemIndex = index;
-    const row = Math.floor(itemIndex / itemsPerRow);
-    const col = itemIndex % itemsPerRow;
+  if (uniqueColors.length > 0) {
+    const segmentWidth = barWidth / uniqueColors.length;
+    const colorCountMap = new Map<ColorHex, number>();
     
-    const x = legendPadding + col * legendItemWidth;
-    const y = legendStartY + 20 + row * 30;
+    grid.forEach(row => {
+      row.forEach(color => {
+        if (color && color !== '#FFFFFF') {
+          colorCountMap.set(color, (colorCountMap.get(color) || 0) + 1);
+        }
+      });
+    });
     
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, 20, 20);
-    ctx.strokeStyle = '#E5E7EB';
-    ctx.strokeRect(x, y, 20, 20);
-    
-    const symbol = getSymbol(index);
-    ctx.fillStyle = getContrastColor(color);
-    ctx.font = 'bold 10px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(symbol, x + 10, y + 10);
-    
-    ctx.fillStyle = '#6B7280';
-    ctx.font = '9px monospace';
-    ctx.textAlign = 'left';
-    
-    let colorLabel = color;
-    if (colorSystem && colorSystemMapping) {
-      const mapping = colorSystemMapping[color.toUpperCase()];
-      if (mapping && mapping[colorSystem]) {
-        colorLabel = mapping[colorSystem];
+    uniqueColors.forEach((color, index) => {
+      const x = barX + index * segmentWidth;
+      const y = legendY;
+      const count = colorCountMap.get(color) || 0;
+      
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, segmentWidth, legendHeight);
+      
+      ctx.strokeStyle = '#E5E7EB';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(x, y, segmentWidth, legendHeight);
+      
+      if (segmentWidth > 25) {
+        ctx.fillStyle = getContrastColor(color);
+        ctx.font = 'bold 9px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(count.toString(), x + segmentWidth / 2, y + 8);
       }
-    }
-    ctx.fillText(colorLabel, x + 24, y + 14);
-  });
+    });
+  }
   
   return canvas;
 }

@@ -805,7 +805,7 @@ const App: React.FC = () => {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className={`fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-white border-r border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 space-y-4 md:space-y-6 flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out ${isMobileLeftOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
+        <aside className={`fixed inset-y-0 left-0 z-[60] w-80 max-w-[85vw] bg-white border-r border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 space-y-4 md:space-y-6 flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out ${isMobileLeftOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
           <div className="flex justify-between items-center mb-2 lg:hidden">
             <h2 className="text-sm font-black text-slate-900">工具栏</h2>
             <button onClick={() => setIsMobileLeftOpen(false)} className="p-2 text-slate-400 hover:text-slate-600">
@@ -1109,8 +1109,8 @@ const App: React.FC = () => {
           </div>
         </aside>
 
-        <main className="flex-1 bg-[#EBEDF0] relative overflow-hidden">
-          <div className="absolute top-2 left-2 right-2 md:top-6 md:left-1/2 md:right-auto md:-translate-x-1/2 flex items-center justify-center gap-2 md:gap-4 bg-white/95 backdrop-blur-sm px-3 md:px-6 py-2 rounded-2xl md:rounded-full shadow-xl border border-white/50 z-50 md:max-w-fit">
+         <main className="flex-1 bg-[#EBEDF0] relative overflow-hidden">
+           <div className="absolute top-2 left-2 right-2 md:top-6 md:left-1/2 md:right-auto md:-translate-x-1/2 flex items-center justify-center gap-2 md:gap-4 bg-white/95 backdrop-blur-sm px-3 md:px-6 py-2 rounded-2xl md:rounded-full shadow-xl border border-white/50 z-[55] md:z-50 md:max-w-fit">
             <button onClick={() => setZoom(z => Math.max(10, z - 5))} className="p-1.5 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-lg min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation">－</button>
             <input type="range" min="10" max="300" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} className="w-16 md:w-40 h-3 accent-indigo-600 touch-manipulation flex-1 md:flex-initial" />
             <button onClick={() => setZoom(z => Math.min(400, z + 5))} className="p-1.5 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-lg min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation">＋</button>
@@ -1187,7 +1187,7 @@ const App: React.FC = () => {
             ) : null}
           </div>
 
-          <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-50 max-w-fit md:max-w-none">
+           <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-[45] md:z-50 max-w-fit md:max-w-none">
             <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridSize}x{gridSize}</div>
             <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridSize * gridSize}</div>
             <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
@@ -1203,7 +1203,7 @@ const App: React.FC = () => {
           </button>
         </main>
 
-        <aside className={`fixed inset-y-0 right-0 z-50 w-80 max-w-[85vw] bg-white border-l border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 shrink-0 transform transition-transform duration-300 ease-in-out ${isMobileRightOpen ? 'translate-x-0' : 'translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
+         <aside className={`fixed inset-y-0 right-0 z-[60] w-80 max-w-[85vw] bg-white border-l border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 shrink-0 transform transition-transform duration-300 ease-in-out ${isMobileRightOpen ? 'translate-x-0' : 'translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
           <div className="flex justify-between items-center mb-2 lg:hidden">
             <h2 className="text-sm font-black text-slate-900">颜色统计</h2>
             <button onClick={() => setIsMobileRightOpen(false)} className="p-2 text-slate-400 hover:text-slate-600">
@@ -1285,14 +1285,14 @@ const App: React.FC = () => {
 
       {isMobileLeftOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-[50] lg:hidden"
           onClick={() => setIsMobileLeftOpen(false)}
         />
       )}
 
       {isMobileRightOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-[50] lg:hidden"
           onClick={() => setIsMobileRightOpen(false)}
         />
       )}
