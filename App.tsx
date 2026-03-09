@@ -69,6 +69,7 @@ const App: React.FC = () => {
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportPixelStyle, setExportPixelStyle] = useState<PixelStyle>(PixelStyle.CIRCLE);
+  const [exportShowGuideLines, setExportShowGuideLines] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -532,6 +533,7 @@ const App: React.FC = () => {
       pixelStyle: exportPixelStyle,
       colorSystem: selectedColorSystem,
       colorSystemMapping: colorSystemMapping as Record<string, Record<string, string>>,
+      showGuideLines: exportShowGuideLines,
     });
     
     const url = canvas.toDataURL('image/png');
@@ -541,7 +543,7 @@ const App: React.FC = () => {
     a.click();
     
     setExportModalOpen(false);
-  }, [grid, gridSize, exportPixelStyle, selectedColorSystem]);
+  }, [grid, gridSize, exportPixelStyle, exportShowGuideLines, selectedColorSystem]);
 
   const baseBeadSize = 28;
   const boardDimension = gridSize * (baseBeadSize * (zoom / 100));
@@ -1397,6 +1399,19 @@ const App: React.FC = () => {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="exportGuideLines"
+                checked={exportShowGuideLines}
+                onChange={(e) => setExportShowGuideLines(e.target.checked)}
+                className="w-5 h-5 rounded border-2 border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="exportGuideLines" className="text-sm font-black text-slate-700 cursor-pointer">
+                显示参考线（5x5分区）
+              </label>
             </div>
 
             <div className="flex gap-3">

@@ -83,10 +83,11 @@ export interface ExportImageData {
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
   colorSystem?: string;
   colorSystemMapping?: Record<string, Record<string, string>>;
+  showGuideLines?: boolean;
 }
 
 export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
-  const { grid, gridSize, pixelStyle, colorSystem, colorSystemMapping } = data;
+  const { grid, gridSize, pixelStyle, colorSystem, colorSystemMapping, showGuideLines } = data;
   
   const uniqueColors = getUniqueColors(grid);
   
@@ -162,6 +163,25 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
         ctx.strokeStyle = '#F3F4F6';
         ctx.strokeRect(x, y, cellSize, cellSize);
       }
+    }
+  }
+  
+  if (showGuideLines) {
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+    
+    for (let i = 5; i < gridSize; i += 5) {
+      const pos = i * cellSize;
+      ctx.beginPath();
+      ctx.moveTo(pos, 0);
+      ctx.lineTo(pos, gridSize * cellSize);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(0, pos);
+      ctx.lineTo(gridSize * cellSize, pos);
+      ctx.stroke();
     }
   }
   
