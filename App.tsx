@@ -74,6 +74,7 @@ const App: React.FC = () => {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportPixelStyle, setExportPixelStyle] = useState<PixelStyle>(PixelStyle.CIRCLE);
   const [exportShowGuideLines, setExportShowGuideLines] = useState(false);
+  const [exportMirror, setExportMirror] = useState(false);
 
   const [materialGalleryOpen, setMaterialGalleryOpen] = useState(false);
   const [shareToGallery, setShareToGallery] = useState(false);
@@ -564,16 +565,17 @@ const App: React.FC = () => {
       colorSystem: selectedColorSystem,
       colorSystemMapping: colorSystemMapping as Record<string, Record<string, string>>,
       showGuideLines: exportShowGuideLines,
+      mirror: exportMirror,
     });
-    
+
     const url = canvas.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pixel-bead-${gridSize}.png`;
+    a.download = exportMirror ? `pixel-bead-${gridSize}-mirrored.png` : `pixel-bead-${gridSize}.png`;
     a.click();
-    
+
     setExportModalOpen(false);
-  }, [grid, gridSize, exportPixelStyle, exportShowGuideLines, selectedColorSystem]);
+  }, [grid, gridSize, exportPixelStyle, exportShowGuideLines, exportMirror, selectedColorSystem]);
 
   const baseBeadSize = 28;
   const boardDimension = gridSize * (baseBeadSize * (zoom / 100));
@@ -1639,6 +1641,19 @@ const App: React.FC = () => {
               />
               <label htmlFor="exportGuideLines" className="text-sm font-black text-slate-700 cursor-pointer">
                 显示参考线（5x5分区）
+              </label>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="exportMirror"
+                checked={exportMirror}
+                onChange={(e) => setExportMirror(e.target.checked)}
+                className="w-5 h-5 rounded border-2 border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="exportMirror" className="text-sm font-black text-slate-700 cursor-pointer">
+                水平镜像
               </label>
             </div>
 

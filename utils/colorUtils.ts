@@ -84,12 +84,14 @@ export interface ExportImageData {
   colorSystem?: string;
   colorSystemMapping?: Record<string, Record<string, string>>;
   showGuideLines?: boolean;
+  mirror?: boolean;
 }
 
 export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
-  const { grid, gridSize, pixelStyle, colorSystem, colorSystemMapping, showGuideLines } = data;
-  
-  const uniqueColors = getUniqueColors(grid);
+  const { grid, gridSize, pixelStyle, colorSystem, colorSystemMapping, showGuideLines, mirror } = data;
+
+  const mirroredGrid = mirror ? grid.map(row => [...row].reverse()) : grid;
+  const uniqueColors = getUniqueColors(mirroredGrid);
   
   const cellSize = 30;
   const canvasWidth = gridSize * cellSize;
@@ -118,7 +120,7 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
   
   for (let row = 0; row < gridSize; row++) {
     for (let col = 0; col < gridSize; col++) {
-      const color = grid[row][col];
+      const color = mirroredGrid[row][col];
       const x = col * cellSize;
       const y = row * cellSize;
       
