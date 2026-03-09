@@ -274,7 +274,7 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
         </div>
 
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          <div className="w-full md:w-72 lg:w-80 bg-slate-50 p-4 flex flex-col gap-4 overflow-y-auto shrink-0 border-r border-slate-200">
+          <div className="hidden md:block md:w-72 lg:w-80 bg-slate-50 p-4 flex flex-col gap-4 overflow-y-auto shrink-0 border-r border-slate-200">
             <div>
               <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2 block">搜索</label>
               <div className="relative">
@@ -331,7 +331,41 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
             </div>
           </div>
 
-          <div className="flex-1 p-4 md:p-6 overflow-y-auto">
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="md:hidden p-4 bg-white border-b border-slate-200 shrink-0">
+              <div className="relative mb-3">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  placeholder="搜索素材..."
+                  className="w-full px-4 py-3 bg-slate-100 border-0 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 transition-all pl-10"
+                />
+                <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              {allTags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedTag('')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${!selectedTag ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+                  >
+                    全部
+                  </button>
+                  {allTags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => handleTagFilter(tag)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${selectedTag === tag ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex-1 p-4 md:p-6 overflow-y-auto">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div>
@@ -377,7 +411,8 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
                   </div>
                 ))}
               </div>
-            )}
+             )}
+          </div>
           </div>
         </div>
 
