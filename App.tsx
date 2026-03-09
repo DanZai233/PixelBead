@@ -5,7 +5,7 @@ import {
   ColorSystem, PaletteColor, PALETTE_PRESETS
 } from './types';
 import { generatePixelArtImage } from './services/aiService';
-import { saveToUpstash, generateShareUrl, getShareKeyFromUrl, loadFromUpstash } from './services/upstashService';
+import { saveToUpstash, saveMaterialToUpstash, generateShareUrl, getShareKeyFromUrl, loadFromUpstash } from './services/upstashService';
 import { BeadCanvas } from './components/BeadCanvas';
 import { Bead3DViewer } from './components/Bead3DViewer';
 import { BeadSliceViewer } from './components/BeadSliceViewer';
@@ -13,6 +13,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { ColorPicker } from './components/ColorPicker';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { PromoSection } from './components/PromoSection';
+import { MaterialGallery } from './components/MaterialGallery';
 import { generateExportImage } from './utils/colorUtils';
 import {
   mergeSimilarColors,
@@ -72,6 +73,14 @@ const App: React.FC = () => {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportPixelStyle, setExportPixelStyle] = useState<PixelStyle>(PixelStyle.CIRCLE);
   const [exportShowGuideLines, setExportShowGuideLines] = useState(false);
+
+  const [materialGalleryOpen, setMaterialGalleryOpen] = useState(false);
+  const [shareToGallery, setShareToGallery] = useState(false);
+  const [materialTitle, setMaterialTitle] = useState('');
+  const [materialDescription, setMaterialDescription] = useState('');
+  const [materialAuthor, setMaterialAuthor] = useState('');
+  const [materialTags, setMaterialTags] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -218,6 +227,22 @@ const App: React.FC = () => {
     redoStackRef.current = [];
     setHistoryVersion(v => v + 1);
   }, []);
+
+  const handleApplyMaterial = useCallback(async (material: any) => {
+    if (material.gridSize !== gridSize) {
+      if (!confirm(`素材尺寸为 ${material.gridSize}x${material.gridSize}，当前为 ${gridSize}x${gridSize}。是否切换尺寸并应用？`)) {
+        return;
+      }
+      setGridSize(material.gridSize);
+    }
+
+    pushUndo(gridRef.current);
+    setGrid(material.grid);
+    setPanOffset({ x: 0, y: 0 });
+    if (material.gridSize >= 80) setZoom(35);
+    else if (material.gridSize >= 48) setZoom(50);
+    else setZoom(80);
+  }, [gridSize, pushUndo]);
 
   const undo = useCallback(() => {
     if (undoStackRef.current.length === 0) return;
@@ -596,23 +621,68 @@ const App: React.FC = () => {
       return;
     }
 
-    setIsSharing(true);
-    try {
-      const key = await saveToUpstash(grid, gridSize, pixelStyle);
-      if (key) {
-        const url = generateShareUrl(key, 'https://pindou.danzaii.cn');
-        setShareUrl(url);
-        setShareModalOpen(true);
-      } else {
-        alert('分享失败，请检查网络连接或稍后重试');
+    if (shareToGallery) {
+      if (!materialTitle.trim()) {
+        alert('请输入素材名称');
+        return;
       }
-    } catch (error) {
-      console.error('分享失败:', error);
-      alert('分享失败，请稍后重试');
-    } finally {
-      setIsSharing(false);
+      if (!materialAuthor.trim()) {
+        alert('请输入作者名称');
+        return;
+      }
+
+      const tags = materialTags
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+
+      setIsPublishing(true);
+      try {
+        const key = await saveMaterialToUpstash(
+          grid,
+          gridSize,
+          pixelStyle,
+          materialTitle,
+          materialDescription,
+          materialAuthor,
+          tags
+        );
+        if (key) {
+          alert('素材已成功发布到广场！');
+          setShareModalOpen(false);
+          setMaterialTitle('');
+          setMaterialDescription('');
+          setMaterialAuthor('');
+          setMaterialTags('');
+          setShareToGallery(false);
+        } else {
+          alert('发布失败，请检查网络连接或稍后重试');
+        }
+      } catch (error) {
+        console.error('发布失败:', error);
+        alert('发布失败，请检查网络连接或稍后重试');
+      } finally {
+        setIsPublishing(false);
+      }
+    } else {
+      setIsSharing(true);
+      try {
+        const key = await saveToUpstash(grid, gridSize, pixelStyle);
+        if (key) {
+          const url = generateShareUrl(key, 'https://pindou.danzaii.cn');
+          setShareUrl(url);
+          setShareModalOpen(true);
+        } else {
+          alert('分享失败，请检查网络连接或稍后重试');
+        }
+      } catch (error) {
+        console.error('分享失败:', error);
+        alert('分享失败，请检查网络连接或稍后重试');
+      } finally {
+        setIsSharing(false);
+      }
     }
-  }, [grid, gridSize, pixelStyle]);
+  }, [grid, gridSize, pixelStyle, shareToGallery, materialTitle, materialDescription, materialAuthor, materialTags]);
 
   const copyShareUrl = useCallback(() => {
     if (shareUrl) {
@@ -791,6 +861,16 @@ const App: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
               <span className="hidden sm:inline">{isSharing ? '生成中...' : '分享'}</span>
+            </button>
+            <button
+              onClick={() => setMaterialGalleryOpen(true)}
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-3 md:px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 flex items-center gap-2"
+              title="素材广场"
+            >
+              <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <span className="hidden sm:inline">广场</span>
             </button>
 
             <div className="flex gap-1 md:gap-2">
@@ -1336,42 +1416,168 @@ const App: React.FC = () => {
 
       {shareModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 md:p-6 backdrop-blur-sm">
-          <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 max-w-lg w-full shadow-2xl space-y-6 md:space-y-8">
-            <div className="text-center space-y-2">
-              <div className="w-16 h-16 bg-emerald-500 rounded-full mx-auto flex items-center justify-center">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h3 className="text-xl md:text-2xl font-black text-slate-900 italic">分享成功！</h3>
-              <p className="text-xs md:text-sm text-slate-400 font-medium">你的拼豆图纸已保存，链接7天内有效</p>
-            </div>
-
-            {shareUrl && (
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">分享链接</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={shareUrl}
-                    readOnly
-                    className="flex-1 px-3 py-2 md:py-3 text-xs md:text-sm font-mono bg-slate-50 border border-slate-200 rounded-lg outline-none"
-                  />
-                  <button
-                    onClick={copyShareUrl}
-                    className="px-4 py-2 md:py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-black text-xs transition-all active:scale-95"
-                  >
-                    复制
-                  </button>
+          <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl space-y-6 md:space-y-8">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 space-y-2">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center text-white">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-xl md:text-2xl font-black text-slate-900 italic">分享作品</h3>
+                  <p className="text-xs md:text-sm text-slate-400 font-medium">选择分享方式</p>
                 </div>
               </div>
-            )}
+              <button
+                onClick={() => setShareModalOpen(false)}
+                className="p-2 md:p-3 hover:bg-slate-100 rounded-xl transition-all shrink-0"
+              >
+                <svg className="w-6 h-6 md:w-7 md:h-7 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-slate-50 p-4 md:p-6 rounded-2xl space-y-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    id="shareLink"
+                    name="shareType"
+                    checked={!shareToGallery}
+                    onChange={() => {
+                      setShareToGallery(false);
+                    }}
+                    className="w-5 h-5 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <label htmlFor="shareLink" className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-bold text-base md:text-lg text-slate-900">生成分享链接</div>
+                        <div className="text-xs md:text-sm text-slate-500 mt-1">生成7天有效的分享链接</div>
+                      </div>
+                      <svg className="w-8 h-8 md:w-10 md:h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 005.656 5.656l1.414 1.414a1 1 0 001.414 0l4-4A1 1 0 0012 9.586l-1.414-1.414a1 1 0 00-.586.414l-4 4a4 4 0 005.656 5.656l4-4a1 1 0 001.414 0l1.414 1.414a1 1 0 001.414 0l4-4a1 1 0 001.414 0zM8 14a2 2 0 100-4 0 2 2 0 000 4zM20 12a2 2 0 100-4 0 2 2 0 000 4zM8 10a2 2 0 100-4 0 2 2 0 000 4zM20 8a2 2 0 100-4 0 2 2 0 000 4z" />
+                      </svg>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      id="shareGallery"
+                      name="shareType"
+                      checked={shareToGallery}
+                      onChange={() => {
+                        setShareToGallery(true);
+                      }}
+                      className="w-5 h-5 text-purple-600 focus:ring-purple-500"
+                    />
+                    <label htmlFor="shareGallery" className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="font-bold text-base md:text-lg text-slate-900">发布到素材广场</div>
+                          <div className="text-xs md:text-sm text-slate-500 mt-1">公开分享给所有用户，永久保存</div>
+                        </div>
+                        <svg className="w-8 h-8 md:w-10 md:h-10 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {shareToGallery && (
+                <div className="space-y-4 bg-purple-50 p-4 md:p-6 rounded-2xl">
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-purple-400 tracking-widest mb-2 block">素材名称 <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      value={materialTitle}
+                      onChange={(e) => setMaterialTitle(e.target.value)}
+                      placeholder="给你的作品起个名字"
+                      maxLength={50}
+                      className="w-full px-4 py-3 bg-white border border-purple-200 rounded-xl text-sm font-medium outline-none focus:border-purple-500 transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-purple-400 tracking-widest mb-2 block">作者名称 <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      value={materialAuthor}
+                      onChange={(e) => setMaterialAuthor(e.target.value)}
+                      placeholder="创作者名称"
+                      maxLength={30}
+                      className="w-full px-4 py-3 bg-white border border-purple-200 rounded-xl text-sm font-medium outline-none focus:border-purple-500 transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-purple-400 tracking-widest mb-2 block">描述</label>
+                    <textarea
+                      value={materialDescription}
+                      onChange={(e) => setMaterialDescription(e.target.value)}
+                      placeholder="描述你的作品..."
+                      maxLength={200}
+                      rows={3}
+                      className="w-full px-4 py-3 bg-white border border-purple-200 rounded-xl text-sm font-medium outline-none focus:border-purple-500 transition-all resize-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-purple-400 tracking-widest mb-2 block">标签</label>
+                    <input
+                      type="text"
+                      value={materialTags}
+                      onChange={(e) => setMaterialTags(e.target.value)}
+                      placeholder="用逗号分隔，如：动物, 可爱"
+                      maxLength={100}
+                      className="w-full px-4 py-3 bg-white border border-purple-200 rounded-xl text-sm font-medium outline-none focus:border-purple-500 transition-all"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {shareUrl && !shareToGallery && (
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">分享链接</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={shareUrl}
+                      readOnly
+                      className="flex-1 px-3 py-2 md:py-3 text-xs md:text-sm font-mono bg-slate-50 border border-slate-200 rounded-lg outline-none"
+                    />
+                    <button
+                      onClick={copyShareUrl}
+                      className="px-4 py-2 md:py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-black text-xs transition-all active:scale-95"
+                    >
+                      复制
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <button
-              onClick={() => setShareModalOpen(false)}
-              className="w-full py-3 md:py-4 bg-slate-100 text-slate-700 rounded-xl md:rounded-2xl font-black text-sm hover:bg-slate-200 transition-all"
+              onClick={handleShare}
+              disabled={isSharing || isPublishing || (shareToGallery && (!materialTitle.trim() || !materialAuthor.trim()))}
+              className="w-full py-4 md:py-4.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl md:rounded-2xl font-bold text-base md:text-lg shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              关闭
+              {isSharing || isPublishing ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-3 border-white border-t-transparent"></div>
+                  <span>{shareToGallery ? '发布中...' : '生成中...'}</span>
+                </>
+              ) : (
+                <span>{shareToGallery ? '发布到广场' : '生成链接'}</span>
+              )}
             </button>
           </div>
         </div>
@@ -1439,6 +1645,13 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {materialGalleryOpen && (
+        <MaterialGallery
+          onApplyMaterial={handleApplyMaterial}
+          onClose={() => setMaterialGalleryOpen(false)}
+        />
       )}
     </div>
   );
