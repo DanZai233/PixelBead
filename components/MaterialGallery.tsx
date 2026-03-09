@@ -135,27 +135,27 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
             ctx.arc(
               col * cellSize + cellSize / 2,
               row * cellSize + cellSize / 2,
-              cellSize / 2 - 1,
+              cellSize / 2,
               0,
               Math.PI * 2
             );
             ctx.fill();
           } else if (material.pixelStyle === PixelStyle.ROUNDED) {
-            const radius = cellSize / 4;
+            const radius = Math.max(1, cellSize / 4);
             roundRect(
-              col * cellSize + 1,
-              row * cellSize + 1,
-              cellSize - 2,
-              cellSize - 2,
+              col * cellSize,
+              row * cellSize,
+              cellSize,
+              cellSize,
               radius
             );
             ctx.fill();
           } else {
             ctx.fillRect(
-              col * cellSize + 1,
-              row * cellSize + 1,
-              cellSize - 2,
-              cellSize - 2
+              col * cellSize,
+              row * cellSize,
+              cellSize,
+              cellSize
             );
           }
         }
@@ -216,27 +216,27 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
               ctx.arc(
                 col * cellSize + cellSize / 2,
                 row * cellSize + cellSize / 2,
-                cellSize / 2 - 1,
+                cellSize / 2,
                 0,
                 Math.PI * 2
               );
               ctx.fill();
             } else if (selectedMaterial.pixelStyle === PixelStyle.ROUNDED) {
-              const radius = cellSize / 4;
+              const radius = Math.max(1, cellSize / 4);
               roundRect(
-                col * cellSize + 1,
-                row * cellSize + 1,
-                cellSize - 2,
-                cellSize - 2,
+                col * cellSize,
+                row * cellSize,
+                cellSize,
+                cellSize,
                 radius
               );
               ctx.fill();
             } else {
               ctx.fillRect(
-                col * cellSize + 1,
-                row * cellSize + 1,
-                cellSize - 2,
-                cellSize - 2
+                col * cellSize,
+                row * cellSize,
+                cellSize,
+                cellSize
               );
             }
           }
