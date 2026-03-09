@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "license": "CC-BY-NC-4.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
