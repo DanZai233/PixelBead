@@ -166,13 +166,11 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
   }
   
   const legendY = gridSize * cellSize + 15;
-  const legendHeight = 28;
+  const legendHeight = 22;
+  const itemGap = 5;
   const barPadding = 15;
   const barWidth = canvasWidth - barPadding * 2;
   const barX = barPadding;
-  
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(barX - 5, legendY - 5, barWidth + 10, legendHeight + 10);
   
   if (uniqueColors.length > 0) {
     const colorCountMap = new Map<ColorHex, number>();
@@ -191,38 +189,65 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
       label: allColorsAreHex ? '' : colorSystem && colorSystemMapping && colorSystemMapping[color.toUpperCase()]?.[colorSystem] || color
     })).filter(item => item.count > 0);
     
-    const itemWidth = Math.min(80, Math.max(50, (barWidth - (itemsWithCounts.length - 1) * 6) / itemsWithCounts.length));
-    const totalWidth = itemsWithCounts.length * itemWidth + (itemsWithCounts.length - 1) * 6;
-    const startX = barX + (barWidth - totalWidth) / 2;
+    const itemWidth = Math.min(85, Math.max(55, (barWidth - (itemsWithCounts.length - 1) * itemGap) / itemsWithCounts.length));
+    const itemsPerRow = Math.floor((barWidth + itemGap) / (itemWidth + itemGap));
+    const rowsCount = Math.ceil(itemsWithCounts.length / itemsPerRow);
     
-    itemsWithCounts.forEach((item, index) => {
-      const x = startX + index * (itemWidth + 6);
-      const y = legendY;
+    const itemsPerActualRow = itemsPerRow > 0 ? Math.ceil(itemsWithCounts.length / rowsCount) : itemsWithCounts.length;
+    const rowWidth = itemsPerActualRow * itemWidth + (itemsPerActualRow - 1) * itemGap;
+    const startX = barX + (barWidth - rowWidth) / 2;
+    
+    for (let row = 0; row < rowsCount; row++) {
+      const y = legendY + row * (legendHeight + itemGap);
       
-      ctx.fillStyle = item.color;
-      roundRect(ctx, x, y, itemWidth, legendHeight, legendHeight / 2);
-      ctx.fill();
-      
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      
-      ctx.fillStyle = getContrastColor(item.color);
-      ctx.font = 'bold 9px Arial';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      
-      const centerX = x + 8;
-      const countX = x + itemWidth - 4;
-      
-      if (item.label && !allColorsAreHex) {
-        ctx.fillText(item.label, centerX, y + legendHeight / 2 - 5);
+      for (let col = 0; col < itemsPerRow; col++) {
+        const index = row * itemsPerRow + col;
+        if (index >= itemsWithCounts.length) break;
+        
+        const item = itemsWithCounts[index];
+        const x = startX + col * (itemWidth + itemGap);
+        
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(x - 3, y - 3, itemWidth + 6, legendHeight + 6);
+        
+        ctx.fillStyle = item.color;
+        roundRect(ctx, x, y, itemWidth, legendHeight, legendHeight / 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        ctx.fillStyle = getContrastColor(item.color);
+        ctx.font = 'bold 8px Arial';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        
+        const labelX = x + 6;
+        const countX = x + itemWidth - 4;
+        
+        if (item.label && !allColorsAreHex) {
+          ctx.fillText(item.label, labelX, y + legendHeight / 2 - 1);
+        }
+        
+        ctx.font = 'bold 7px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText(item.count.toString(), countX, y + legendHeight / 2 - 1);
       }
-      
-      ctx.font = 'bold 8px Arial';
-      ctx.textAlign = 'right';
-      ctx.fillText(item.count.toString(), countX, y + legendHeight / 2 - 5);
-    });
+    }
+    
+    const totalLegendHeight = rowsCount * (legendHeight + itemGap) + 10;
+    if (totalLegendHeight > 60) {
+      const newHeight = gridSize * cellSize + totalLegendHeight + 10;
+      const newCanvas = document.createElement('canvas');
+      newCanvas.width = canvasWidth;
+      newCanvas.height = newHeight;
+      const newCtx = newCanvas.getContext('2d')!;
+      newCtx.fillStyle = '#FFFFFF';
+      newCtx.fillRect(0, 0, canvasWidth, newHeight);
+      newCtx.drawImage(canvas, 0, 0);
+      return newCanvas;
+    }
   }
   
   return canvas;
