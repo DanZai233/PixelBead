@@ -67,6 +67,9 @@ const App: React.FC = () => {
 
   const [showRuler, setShowRuler] = useState(true);
 
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportPixelStyle, setExportPixelStyle] = useState<PixelStyle>(PixelStyle.CIRCLE);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const aiReferenceImageRef = useRef<HTMLInputElement>(null);
@@ -518,10 +521,15 @@ const App: React.FC = () => {
       return;
     }
 
+    setExportPixelStyle(pixelStyle);
+    setExportModalOpen(true);
+  }, [grid, gridSize, pixelStyle]);
+
+  const handleConfirmExport = useCallback(() => {
     const canvas = generateExportImage({
       grid,
       gridSize,
-      pixelStyle,
+      pixelStyle: exportPixelStyle,
       colorSystem: selectedColorSystem,
       colorSystemMapping: colorSystemMapping as Record<string, Record<string, string>>,
     });
@@ -531,7 +539,9 @@ const App: React.FC = () => {
     a.href = url;
     a.download = `pixel-bead-${gridSize}.png`;
     a.click();
-  }, [grid, gridSize, pixelStyle]);
+    
+    setExportModalOpen(false);
+  }, [grid, gridSize, exportPixelStyle, selectedColorSystem]);
 
   const baseBeadSize = 28;
   const boardDimension = gridSize * (baseBeadSize * (zoom / 100));
@@ -1355,6 +1365,57 @@ const App: React.FC = () => {
             >
               关闭
             </button>
+          </div>
+        </div>
+      )}
+
+      {exportModalOpen && (
+        <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 md:p-6 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 max-w-lg w-full shadow-2xl space-y-6 md:space-y-8">
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 bg-indigo-600 rounded-full mx-auto flex items-center justify-center">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className="text-xl md:text-2xl font-black text-slate-900 italic">导出图片</h3>
+              <p className="text-xs md:text-sm text-slate-400 font-medium">选择导出图片的像素样式</p>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">像素样式</label>
+              <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+                {PIXEL_STYLES.map(style => (
+                  <button
+                    key={style.value}
+                    onClick={() => setExportPixelStyle(style.value)}
+                    className={`flex-1 px-4 py-3 rounded-lg text-sm font-black transition-all flex items-center justify-center gap-2 ${exportPixelStyle === style.value ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                    title={style.name}
+                  >
+                    <span className="text-lg">{style.icon}</span>
+                    <span>{style.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setExportModalOpen(false)}
+                className="flex-1 py-3 md:py-4 bg-slate-100 text-slate-700 rounded-xl md:rounded-2xl font-black text-sm hover:bg-slate-200 transition-all"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmExport}
+                className="flex-[2] py-3 md:py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl md:rounded-2xl font-black text-sm shadow-xl active:scale-95 flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                导出图片
+              </button>
+            </div>
           </div>
         </div>
       )}
