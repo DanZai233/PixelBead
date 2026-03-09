@@ -92,7 +92,7 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
   
   const cellSize = 30;
   const canvasWidth = gridSize * cellSize;
-  const canvasHeight = gridSize * cellSize + 80;
+  const canvasHeight = gridSize * cellSize + 60;
   
   const canvas = document.createElement('canvas');
   canvas.width = canvasWidth;
@@ -165,16 +165,16 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
     }
   }
   
-  const legendY = gridSize * cellSize + 10;
-  const legendHeight = 50;
-  const barWidth = canvasWidth - 20;
-  const barX = 10;
+  const legendY = gridSize * cellSize + 15;
+  const legendHeight = 28;
+  const barPadding = 15;
+  const barWidth = canvasWidth - barPadding * 2;
+  const barX = barPadding;
   
   ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(barX, legendY, barWidth, legendHeight);
+  ctx.fillRect(barX - 5, legendY - 5, barWidth + 10, legendHeight + 10);
   
   if (uniqueColors.length > 0) {
-    const segmentWidth = barWidth / uniqueColors.length;
     const colorCountMap = new Map<ColorHex, number>();
     
     grid.forEach(row => {
@@ -185,25 +185,43 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
       });
     });
     
-    uniqueColors.forEach((color, index) => {
-      const x = barX + index * segmentWidth;
+    const itemsWithCounts = uniqueColors.map(color => ({
+      color,
+      count: colorCountMap.get(color) || 0,
+      label: allColorsAreHex ? '' : colorSystem && colorSystemMapping && colorSystemMapping[color.toUpperCase()]?.[colorSystem] || color
+    })).filter(item => item.count > 0);
+    
+    const itemWidth = Math.min(80, Math.max(50, (barWidth - (itemsWithCounts.length - 1) * 6) / itemsWithCounts.length));
+    const totalWidth = itemsWithCounts.length * itemWidth + (itemsWithCounts.length - 1) * 6;
+    const startX = barX + (barWidth - totalWidth) / 2;
+    
+    itemsWithCounts.forEach((item, index) => {
+      const x = startX + index * (itemWidth + 6);
       const y = legendY;
-      const count = colorCountMap.get(color) || 0;
       
-      ctx.fillStyle = color;
-      ctx.fillRect(x, y, segmentWidth, legendHeight);
+      ctx.fillStyle = item.color;
+      roundRect(ctx, x, y, itemWidth, legendHeight, legendHeight / 2);
+      ctx.fill();
       
-      ctx.strokeStyle = '#E5E7EB';
-      ctx.lineWidth = 0.5;
-      ctx.strokeRect(x, y, segmentWidth, legendHeight);
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
       
-      if (segmentWidth > 25) {
-        ctx.fillStyle = getContrastColor(color);
-        ctx.font = 'bold 9px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText(count.toString(), x + segmentWidth / 2, y + 8);
+      ctx.fillStyle = getContrastColor(item.color);
+      ctx.font = 'bold 9px Arial';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      
+      const centerX = x + 8;
+      const countX = x + itemWidth - 4;
+      
+      if (item.label && !allColorsAreHex) {
+        ctx.fillText(item.label, centerX, y + legendHeight / 2 - 5);
       }
+      
+      ctx.font = 'bold 8px Arial';
+      ctx.textAlign = 'right';
+      ctx.fillText(item.count.toString(), countX, y + legendHeight / 2 - 5);
     });
   }
   
