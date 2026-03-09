@@ -14,6 +14,7 @@ import { ColorPicker } from './components/ColorPicker';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { PromoSection } from './components/PromoSection';
 import { MaterialGallery } from './components/MaterialGallery';
+import { HelpModal } from './components/HelpModal';
 import { generateExportImage } from './utils/colorUtils';
 import {
   mergeSimilarColors,
@@ -81,6 +82,8 @@ const App: React.FC = () => {
   const [materialAuthor, setMaterialAuthor] = useState('');
   const [materialTags, setMaterialTags] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
+
+  const [helpModalOpen, setHelpModalOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -1289,11 +1292,20 @@ const App: React.FC = () => {
             ) : null}
           </div>
 
-           <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-[45] md:z-50 max-w-fit md:max-w-none">
-            <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridSize}x{gridSize}</div>
-            <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridSize * gridSize}</div>
-            <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
-          </div>
+           <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-4 right-20 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-[45] md:z-50 max-w-fit md:max-w-none">
+             <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridSize}x{gridSize}</div>
+             <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridSize * gridSize}</div>
+             <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
+           </div>
+
+           <button
+             onClick={() => setHelpModalOpen(true)}
+             className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-4 z-[45] md:z-50 w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-95"
+           >
+             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+             </svg>
+           </button>
 
           <button
             onClick={() => setIsMobileRightOpen(!isMobileRightOpen)}
@@ -1655,6 +1667,13 @@ const App: React.FC = () => {
         <MaterialGallery
           onApplyMaterial={handleApplyMaterial}
           onClose={() => setMaterialGalleryOpen(false)}
+        />
+      )}
+
+      {helpModalOpen && (
+        <HelpModal
+          isOpen={helpModalOpen}
+          onClose={() => setHelpModalOpen(false)}
         />
       )}
     </div>
