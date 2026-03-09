@@ -139,10 +139,8 @@ export async function saveMaterialToUpstash(
       console.error('数据过大，超过 1MB 限制');
       return null;
     }
-
-    await redis.set(key, dataStr, {
-      ex: 30 * 24 * 60 * 60, // 30天过期
-    });
+    
+    await redis.set(key, dataStr); // 不设置过期时间，永久保存
 
     // 添加到素材列表
     await redis.lpush(MATERIAL_LIST_KEY, key);
