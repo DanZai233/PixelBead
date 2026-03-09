@@ -631,7 +631,7 @@ const App: React.FC = () => {
         return;
       }
 
-      const tags = materialTags
+      const tags = normalizeTags(materialTags)
         .split(',')
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0);
@@ -705,6 +705,10 @@ const App: React.FC = () => {
       }
     }
   }, [grid, selectedColorSystem, pushUndo]);
+
+  const normalizeTags = useCallback((value: string): string => {
+    return value.replace(/[\uFF0C\uFF0C\u3002]/g, ',');
+  }, []);
 
   const displayStats = useMemo(() => {
     return stats.map(item => ({
@@ -1535,7 +1539,7 @@ const App: React.FC = () => {
                     <input
                       type="text"
                       value={materialTags}
-                      onChange={(e) => setMaterialTags(e.target.value)}
+                      onChange={(e) => setMaterialTags(normalizeTags(e.target.value))}
                       placeholder="用逗号分隔，如：动物, 可爱"
                       maxLength={100}
                       className="w-full px-4 py-3 bg-white border border-purple-200 rounded-xl text-sm font-medium outline-none focus:border-purple-500 transition-all"
