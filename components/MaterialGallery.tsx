@@ -98,11 +98,6 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
 
   const generateThumbnail = useCallback((material: MaterialData): string => {
     const canvas = document.createElement('canvas');
-    const size = Math.min(material.gridSize, PREVIEW_SIZE);
-    const cellSize = Math.floor(PREVIEW_SIZE / size);
-    
-    canvas.width = PREVIEW_SIZE;
-    canvas.height = PREVIEW_SIZE;
     const ctx = canvas.getContext('2d');
     
     if (!ctx) return '';
@@ -117,46 +112,106 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
       ctx.lineTo(x + radius, y + height);
       ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
       ctx.lineTo(x, y + radius);
-      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.quadraticCurveTo(x, y, x, y + radius);
       ctx.closePath();
     };
     
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, PREVIEW_SIZE, PREVIEW_SIZE);
+    let cellSize: number;
+    let offsetX: number;
+    let offsetY: number;
     
-    for (let row = 0; row < size; row++) {
-      for (let col = 0; col < size; col++) {
-        const color = material.grid[row]?.[col];
-        if (color && color !== '#FFFFFF') {
-          ctx.fillStyle = color;
-          
-          if (material.pixelStyle === PixelStyle.CIRCLE) {
-            ctx.beginPath();
-            ctx.arc(
-              col * cellSize + cellSize / 2,
-              row * cellSize + cellSize / 2,
-              cellSize / 2,
-              0,
-              Math.PI * 2
-            );
-            ctx.fill();
-          } else if (material.pixelStyle === PixelStyle.ROUNDED) {
-            const radius = Math.max(1, cellSize / 4);
-            roundRect(
-              col * cellSize,
-              row * cellSize,
-              cellSize,
-              cellSize,
-              radius
-            );
-            ctx.fill();
-          } else {
-            ctx.fillRect(
-              col * cellSize,
-              row * cellSize,
-              cellSize,
-              cellSize
-            );
+    if (material.gridSize <= PREVIEW_SIZE) {
+      canvas.width = PREVIEW_SIZE;
+      canvas.height = PREVIEW_SIZE;
+      
+      cellSize = Math.floor(PREVIEW_SIZE / material.gridSize);
+      offsetX = (PREVIEW_SIZE - material.gridSize * cellSize) / 2;
+      offsetY = (PREVIEW_SIZE - material.gridSize * cellSize) / 2;
+      
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, PREVIEW_SIZE, PREVIEW_SIZE);
+      
+      for (let row = 0; row < material.gridSize; row++) {
+        for (let col = 0; col < material.gridSize; col++) {
+          const color = material.grid[row]?.[col];
+          if (color && color !== '#FFFFFF') {
+            ctx.fillStyle = color;
+            
+            if (material.pixelStyle === PixelStyle.CIRCLE) {
+              ctx.beginPath();
+              ctx.arc(
+                offsetX + col * cellSize + cellSize / 2,
+                offsetY + row * cellSize + cellSize / 2,
+                cellSize / 2,
+                0,
+                Math.PI * 2
+              );
+              ctx.fill();
+            } else if (material.pixelStyle === PixelStyle.ROUNDED) {
+              const radius = Math.max(1, cellSize / 4);
+              roundRect(
+                offsetX + col * cellSize,
+                offsetY + row * cellSize,
+                cellSize,
+                cellSize,
+                radius
+              );
+              ctx.fill();
+            } else {
+              ctx.fillRect(
+                offsetX + col * cellSize,
+                offsetY + row * cellSize,
+                cellSize,
+                cellSize
+              );
+            }
+          }
+        }
+      }
+    } else {
+      canvas.width = PREVIEW_SIZE;
+      canvas.height = PREVIEW_SIZE;
+      
+      const scale = PREVIEW_SIZE / material.gridSize;
+      cellSize = Math.floor(scale);
+      
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, PREVIEW_SIZE, PREVIEW_SIZE);
+      
+      for (let row = 0; row < material.gridSize; row++) {
+        for (let col = 0; col < material.gridSize; col++) {
+          const color = material.grid[row]?.[col];
+          if (color && color !== '#FFFFFF') {
+            ctx.fillStyle = color;
+            
+            if (material.pixelStyle === PixelStyle.CIRCLE) {
+              ctx.beginPath();
+              ctx.arc(
+                col * cellSize + cellSize / 2,
+                row * cellSize + cellSize / 2,
+                cellSize / 2,
+                0,
+                Math.PI * 2
+              );
+              ctx.fill();
+            } else if (material.pixelStyle === PixelStyle.ROUNDED) {
+              const radius = Math.max(1, cellSize / 4);
+              roundRect(
+                col * cellSize,
+                row * cellSize,
+                cellSize,
+                cellSize,
+                radius
+              );
+              ctx.fill();
+            } else {
+              ctx.fillRect(
+                col * cellSize,
+                row * cellSize,
+                cellSize,
+                cellSize
+              );
+            }
           }
         }
       }
