@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FixedSizeGrid } from 'react-window';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getMaterialList, searchMaterials, incrementMaterialViews, incrementMaterialLikes, type MaterialData } from '../services/upstashService';
 import { PixelStyle } from '../types';
 
@@ -167,81 +166,17 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
     return canvas.toDataURL('image/png');
   }, []);
 
-  const generateThumbnailLazy = useCallback((material: MaterialData): string => {
-    if (thumbnails[material.id]) {
-      return thumbnails[material.id];
-    }
-    const thumbnail = generateThumbnail(material);
-    setThumbnails(prev => ({
-      ...prev,
-      [material.id]: thumbnail,
-    }));
-    return thumbnail;
-  }, [thumbnails, generateThumbnail]);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [columns, setColumns] = useState(4);
-  const [containerWidth, setContainerWidth] = useState(800);
-
   useEffect(() => {
-    const updateColumns = () => {
-      if (!containerRef.current) return;
-      const width = containerRef.current.offsetWidth;
-      const itemWidth = 180;
-      const gap = 12;
-      const newColumns = Math.max(2, Math.floor((width + gap) / (itemWidth + gap)));
-      setColumns(newColumns);
-      setContainerWidth(width);
-    };
-
-    const observer = new ResizeObserver(updateColumns);
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
-    
-    return () => observer.disconnect();
-  }, []);
-
-  const rowCount = Math.ceil(filteredMaterials.length / columns);
-
-  const MaterialCard = useCallback(({ columnIndex, rowIndex, style, data }: any) => {
-    const index = rowIndex * columns + columnIndex;
-    if (index >= filteredMaterials.length) return null;
-    
-    const material = filteredMaterials[index];
-    const thumbnail = generateThumbnailLazy(material);
-
-    return (
-      <div style={style} className="p-1.5">
-        <div
-          onClick={() => handleViewMaterial(material)}
-          className="group cursor-pointer bg-white rounded-xl md:rounded-2xl shadow-md hover:shadow-xl transition-all overflow-hidden border-2 border-transparent hover:border-indigo-500 h-full"
-        >
-          <div className="aspect-square bg-slate-100 relative overflow-hidden p-2 md:p-0">
-            {thumbnail ? (
-              <img 
-                src={thumbnail}
-                alt={material.title}
-                className="w-full h-full object-contain"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-2 border-indigo-600 border-t-transparent"></div>
-              </div>
-            )}
-          </div>
-          <div className="p-2 md:p-3">
-            <h4 className="text-xs md:text-sm font-bold text-slate-900 truncate mb-1">{material.title}</h4>
-            <div className="flex items-center gap-1 text-[10px] md:text-xs text-slate-500">
-              <span>{material.author}</span>
-              <span className="hidden sm:inline">·</span>
-              <span className="hidden sm:inline">{material.gridSize}×{material.gridSize}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }, [columns, filteredMaterials, generateThumbnailLazy, handleViewMaterial]);
+    materials.forEach(async (material) => {
+      if (!thumbnails[material.id]) {
+        const thumbnail = generateThumbnail(material);
+        setThumbnails(prev => ({
+          ...prev,
+          [material.id]: thumbnail,
+        }));
+      }
+    });
+  }, [materials, thumbnails, generateThumbnail]);
 
   useEffect(() => {
     if (selectedMaterial) {
@@ -448,19 +383,36 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
                 </p>
               </div>
             ) : (
-              <div ref={containerRef} className="flex-1">
-                <FixedSizeGrid
-                  columnCount={columns}
-                  columnWidth={180}
-                  height={containerRef.current?.offsetHeight || 600}
-                  rowCount={rowCount}
-                  rowHeight={280}
-                  width={containerWidth}
-                  className="custom-scrollbar"
-                  style={{ overflowY: 'auto' }}
-                >
-                  {MaterialCard}
-                </FixedSizeGrid>
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+                {filteredMaterials.map((material) => (
+                  <div
+                    key={material.id}
+                    onClick={() => handleViewMaterial(material)}
+                    className="group cursor-pointer bg-white rounded-xl md:rounded-2xl shadow-md hover:shadow-xl transition-all overflow-hidden border-2 border-transparent hover:border-indigo-500"
+                  >
+                    <div className="aspect-square bg-slate-100 relative overflow-hidden p-2 md:p-0">
+                      {thumbnails[material.id] ? (
+                        <img 
+                          src={thumbnails[material.id]}
+                          alt={material.title}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-2 border-indigo-600 border-t-transparent"></div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-2 md:p-3">
+                      <h4 className="text-xs md:text-sm font-bold text-slate-900 truncate mb-1">{material.title}</h4>
+                      <div className="flex items-center gap-1 text-[10px] md:text-xs text-slate-500">
+                        <span>{material.author}</span>
+                        <span className="hidden sm:inline">·</span>
+                        <span className="hidden sm:inline">{material.gridSize}×{material.gridSize}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
