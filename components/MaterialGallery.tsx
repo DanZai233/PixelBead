@@ -173,7 +173,7 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
       canvas.height = PREVIEW_SIZE;
       
       const scale = PREVIEW_SIZE / material.gridSize;
-      cellSize = Math.floor(scale);
+      cellSize = Math.max(1, Math.floor(scale));
       
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, PREVIEW_SIZE, PREVIEW_SIZE);
