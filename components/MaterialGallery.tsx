@@ -195,21 +195,21 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
               );
               ctx.fill();
             } else if (material.pixelStyle === PixelStyle.ROUNDED) {
-              const radius = Math.max(1, cellSize / 4);
+              const radius = Math.max(1, scale / 4);
               roundRect(
-                col * cellSize,
-                row * cellSize,
-                cellSize,
-                cellSize,
+                col * scale,
+                row * scale,
+                scale,
+                scale,
                 radius
               );
               ctx.fill();
             } else {
               ctx.fillRect(
-                col * cellSize,
-                row * cellSize,
-                cellSize,
-                cellSize
+                col * scale,
+                row * scale,
+                scale,
+                scale
               );
             }
           }
