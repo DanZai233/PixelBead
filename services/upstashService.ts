@@ -169,9 +169,9 @@ export async function getMaterialFromUpstash(key: string): Promise<MaterialData 
   }
 }
 
-export async function getMaterialList(): Promise<MaterialData[]> {
+export async function getMaterialList(offset: number = 0, limit: number = 20): Promise<MaterialData[]> {
   try {
-    const keys = await redis.lrange(MATERIAL_LIST_KEY, 0, 99) as string[];
+    const keys = await redis.lrange(MATERIAL_LIST_KEY, offset, offset + limit - 1) as string[];
     
     if (!keys || keys.length === 0) {
       return [];

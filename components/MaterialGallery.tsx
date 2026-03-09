@@ -16,9 +16,14 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialData | null>(null);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [detailImage, setDetailImage] = useState<string | null>(null);
+  const isSearchMode = searchQuery.trim() !== '';
+  const PAGE_SIZE = 20;
 
   const allTags = React.useMemo(() => {
     const tagSet = new Set<string>();
@@ -26,18 +31,39 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
     return Array.from(tagSet).sort();
   }, [materials]);
 
-  const loadMaterials = useCallback(async () => {
-    setIsLoading(true);
+  const loadMaterials = useCallback(async (reset: boolean = false) => {
+    if (reset) {
+      setIsLoading(true);
+      setPage(0);
+      setMaterials([]);
+      setFilteredMaterials([]);
+    } else {
+      setIsLoadingMore(true);
+    }
+
     try {
-      const data = await getMaterialList();
-      setMaterials(data);
-      setFilteredMaterials(data);
+      const currentPage = reset ? 0 : page;
+      const data = await getMaterialList(currentPage * PAGE_SIZE, PAGE_SIZE);
+
+      if (reset) {
+        setMaterials(data);
+        setFilteredMaterials(data);
+      } else {
+        setMaterials(prev => [...prev, ...data]);
+      }
+
+      setHasMore(data.length >= PAGE_SIZE);
+      if (!reset) setPage(prev => prev + 1);
     } catch (error) {
       console.error('加载素材失败:', error);
     } finally {
-      setIsLoading(false);
+      if (reset) {
+        setIsLoading(false);
+      } else {
+        setIsLoadingMore(false);
+      }
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     loadMaterials();
@@ -46,14 +72,16 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
   const handleSearch = useCallback(async (query: string) => {
     setSearchQuery(query);
     setIsLoading(true);
+    setPage(0);
     try {
       let results;
       if (query.trim()) {
         results = await searchMaterials(query);
       } else {
-        results = await getMaterialList();
+        results = await getMaterialList(0, PAGE_SIZE);
       }
       setFilteredMaterials(results);
+      setHasMore(results.length >= PAGE_SIZE);
     } catch (error) {
       console.error('搜索失败:', error);
     } finally {
@@ -64,6 +92,11 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
   const handleTagFilter = useCallback((tag: string) => {
     setSelectedTag(tag === selectedTag ? '' : tag);
   }, [selectedTag]);
+
+  const handleLoadMore = useCallback(() => {
+    if (isLoadingMore || !hasMore || isSearchMode) return;
+    loadMaterials(false);
+  }, [isLoadingMore, hasMore, isSearchMode, loadMaterials]);
 
   useEffect(() => {
     if (selectedTag) {
@@ -198,7 +231,9 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
     if (containerRef.current) {
       observer.observe(containerRef.current);
     }
-    
+
+    updateColumns();
+
     return () => observer.disconnect();
   }, []);
 
@@ -430,7 +465,7 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
                 </div>
               )}
             </div>
-            <div className="flex-1 p-4 md:p-6 overflow-y-auto">
+            <div ref={containerRef} className="flex-1 p-4 md:p-6">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div>
@@ -448,19 +483,27 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
                 </p>
               </div>
             ) : (
-              <div ref={containerRef} className="flex-1">
-                <FixedSizeGrid
-                  columnCount={columns}
-                  columnWidth={180}
-                  height={containerRef.current?.offsetHeight || 600}
-                  rowCount={rowCount}
-                  rowHeight={280}
-                  width={containerWidth}
-                  className="custom-scrollbar"
-                  style={{ overflowY: 'auto' }}
-                >
-                  {MaterialCard}
-                </FixedSizeGrid>
+              <FixedSizeGrid
+                columnCount={columns}
+                columnWidth={180}
+                height={containerRef.current?.offsetHeight || 600}
+                rowCount={rowCount}
+                rowHeight={280}
+                width={containerWidth}
+                className="custom-scrollbar"
+                style={{ overflowY: 'auto' }}
+                onScroll={({ scrollOffset, scrollDirection, clientHeight, scrollHeight }: any) => {
+                  if (scrollDirection === 'forward' && scrollOffset + clientHeight >= scrollHeight - 500) {
+                    handleLoadMore();
+                  }
+                }}
+              >
+                {MaterialCard}
+              </FixedSizeGrid>
+            )}
+            {isLoadingMore && (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
               </div>
             )}
           </div>
