@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getMaterialList, searchMaterials, getMaterialFromUpstash, incrementMaterialViews, incrementMaterialLikes, type MaterialData } from '../services/upstashService';
+import { PixelStyle } from '../types';
 
 interface MaterialGalleryProps {
   onApplyMaterial: (material: MaterialData) => void;
   onClose: () => void;
 }
+
+const PREVIEW_SIZE = 20;
 
 export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMaterial, onClose }) => {
   const [materials, setMaterials] = useState<MaterialData[]>([]);
@@ -13,6 +16,8 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialData | null>(null);
+  const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
+  const [detailImage, setDetailImage] = useState<string | null>(null);
 
   const allTags = React.useMemo(() => {
     const tagSet = new Set<string>();
@@ -88,8 +93,159 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
-    return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
+    return `${date.getFullYear()}/${String(date.getMonth() +1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
   };
+
+  const generateThumbnail = useCallback((material: MaterialData): string => {
+    const canvas = document.createElement('canvas');
+    const size = Math.min(material.gridSize, PREVIEW_SIZE);
+    const cellSize = Math.floor(PREVIEW_SIZE / size);
+    
+    canvas.width = PREVIEW_SIZE;
+    canvas.height = PREVIEW_SIZE;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return '';
+    
+    const roundRect = (x: number, y: number, width: number, height: number, radius: number) => {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    };
+    
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, PREVIEW_SIZE, PREVIEW_SIZE);
+    
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        const color = material.grid[row]?.[col];
+        if (color && color !== '#FFFFFF') {
+          ctx.fillStyle = color;
+          
+          if (material.pixelStyle === PixelStyle.CIRCLE) {
+            ctx.beginPath();
+            ctx.arc(
+              col * cellSize + cellSize / 2,
+              row * cellSize + cellSize / 2,
+              cellSize / 2 - 1,
+              0,
+              Math.PI * 2
+            );
+            ctx.fill();
+          } else if (material.pixelStyle === PixelStyle.ROUNDED) {
+            const radius = cellSize / 4;
+            roundRect(
+              col * cellSize + 1,
+              row * cellSize + 1,
+              cellSize - 2,
+              cellSize - 2,
+              radius
+            );
+            ctx.fill();
+          } else {
+            ctx.fillRect(
+              col * cellSize + 1,
+              row * cellSize + 1,
+              cellSize - 2,
+              cellSize - 2
+            );
+          }
+        }
+      }
+    }
+    
+    return canvas.toDataURL('image/png');
+  }, []);
+
+  useEffect(() => {
+    materials.forEach(async (material) => {
+      if (!thumbnails[material.id]) {
+        const thumbnail = generateThumbnail(material);
+        setThumbnails(prev => ({
+          ...prev,
+          [material.id]: thumbnail,
+        }));
+      }
+    });
+  }, [materials, thumbnails, generateThumbnail]);
+
+  useEffect(() => {
+    if (selectedMaterial) {
+      const detailCanvas = document.createElement('canvas');
+      const cellSize = 20;
+      
+      detailCanvas.width = selectedMaterial.gridSize * cellSize;
+      detailCanvas.height = selectedMaterial.gridSize * cellSize;
+      const ctx = detailCanvas.getContext('2d');
+      
+      if (!ctx) return;
+      
+      const roundRect = (x: number, y: number, width: number, height: number, radius: number) => {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+      };
+      
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, detailCanvas.width, detailCanvas.height);
+      
+      for (let row = 0; row < selectedMaterial.gridSize; row++) {
+        for (let col = 0; col < selectedMaterial.gridSize; col++) {
+          const color = selectedMaterial.grid[row]?.[col];
+          if (color && color !== '#FFFFFF') {
+            ctx.fillStyle = color;
+            
+            if (selectedMaterial.pixelStyle === PixelStyle.CIRCLE) {
+              ctx.beginPath();
+              ctx.arc(
+                col * cellSize + cellSize / 2,
+                row * cellSize + cellSize / 2,
+                cellSize / 2 - 1,
+                0,
+                Math.PI * 2
+              );
+              ctx.fill();
+            } else if (selectedMaterial.pixelStyle === PixelStyle.ROUNDED) {
+              const radius = cellSize / 4;
+              roundRect(
+                col * cellSize + 1,
+                row * cellSize + 1,
+                cellSize - 2,
+                cellSize - 2,
+                radius
+              );
+              ctx.fill();
+            } else {
+              ctx.fillRect(
+                col * cellSize + 1,
+                row * cellSize + 1,
+                cellSize - 2,
+                cellSize - 2
+              );
+            }
+          }
+        }
+      }
+      
+      setDetailImage(detailCanvas.toDataURL('image/png'));
+    }
+  }, [selectedMaterial]);
 
   return (
     <div className="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-4 md:p-6 backdrop-blur-sm">
@@ -202,14 +358,17 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
                     className="group cursor-pointer bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all overflow-hidden border-2 border-transparent hover:border-indigo-500"
                   >
                     <div className="aspect-square bg-slate-100 relative overflow-hidden">
-                      <div 
-                        className="w-full h-full"
-                        style={{
-                          backgroundImage: `linear-gradient(45deg, ${material.grid.flat().filter(c => c !== '#FFFFFF')[0] || '#E5E7EB'} 25%, transparent 25%), linear-gradient(-45deg, ${material.grid.flat().filter(c => c !== '#FFFFFF')[0] || '#E5E7EB'} 25%, transparent 25%), linear-gradient(45deg, transparent 75%, ${material.grid.flat().filter(c => c !== '#FFFFFF')[0] || '#E5E7EB'} 75%), linear-gradient(-45deg, transparent 75%, ${material.grid.flat().filter(c => c !== '#FFFFFF')[0] || '#E5E7EB'} 75%)`,
-                          backgroundSize: '20px 20px',
-                          backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-                        }}
-                      />
+                      {thumbnails[material.id] ? (
+                        <img 
+                          src={thumbnails[material.id]}
+                          alt={material.title}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-600 border-t-transparent"></div>
+                        </div>
+                      )}
                       <div className="absolute inset-0 bg-black/0 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
                         <div className="bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2 font-bold text-sm text-indigo-600">
                           查看详情
@@ -301,15 +460,18 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
               </div>
 
               <div className="p-4 md:p-6 flex flex-col items-center gap-6">
-                <div className="w-full max-w-2xl aspect-square bg-slate-100 rounded-3xl overflow-hidden flex items-center justify-center">
-                  <div 
-                    className="w-full h-full"
-                    style={{
-                      backgroundImage: `linear-gradient(45deg, ${selectedMaterial.grid.flat().filter(c => c !== '#FFFFFF')[0] || '#E5E7EB'} 25%, transparent 25%), linear-gradient(-45deg, ${selectedMaterial.grid.flat().filter(c => c !== '#FFFFFF')[0] || '#E5E7EB'} 25%, transparent 25%), linear-gradient(45deg, transparent 75%, ${selectedMaterial.grid.flat().filter(c => c !== '#FFFFFF')[0] || '#E5E7EB'} 75%), linear-gradient(-45deg, transparent 75%, ${selectedMaterial.grid.flat().filter(c => c !== '#FFFFFF')[0] || '#E5E7EB'} 75%)`,
-                      backgroundSize: '20px 20px',
-                      backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-                    }}
-                  />
+                <div className="w-full max-w-2xl bg-slate-100 rounded-3xl overflow-hidden">
+                  {detailImage ? (
+                    <img 
+                      src={detailImage}
+                      alt={selectedMaterial.title}
+                      className="w-full h-auto"
+                    />
+                  ) : (
+                    <div className="aspect-square flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent"></div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-3 w-full max-w-2xl">
