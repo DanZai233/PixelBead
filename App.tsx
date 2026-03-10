@@ -15,6 +15,8 @@ import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { PromoSection } from './components/PromoSection';
 import { MaterialGallery } from './components/MaterialGallery';
 import { HelpModal } from './components/HelpModal';
+import { StatusPage } from './components/StatusPage';
+import { trackVisit } from './services/analyticsService';
 import { generateExportImage } from './utils/colorUtils';
 import {
   mergeSimilarColors,
@@ -85,6 +87,7 @@ const App: React.FC = () => {
   const [isPublishing, setIsPublishing] = useState(false);
 
   const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [statusPageOpen, setStatusPageOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -98,6 +101,10 @@ const App: React.FC = () => {
   useEffect(() => {
     gridRef.current = grid;
   }, [grid]);
+
+  useEffect(() => {
+    trackVisit(window.location.pathname, navigator.userAgent);
+  }, []);
 
   const canUndo = undoStackRef.current.length > 0;
   const canRedo = redoStackRef.current.length > 0;
@@ -1294,11 +1301,14 @@ const App: React.FC = () => {
             ) : null}
           </div>
 
-           <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-4 right-20 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-[45] md:z-50 max-w-fit md:max-w-none">
-             <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridSize}x{gridSize}</div>
-             <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridSize * gridSize}</div>
-             <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
-           </div>
+            <button
+              onClick={() => setStatusPageOpen(true)}
+              className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-4 right-20 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur hover:bg-slate-900 text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-[45] md:z-50 max-w-fit md:max-w-none transition-all active:scale-95"
+            >
+              <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridSize}x{gridSize}</div>
+              <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridSize * gridSize}</div>
+              <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
+            </button>
 
            <button
              onClick={() => setHelpModalOpen(true)}
@@ -1689,6 +1699,12 @@ const App: React.FC = () => {
         <HelpModal
           isOpen={helpModalOpen}
           onClose={() => setHelpModalOpen(false)}
+        />
+      )}
+
+      {statusPageOpen && (
+        <StatusPage
+          onClose={() => setStatusPageOpen(false)}
         />
       )}
     </div>
