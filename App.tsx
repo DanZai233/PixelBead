@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import {
   ToolType, DEFAULT_COLORS, AIConfig, PixelStyle,
   TOOLS_INFO, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES,
@@ -1691,6 +1692,7 @@ const App: React.FC = () => {
           onClose={() => setHelpModalOpen(false)}
         />
       )}
+      <SpeedInsights />
     </div>
   );
 };
