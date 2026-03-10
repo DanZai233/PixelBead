@@ -24,6 +24,7 @@ import {
   colorSystemOptions,
 } from './utils/colorSystemUtils';
 import colorSystemMapping from './colorSystemMapping.json';
+import { Analytics } from '@vercel/analytics/react';
 
 const App: React.FC = () => {
   const [gridSize, setGridSize] = useState(32);
@@ -1691,6 +1692,7 @@ const App: React.FC = () => {
           onClose={() => setHelpModalOpen(false)}
         />
       )}
+      <Analytics />
     </div>
   );
 };
