@@ -2,7 +2,7 @@ import { Redis } from '@upstash/redis';
 import type { BeadGrid } from '../types';
 
 // 使用环境变量或默认配置
-export const redis = new Redis({
+const redis = new Redis({
   url: (import.meta as any).env.VITE_UPSTASH_REDIS_REST_URL || '',
   token: (import.meta as any).env.VITE_UPSTASH_REDIS_REST_TOKEN || '',
 });
