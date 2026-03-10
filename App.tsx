@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   ToolType, DEFAULT_COLORS, AIConfig, PixelStyle,
   TOOLS_INFO, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES,
@@ -25,9 +26,10 @@ import {
   createFullPaletteFromMapping,
   colorSystemOptions,
 } from './utils/colorSystemUtils';
-import colorSystemMapping from './colorSystemMapping.json';
+  import colorSystemMapping from './colorSystemMapping.json';
 
 const App: React.FC = () => {
+  const location = useLocation();
   const [gridSize, setGridSize] = useState(32);
   const [customSize, setCustomSize] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -105,6 +107,14 @@ const App: React.FC = () => {
   useEffect(() => {
     trackVisit(window.location.pathname, navigator.userAgent);
   }, []);
+
+  useEffect(() => {
+    if (location.pathname === '/status') {
+      setStatusPageOpen(true);
+    } else {
+      setStatusPageOpen(false);
+    }
+  }, [location.pathname]);
 
   const canUndo = undoStackRef.current.length > 0;
   const canRedo = redoStackRef.current.length > 0;
