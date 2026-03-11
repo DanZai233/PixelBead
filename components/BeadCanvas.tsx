@@ -42,6 +42,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const backgroundImageImgRef = useRef<HTMLImageElement | null>(null);
   const isDrawingRef = useRef(false);
   const isMiddleButtonDraggingRef = useRef(false);
   const isDraggingBackgroundRef = useRef(false);
@@ -52,11 +53,28 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   const lastPinchDistanceRef = useRef(0);
   const lastPinchCenterRef = useRef({ x: 0, y: 0 });
   const lastZoomRef = useRef(propZoom);
+  const backgroundImageReadyRef = useRef(false);
   const baseBeadSize = 28;
 
   useEffect(() => {
     lastZoomRef.current = propZoom;
   }, [propZoom]);
+
+  useEffect(() => {
+    if (backgroundImage) {
+      const img = new Image();
+      img.src = backgroundImage.src;
+      img.onload = () => {
+        backgroundImageImgRef.current = img;
+        backgroundImageReadyRef.current = true;
+        drawCanvas();
+      };
+      backgroundImageImgRef.current = img;
+    } else {
+      backgroundImageImgRef.current = null;
+      backgroundImageReadyRef.current = false;
+    }
+  }, [backgroundImage?.src]);
 
   const cellSize = baseBeadSize * (propZoom / 100);
   const rulerSize = showRuler ? Math.max(20, cellSize * 0.5) : 0;
@@ -201,11 +219,10 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     ctx.save();
     ctx.translate(offsetX, offsetY);
 
-    if (backgroundImage) {
-      const img = new Image();
-      img.src = backgroundImage.src;
-      const bgWidth = gridWidth * cellSize * backgroundImage.scale;
-      const bgHeight = gridHeight * cellSize * backgroundImage.scale;
+    if (backgroundImage && backgroundImageImgRef.current) {
+      const img = backgroundImageImgRef.current;
+      const bgWidth = img.width * backgroundImage.scale;
+      const bgHeight = img.height * backgroundImage.scale;
       const bgX = backgroundImage.x;
       const bgY = backgroundImage.y;
       ctx.globalAlpha = backgroundImage.opacity;
