@@ -12,8 +12,8 @@ interface BeadCanvasProps {
   pixelStyle: PixelStyle;
   backgroundImage?: { src: string; x: number; y: number; scale: number; opacity: number } | null;
   selectedLayer?: 'bead' | 'background';
-  onPointerDown: (row: number, col: number) => void;
-  onPointerMove: (row: number, col: number) => void;
+  onPointerDown: (row: number, col: number, backgroundColor?: string | null) => void;
+  onPointerMove: (row: number, col: number, backgroundColor?: string | null) => void;
   onPointerUp: () => void;
   onMiddleButtonDrag: (deltaX: number, deltaY: number) => void;
   onBackgroundImageDrag?: (deltaX: number, deltaY: number) => void;
@@ -312,6 +312,42 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     return { row: -1, col: -1 };
   }, [gridWidth, gridHeight, cellSize, showRuler]);
 
+  const getBackgroundColorAtPosition = useCallback((row: number, col: number): string | null => {
+    if (!backgroundImage || !backgroundImageImgRef.current) return null;
+
+    const img = backgroundImageImgRef.current;
+    const zoomRatio = cellSize / baseBeadSize;
+
+    const bgWidth = img.width * backgroundImage.scale * zoomRatio;
+    const bgHeight = img.height * backgroundImage.scale * zoomRatio;
+    const bgX = backgroundImage.x * zoomRatio;
+    const bgY = backgroundImage.y * zoomRatio;
+
+    const cellCenterX = col * cellSize + cellSize / 2;
+    const cellCenterY = row * cellSize + cellSize / 2;
+
+    const imageX = cellCenterX - bgX;
+    const imageY = cellCenterY - bgY;
+
+    if (imageX < 0 || imageX >= bgWidth || imageY < 0 || imageY >= bgHeight) return null;
+
+    const originalImageX = (imageX / (bgWidth)) * img.width;
+    const originalImageY = (imageY / (bgHeight)) * img.height;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.drawImage(img, originalImageX, originalImageY, 1, 1, 0, 0, 1, 1);
+    const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+
+    if (a < 128) return null;
+
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
+  }, [backgroundImage, backgroundImageImgRef, cellSize, baseBeadSize]);
+
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPinchingRef.current) return;
 
@@ -325,7 +361,8 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         isDrawingRef.current = true;
         lastTouchDrawRowRef.current = row;
         lastTouchDrawColRef.current = col;
-        onPointerDown(row, col);
+        const backgroundColor = getBackgroundColorAtPosition(row, col);
+        onPointerDown(row, col, backgroundColor);
       }
       return;
     }
@@ -349,10 +386,11 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       if (row >= 0 && col >= 0) {
         isDrawingRef.current = true;
         canvasRef.current?.setPointerCapture(e.pointerId);
-        onPointerDown(row, col);
+        const backgroundColor = getBackgroundColorAtPosition(row, col);
+        onPointerDown(row, col, backgroundColor);
       }
     }
-  }, [getCellFromEvent, onPointerDown, selectedLayer, backgroundImage]);
+  }, [getCellFromEvent, getBackgroundColorAtPosition, onPointerDown, selectedLayer, backgroundImage]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPinchingRef.current) return;
@@ -396,10 +434,11 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       e.preventDefault();
       const { row, col } = getCellFromEvent(e);
       if (row >= 0 && col >= 0) {
-        onPointerMove(row, col);
+        const backgroundColor = getBackgroundColorAtPosition(row, col);
+        onPointerMove(row, col, backgroundColor);
       }
     }
-  }, [getCellFromEvent, onPointerMove, onMiddleButtonDrag, onBackgroundImageDrag]);
+  }, [getCellFromEvent, getBackgroundColorAtPosition, onPointerMove, onMiddleButtonDrag, onBackgroundImageDrag]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (e.pointerType === 'touch') {

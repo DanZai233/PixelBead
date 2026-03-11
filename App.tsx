@@ -412,7 +412,7 @@ const App: React.FC = () => {
     img.src = imageSrc;
   }, [pushUndo]);
 
-  const handleCanvasAction = useCallback((row: number, col: number) => {
+  const handleCanvasAction = useCallback((row: number, col: number, backgroundColor?: string | null) => {
     if (currentTool === ToolType.PICKER) {
       const colorAt = grid[row][col];
       if (colorAt && colorAt !== '#FFFFFF') {
@@ -448,10 +448,28 @@ const App: React.FC = () => {
     setGrid(prev => {
       const newGrid = prev.map(r => [...r]);
       
-      if (currentTool === ToolType.PENCIL) {
-        if (newGrid[row][col] === selectedColor) return prev;
+      let colorToUse = selectedColor;
+
+      if (currentTool === ToolType.SMART_PENCIL && backgroundColor) {
+        const availableColors: Array<{ hex: ColorHex; key: string }> = [];
+        Object.entries(colorSystemMapping).forEach(([hex, mapping]) => {
+          const colorKey = mapping[selectedColorSystem];
+          if (colorKey && !colorKey.startsWith('#')) {
+            availableColors.push({ hex: hex as ColorHex, key: colorKey });
+          }
+        });
+        
+        const { findClosestColor } = require('./utils/colorSystemUtils');
+        const closest = findClosestColor(backgroundColor, availableColors);
+        if (closest) {
+          colorToUse = closest.hex;
+        }
+      }
+      
+      if (currentTool === ToolType.PENCIL || currentTool === ToolType.SMART_PENCIL) {
+        if (newGrid[row][col] === colorToUse) return prev;
         pushUndo(prev);
-        newGrid[row][col] = selectedColor;
+        newGrid[row][col] = colorToUse;
       } else if (currentTool === ToolType.ERASER) {
         if (newGrid[row][col] === '#FFFFFF') return prev;
         pushUndo(prev);
@@ -474,7 +492,7 @@ const App: React.FC = () => {
       }
       return newGrid;
     });
-  }, [selectedColor, currentTool, gridWidth, gridHeight, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo]);
+  }, [selectedColor, currentTool, gridWidth, gridHeight, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo, selectedColorSystem]);
 
   const handleMiddleButtonDrag = useCallback((deltaX: number, deltaY: number) => {
     setPanOffset(prev => ({

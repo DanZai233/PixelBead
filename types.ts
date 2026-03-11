@@ -47,6 +47,7 @@ export enum ToolType {
   LINE = 'LINE',
   RECT = 'RECT',
   CIRCLE = 'CIRCLE',
+  SMART_PENCIL = 'SMART_PENCIL',
 }
 
 export enum PixelStyle {
@@ -137,6 +138,7 @@ export const TOOLS_INFO: ToolInfo[] = [
   { type: ToolType.LINE, name: '直线', icon: '📏', shortcut: 'L', description: '绘制直线' },
   { type: ToolType.RECT, name: '矩形', icon: '⬜', shortcut: 'R', description: '绘制矩形' },
   { type: ToolType.CIRCLE, name: '圆形', icon: '⭕', shortcut: 'C', description: '绘制圆形' },
+  { type: ToolType.SMART_PENCIL, name: '智能画笔', icon: '✨', shortcut: 'M', description: '根据底图颜色自动切换颜色' },
 ];
 
 export const PIXEL_STYLES = [
@@ -153,6 +155,7 @@ export const SHORTCUTS = [
   { key: 'L', action: '直线工具' },
   { key: 'R', action: '矩形工具' },
   { key: 'C', action: '圆形工具' },
+  { key: 'M', action: '智能画笔工具' },
   { key: 'Ctrl + 滚轮', action: '缩放画布' },
   { key: '中键拖动', action: '移动画布' },
   { key: 'Space + 拖动', action: '移动画布' },
