@@ -643,18 +643,50 @@ const App: React.FC = () => {
 
   const presetSizes = [16, 32, 48, 64, 80, 100];
 
-  const paletteColors = useMemo(() => {
-    const colors: Array<{ hex: ColorHex; key: string }> = [];
+  const [expandedColorGroups, setExpandedColorGroups] = useState<Set<string>>(new Set());
+
+  const paletteGroups = useMemo(() => {
+    const groups: Map<string, Array<{ hex: ColorHex; key: string }>> = new Map();
 
     Object.entries(colorSystemMapping).forEach(([hex, mapping]) => {
       const colorKey = mapping[selectedColorSystem];
       if (colorKey && !colorKey.startsWith('#')) {
-        colors.push({ hex: hex as ColorHex, key: colorKey });
+        const prefix = colorKey.charAt(0);
+        if (!groups.has(prefix)) {
+          groups.set(prefix, []);
+        }
+        groups.get(prefix)!.push({ hex: hex as ColorHex, key: colorKey });
       }
     });
 
-    return colors.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
+    const sortedGroups: Array<{ letter: string; colors: Array<{ hex: ColorHex; key: string }> }> = [];
+    groups.forEach((colors, letter) => {
+      colors.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
+      sortedGroups.push({ letter, colors });
+    });
+
+    return sortedGroups.sort((a, b) => a.letter.localeCompare(b.letter));
   }, [selectedColorSystem]);
+
+  const toggleColorGroup = (letter: string) => {
+    setExpandedColorGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(letter)) {
+        next.delete(letter);
+      } else {
+        next.add(letter);
+      }
+      return next;
+    });
+  };
+
+  const paletteColors = useMemo(() => {
+    const allColors: Array<{ hex: ColorHex; key: string }> = [];
+    paletteGroups.forEach(group => {
+      allColors.push(...group.colors);
+    });
+    return allColors;
+  }, [paletteGroups]);
 
   const allColors = useMemo(() => {
     const colorSet = new Set<ColorHex>([...DEFAULT_COLORS]);
@@ -1092,21 +1124,49 @@ const App: React.FC = () => {
                 placeholder="#RRGGBB (自定义颜色)"
               />
             </div>
-            <div className="grid grid-cols-5 md:grid-cols-6 gap-1.5">
-              {paletteColors.map(({ hex, key }) => (
-                <button
-                  key={hex}
-                  onClick={() => {
-                    setSelectedColor(hex);
-                    if (currentTool === ToolType.ERASER || currentTool === ToolType.PICKER) setCurrentTool(ToolType.PENCIL);
-                  }}
-                  className={`relative aspect-square rounded-full border-2 transition-all hover:scale-110 ${selectedColor === hex ? 'border-indigo-600 scale-110 ring-2 ring-indigo-100' : 'border-white'}`}
-                  style={{ backgroundColor: hex }}
-                  title={`${key}: ${hex}`}
-                >
-                  <span className="absolute bottom-0.5 right-0.5 text-[7px] font-bold text-white/90 drop-shadow-md">{key}</span>
-                </button>
-              ))}
+            <div className="space-y-2">
+              {paletteGroups.map(({ letter, colors }) => {
+                const isExpanded = expandedColorGroups.has(letter);
+                const displayColors = isExpanded ? colors : [colors[0]];
+
+                return (
+                  <div key={letter} className="space-y-1">
+                    <button
+                      onClick={() => toggleColorGroup(letter)}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all"
+                    >
+                      <span className="text-xs font-bold text-slate-700">{letter}</span>
+                      <span className="text-[9px] text-slate-500">{isExpanded ? `${colors.length} 个颜色` : `点击展开 (${colors.length})`}</span>
+                      <svg 
+                        className={`ml-auto w-3 h-3 text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <div className={`grid grid-cols-5 md:grid-cols-6 gap-1.5 ${isExpanded ? 'max-h-40 overflow-y-auto' : ''}`}>
+                      {displayColors.map(({ hex, key }) => (
+                        <button
+                          key={hex}
+                          onClick={() => {
+                            setSelectedColor(hex);
+                            if (currentTool === ToolType.ERASER || currentTool === ToolType.PICKER) setCurrentTool(ToolType.PENCIL);
+                          }}
+                          className={`relative aspect-square rounded-full border-2 transition-all hover:scale-110 ${selectedColor === hex ? 'border-indigo-600 scale-110 ring-2 ring-indigo-100' : 'border-white'}`}
+                          style={{ backgroundColor: hex }}
+                          title={`${key}: ${hex}`}
+                        >
+                          {isExpanded && (
+                            <span className="absolute bottom-0.5 right-0.5 text-[7px] font-bold text-white/90 drop-shadow-md">{key}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
