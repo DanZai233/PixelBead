@@ -79,7 +79,8 @@ export function getUniqueColors(grid: ColorHex[][]): ColorHex[] {
 
 export interface ExportImageData {
   grid: ColorHex[][];
-  gridSize: number;
+  gridWidth: number;
+  gridHeight: number;
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
   colorSystem?: string;
   colorSystemMapping?: Record<string, Record<string, string>>;
@@ -87,15 +88,26 @@ export interface ExportImageData {
   mirror?: boolean;
 }
 
-export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
-  const { grid, gridSize, pixelStyle, colorSystem, colorSystemMapping, showGuideLines, mirror } = data;
+function loadLogo(): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to load logo'));
+    img.src = '/logo.jpg';
+  });
+}
+
+export async function generateExportImage(data: ExportImageData): Promise<HTMLCanvasElement> {
+  const { grid, gridWidth, gridHeight, pixelStyle, colorSystem, colorSystemMapping, showGuideLines, mirror } = data;
 
   const mirroredGrid = mirror ? grid.map(row => [...row].reverse()) : grid;
   const uniqueColors = getUniqueColors(mirroredGrid);
   
   const cellSize = 30;
-  const canvasWidth = gridSize * cellSize;
-  const canvasHeight = gridSize * cellSize + 60;
+  const headerHeight = 60;
+  const gridOffsetY = headerHeight;
+  const canvasWidth = gridWidth * cellSize;
+  const canvasHeight = gridHeight * cellSize + 60 + headerHeight;
   
   const canvas = document.createElement('canvas');
   canvas.width = canvasWidth;
@@ -118,11 +130,42 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
     return !mapping || !mapping[colorSystem] || mapping[colorSystem].startsWith('#');
   });
   
-  for (let row = 0; row < gridSize; row++) {
-    for (let col = 0; col < gridSize; col++) {
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, canvasWidth, headerHeight);
+  
+  ctx.strokeStyle = '#E5E7EB';
+  ctx.beginPath();
+  ctx.moveTo(0, headerHeight);
+  ctx.lineTo(canvasWidth, headerHeight);
+  ctx.stroke();
+  
+  let logo: HTMLImageElement | null = null;
+  try {
+    logo = await loadLogo();
+  } catch (error) {
+    console.warn('Failed to load logo:', error);
+  }
+  
+  if (logo) {
+    const logoSize = 40;
+    ctx.drawImage(logo, 15, 10, logoSize, logoSize);
+  }
+  
+  ctx.fillStyle = '#1E293B';
+  ctx.font = 'bold 24px Arial';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('拼豆糕手', logo ? 65 : 15, 30);
+  
+  ctx.fillStyle = '#64748B';
+  ctx.font = '12px Arial';
+  ctx.fillText('pindou.danzaii.cn', logo ? 65 : 15, 48);
+  
+  for (let row = 0; row < gridHeight; row++) {
+    for (let col = 0; col < gridWidth; col++) {
       const color = mirroredGrid[row][col];
       const x = col * cellSize;
-      const y = row * cellSize;
+      const y = gridOffsetY + row * cellSize;
       
       if (color && color !== '#FFFFFF') {
         ctx.fillStyle = color;
@@ -172,22 +215,25 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
     ctx.lineWidth = 2;
     ctx.setLineDash([]);
-    
-    for (let i = 5; i < gridSize; i += 5) {
+
+    for (let i = 5; i < gridWidth; i += 5) {
       const pos = i * cellSize;
       ctx.beginPath();
-      ctx.moveTo(pos, 0);
-      ctx.lineTo(pos, gridSize * cellSize);
+      ctx.moveTo(pos, gridOffsetY);
+      ctx.lineTo(pos, gridOffsetY + gridHeight * cellSize);
       ctx.stroke();
-      
+    }
+
+    for (let i = 5; i < gridHeight; i += 5) {
+      const pos = i * cellSize;
       ctx.beginPath();
-      ctx.moveTo(0, pos);
-      ctx.lineTo(gridSize * cellSize, pos);
+      ctx.moveTo(0, gridOffsetY + pos);
+      ctx.lineTo(gridWidth * cellSize, gridOffsetY + pos);
       ctx.stroke();
     }
   }
-  
-  const legendY = gridSize * cellSize + 15;
+
+  const legendY = gridOffsetY + gridHeight * cellSize + 15;
   const legendHeight = 22;
   const itemGap = 5;
   const barPadding = 15;
@@ -259,8 +305,9 @@ export function generateExportImage(data: ExportImageData): HTMLCanvasElement {
     }
     
     const totalLegendHeight = rowsCount * (legendHeight + itemGap) + 10;
-    if (totalLegendHeight > 60) {
-      const newHeight = gridSize * cellSize + totalLegendHeight + 10;
+    const requiredHeight = gridOffsetY + gridHeight * cellSize + totalLegendHeight + 10;
+    if (requiredHeight > canvasHeight) {
+      const newHeight = requiredHeight;
       const newCanvas = document.createElement('canvas');
       newCanvas.width = canvasWidth;
       newCanvas.height = newHeight;

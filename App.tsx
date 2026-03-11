@@ -27,12 +27,16 @@ import colorSystemMapping from './colorSystemMapping.json';
 import { Analytics } from '@vercel/analytics/react';
 
 const App: React.FC = () => {
-  const [gridSize, setGridSize] = useState(32);
-  const [customSize, setCustomSize] = useState('');
+  const [gridWidth, setGridWidth] = useState(32);
+  const [gridHeight, setGridHeight] = useState(32);
+  const [customWidth, setCustomWidth] = useState('');
+  const [customHeight, setCustomHeight] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [grid, setGrid] = useState<string[][]>(() => 
     Array(32).fill(null).map(() => Array(32).fill('#FFFFFF'))
   );
+  const [backgroundImage, setBackgroundImage] = useState<{ src: string; x: number; y: number; scale: number; opacity: number } | null>(null);
+  const [selectedLayer, setSelectedLayer] = useState<'bead' | 'background'>('bead');
   const [selectedColor, setSelectedColor] = useState(DEFAULT_COLORS[0]);
   const [currentTool, setCurrentTool] = useState<ToolType>(ToolType.PENCIL);
   const [pixelStyle, setPixelStyle] = useState<PixelStyle>(PixelStyle.CIRCLE);
@@ -90,6 +94,7 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const aiReferenceImageRef = useRef<HTMLInputElement>(null);
+  const backgroundImageRef = useRef<HTMLInputElement>(null);
   const undoStackRef = useRef<string[][][]>([]);
   const redoStackRef = useRef<string[][][]>([]);
   const gridRef = useRef(grid);
@@ -156,7 +161,7 @@ const App: React.FC = () => {
     const add = (dx: number, dy: number) => {
       const row = Math.round(cy + dy);
       const col = Math.round(cx + dx);
-      if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) cells.push([row, col]);
+      if (row >= 0 && row < gridHeight && col >= 0 && col < gridWidth) cells.push([row, col]);
     };
     while (x >= y) {
       add(x, y); add(-x, y); add(x, -y); add(-x, -y);
@@ -166,7 +171,7 @@ const App: React.FC = () => {
       else { x--; err += 2 * (y - x) + 1; }
     }
     return cells;
-  }, [gridSize]);
+  }, [gridHeight, gridWidth]);
 
   useEffect(() => {
     const shapeTools = [ToolType.LINE, ToolType.RECT, ToolType.CIRCLE];
@@ -181,7 +186,9 @@ const App: React.FC = () => {
         try {
           const shareData = await loadFromUpstash(shareKey);
           if (shareData) {
-            setGridSize(shareData.gridSize);
+            const size = shareData.gridSize || shareData.gridWidth || 32;
+            setGridWidth(size);
+            setGridHeight(shareData.gridHeight || size);
             setGrid(shareData.grid);
             setPixelStyle(shareData.pixelStyle as PixelStyle);
             setShareModalOpen(true);
@@ -234,20 +241,26 @@ const App: React.FC = () => {
   }, []);
 
   const handleApplyMaterial = useCallback(async (material: any) => {
-    if (material.gridSize !== gridSize) {
-      if (!confirm(`素材尺寸为 ${material.gridSize}x${material.gridSize}，当前为 ${gridSize}x${gridSize}。是否切换尺寸并应用？`)) {
+    const materialSize = material.gridSize || material.gridWidth || 32;
+    const materialHeight = material.gridHeight || material.gridWidth || 32;
+    const currentMaxSize = Math.max(gridWidth, gridHeight);
+    const materialMaxSize = Math.max(materialSize, materialHeight);
+
+    if (materialMaxSize !== currentMaxSize || material.gridWidth !== gridWidth || material.gridHeight !== gridHeight) {
+      if (!confirm(`素材尺寸为 ${materialSize}x${materialHeight}，当前为 ${gridWidth}x${gridHeight}。是否切换尺寸并应用？`)) {
         return;
       }
-      setGridSize(material.gridSize);
+      setGridWidth(materialSize);
+      setGridHeight(materialHeight);
     }
 
     pushUndo(gridRef.current);
     setGrid(material.grid);
     setPanOffset({ x: 0, y: 0 });
-    if (material.gridSize >= 80) setZoom(35);
-    else if (material.gridSize >= 48) setZoom(50);
+    if (materialMaxSize >= 80) setZoom(35);
+    else if (materialMaxSize >= 48) setZoom(50);
     else setZoom(80);
-  }, [gridSize, pushUndo]);
+  }, [gridWidth, gridHeight, pushUndo]);
 
   const undo = useCallback(() => {
     if (undoStackRef.current.length === 0) return;
@@ -291,68 +304,82 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSettingsOpen, isColorPickerOpen, isShortcutsOpen, undo, redo]);
 
-  const handleResize = useCallback((newSize: number) => {
+  const handleResize = useCallback((newWidth: number, newHeight?: number) => {
+    const finalHeight = newHeight || newWidth;
     if (grid.some(row => row.some(c => c !== '#FFFFFF'))) {
       if (!confirm("更改尺寸将清空当前画布，确定吗？")) return;
     }
     undoStackRef.current = [];
     redoStackRef.current = [];
-    setGridSize(newSize);
-    setGrid(Array(newSize).fill(null).map(() => Array(newSize).fill('#FFFFFF')));
+    setGridWidth(newWidth);
+    setGridHeight(finalHeight);
+    setGrid(Array(finalHeight).fill(null).map(() => Array(newWidth).fill('#FFFFFF')));
     setPanOffset({ x: 0, y: 0 });
-    if (newSize >= 80) setZoom(35);
-    else if (newSize >= 48) setZoom(50);
+    const maxSize = Math.max(newWidth, finalHeight);
+    if (maxSize >= 80) setZoom(35);
+    else if (maxSize >= 48) setZoom(50);
     else setZoom(80);
     setShowCustomInput(false);
-    setCustomSize('');
+    setCustomWidth('');
+    setCustomHeight('');
   }, [grid]);
 
   const handleCustomSize = useCallback(() => {
-    const size = parseInt(customSize);
-    if (isNaN(size) || size < 4 || size > 200) {
+    const width = parseInt(customWidth);
+    const height = parseInt(customHeight);
+    if (isNaN(width) || isNaN(height) || width < 4 || width > 200 || height < 4 || height > 200) {
       alert('请输入 4-200 之间的数字');
       return;
     }
-    handleResize(size);
-  }, [customSize, handleResize]);
+    handleResize(width, height);
+  }, [customWidth, customHeight, handleResize]);
 
   const resetGrid = useCallback(() => {
     if (confirm("确定要清空画布吗？")) {
       pushUndo(gridRef.current);
-      setGrid(Array(gridSize).fill(null).map(() => Array(gridSize).fill('#FFFFFF')));
+      setGrid(Array(gridHeight).fill(null).map(() => Array(gridWidth).fill('#FFFFFF')));
       setPanOffset({ x: 0, y: 0 });
     }
-  }, [gridSize, pushUndo]);
+  }, [gridWidth, gridHeight, pushUndo]);
 
-  const processImageToGrid = useCallback((imageSrc: string, size: number, xAlign: number = 0, yAlign: number = 0) => {
+  const processImageToGrid = useCallback((imageSrc: string, width: number, height: number, xAlign: number = 0, yAlign: number = 0) => {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      const sourceSize = Math.min(img.width, img.height);
-      let offsetX = (img.width - sourceSize) / 2;
-      let offsetY = (img.height - sourceSize) / 2;
+      const sourceWidth = img.width;
+      const sourceHeight = img.height;
+      let sourceX = 0;
+      let sourceY = 0;
+      let sourceDrawWidth = sourceWidth;
+      let sourceDrawHeight = sourceHeight;
 
-      if (img.width > img.height) {
-        if (xAlign === -1) offsetX = 0;
-        else if (xAlign === 1) offsetX = img.width - sourceSize;
-      } else {
-        if (yAlign === -1) offsetY = 0;
-        else if (yAlign === 1) offsetY = img.height - sourceSize;
+      if (xAlign === -1) {
+        sourceDrawWidth = Math.min(sourceWidth, sourceHeight * width / height);
+      } else if (xAlign === 1) {
+        sourceX = sourceWidth - Math.min(sourceWidth, sourceHeight * width / height);
+        sourceDrawWidth = Math.min(sourceWidth, sourceHeight * width / height);
       }
 
-      ctx.drawImage(img, offsetX, offsetY, sourceSize, sourceSize, 0, 0, size, size);
-      const imageData = ctx.getImageData(0, 0, size, size).data;
+      if (yAlign === -1) {
+        sourceDrawHeight = Math.min(sourceHeight, sourceWidth * height / width);
+      } else if (yAlign === 1) {
+        sourceY = sourceHeight - Math.min(sourceHeight, sourceWidth * height / width);
+        sourceDrawHeight = Math.min(sourceHeight, sourceWidth * height / width);
+      }
+
+      ctx.drawImage(img, sourceX, sourceY, sourceDrawWidth, sourceDrawHeight, 0, 0, width, height);
+      const imageData = ctx.getImageData(0, 0, width, height).data;
       
       const newGrid: string[][] = [];
-      for (let i = 0; i < size; i++) {
+      for (let i = 0; i < height; i++) {
         const row: string[] = [];
-        for (let j = 0; j < size; j++) {
-          const index = (i * size + j) * 4;
+        for (let j = 0; j < width; j++) {
+          const index = (i * width + j) * 4;
           const r = imageData[index];
           const g = imageData[index + 1];
           const b = imageData[index + 2];
@@ -400,7 +427,7 @@ const App: React.FC = () => {
         const newGrid = prev.map(r => [...r]);
         const color = selectedColor;
         for (const [r, c] of cells) {
-          if (r >= 0 && r < gridSize && c >= 0 && c < gridSize) newGrid[r][c] = color;
+          if (r >= 0 && r < gridHeight && c >= 0 && c < gridWidth) newGrid[r][c] = color;
         }
         return newGrid;
       });
@@ -429,7 +456,7 @@ const App: React.FC = () => {
         while (stack.length > 0) {
           const [r, c] = stack.pop()!;
           const key = `${r},${c}`;
-          if (r < 0 || r >= gridSize || c < 0 || c >= gridSize || newGrid[r][c] !== targetColor || visited.has(key)) continue;
+          if (r < 0 || r >= gridHeight || c < 0 || c >= gridWidth || newGrid[r][c] !== targetColor || visited.has(key)) continue;
           newGrid[r][c] = fillColor;
           visited.add(key);
           stack.push([r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]);
@@ -437,7 +464,7 @@ const App: React.FC = () => {
       }
       return newGrid;
     });
-  }, [selectedColor, currentTool, gridSize, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo]);
+  }, [selectedColor, currentTool, gridWidth, gridHeight, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo]);
 
   const handleMiddleButtonDrag = useCallback((deltaX: number, deltaY: number) => {
     setPanOffset(prev => ({
@@ -474,7 +501,7 @@ const App: React.FC = () => {
     setIsGenerating(true);
     try {
       const base64 = await generatePixelArtImage(aiPrompt, aiConfig, aiReferenceImage || undefined);
-      processImageToGrid(base64, gridSize, 0, 0);
+      processImageToGrid(base64, gridWidth, gridHeight, 0, 0);
       setAiGeneratedImage(base64);
       setAiPrompt('');
       setAiReferenceImage(null);
@@ -519,19 +546,23 @@ const App: React.FC = () => {
   const onImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
         const data = JSON.parse(content);
-        
-        if (data.grid && data.gridSize) {
-          if (data.gridSize !== gridSize) {
-            if (!confirm(`导入的画布大小为 ${data.gridSize}x${data.gridSize}，当前为 ${gridSize}x${gridSize}。是否切换尺寸并导入？`)) {
+
+        const importWidth = data.gridSize || data.gridWidth || 32;
+        const importHeight = data.gridHeight || data.gridSize || 32;
+
+        if (data.grid && (data.gridSize || data.gridWidth)) {
+          if (importWidth !== gridWidth || importHeight !== gridHeight) {
+            if (!confirm(`导入的画布大小为 ${importWidth}x${importHeight}，当前为 ${gridWidth}x${gridHeight}。是否切换尺寸并导入？`)) {
               return;
             }
-            setGridSize(data.gridSize);
+            setGridWidth(importWidth);
+            setGridHeight(importHeight);
           }
           pushUndo(gridRef.current);
           setGrid(data.grid);
@@ -547,6 +578,25 @@ const App: React.FC = () => {
     event.target.value = '';
   };
 
+  const handleBackgroundImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const src = e.target?.result as string;
+      setBackgroundImage({
+        src,
+        x: 0,
+        y: 0,
+        scale: 1,
+        opacity: 0.5,
+      });
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  };
+
   const handleExportImage = useCallback(() => {
     const hasContent = grid.some(row => row.some(c => c !== '#FFFFFF'));
     if (!hasContent) {
@@ -556,12 +606,13 @@ const App: React.FC = () => {
 
     setExportPixelStyle(pixelStyle);
     setExportModalOpen(true);
-  }, [grid, gridSize, pixelStyle]);
+  }, [grid, gridWidth, gridHeight, pixelStyle]);
 
-  const handleConfirmExport = useCallback(() => {
-    const canvas = generateExportImage({
+  const handleConfirmExport = useCallback(async () => {
+    const canvas = await generateExportImage({
       grid,
-      gridSize,
+      gridWidth,
+      gridHeight,
       pixelStyle: exportPixelStyle,
       colorSystem: selectedColorSystem,
       colorSystemMapping: colorSystemMapping as Record<string, Record<string, string>>,
@@ -572,14 +623,14 @@ const App: React.FC = () => {
     const url = canvas.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = url;
-    a.download = exportMirror ? `pixel-bead-${gridSize}-mirrored.png` : `pixel-bead-${gridSize}.png`;
+    a.download = exportMirror ? `pixel-bead-${gridWidth}x${gridHeight}-mirrored.png` : `pixel-bead-${gridWidth}x${gridHeight}.png`;
     a.click();
 
     setExportModalOpen(false);
-  }, [grid, gridSize, exportPixelStyle, exportShowGuideLines, exportMirror, selectedColorSystem]);
+  }, [grid, gridWidth, gridHeight, exportPixelStyle, exportShowGuideLines, exportMirror, selectedColorSystem]);
 
   const baseBeadSize = 28;
-  const boardDimension = gridSize * (baseBeadSize * (zoom / 100));
+  const boardDimension = Math.max(gridWidth, gridHeight) * (baseBeadSize * (zoom / 100));
 
   const presetSizes = [16, 32, 48, 64, 80, 100];
 
@@ -646,7 +697,8 @@ const App: React.FC = () => {
       try {
         const key = await saveMaterialToUpstash(
           grid,
-          gridSize,
+          gridWidth,
+          gridHeight,
           pixelStyle,
           materialTitle,
           materialDescription,
@@ -673,7 +725,7 @@ const App: React.FC = () => {
     } else {
       setIsSharing(true);
       try {
-        const key = await saveToUpstash(grid, gridSize, pixelStyle);
+        const key = await saveToUpstash(grid, gridWidth, gridHeight, pixelStyle);
         if (key) {
           const url = generateShareUrl(key, 'https://pindou.danzaii.cn');
           setShareUrl(url);
@@ -688,7 +740,7 @@ const App: React.FC = () => {
         setIsSharing(false);
       }
     }
-  }, [grid, gridSize, pixelStyle, shareToGallery, materialTitle, materialDescription, materialAuthor, materialTags]);
+  }, [grid, gridWidth, gridHeight, pixelStyle, shareToGallery, materialTitle, materialDescription, materialAuthor, materialTags]);
 
   const copyShareUrl = useCallback(() => {
     if (shareUrl) {
@@ -747,7 +799,7 @@ const App: React.FC = () => {
               <button
                 key={size}
                 onClick={() => handleResize(size)}
-                className={`px-2 md:px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-black transition-all ${gridSize === size ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`px-2 md:px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-black transition-all ${gridWidth === size && gridHeight === size ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 {size}²
               </button>
@@ -766,10 +818,20 @@ const App: React.FC = () => {
                 type="number"
                 min="4"
                 max="200"
-                value={customSize}
-                onChange={(e) => setCustomSize(e.target.value)}
-                placeholder="4-200"
-                className="w-14 md:w-16 px-2 py-1.5 text-[10px] md:text-xs font-black text-center border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
+                value={customWidth}
+                onChange={(e) => setCustomWidth(e.target.value)}
+                placeholder="宽"
+                className="w-10 md:w-14 px-2 py-1.5 text-[10px] md:text-xs font-black text-center border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
+              />
+              <span className="text-slate-400">x</span>
+              <input
+                type="number"
+                min="4"
+                max="200"
+                value={customHeight}
+                onChange={(e) => setCustomHeight(e.target.value)}
+                placeholder="高"
+                className="w-10 md:w-14 px-2 py-1.5 text-[10px] md:text-xs font-black text-center border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
               />
               <button
                 onClick={handleCustomSize}
@@ -837,14 +899,14 @@ const App: React.FC = () => {
               <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
               <span className="hidden sm:inline">导入</span>
             </button>
-            <button 
+            <button
               onClick={() => {
-                const data = JSON.stringify({ grid, gridSize });
+                const data = JSON.stringify({ grid, gridWidth, gridHeight });
                 const blob = new Blob([data], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `pixel-bead-${gridSize}.json`;
+                a.download = `pixel-bead-${gridWidth}x${gridHeight}.json`;
                 a.click();
               }}
               className="bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2"
@@ -1202,8 +1264,111 @@ const App: React.FC = () => {
             )}
           </div>
 
+          <div className="bg-blue-600 rounded-3xl p-4 md:p-5 text-white shadow-xl space-y-2 md:space-y-3">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-[10px] font-black uppercase tracking-widest text-white">底图参考</h2>
+            </div>
+
+            <input type="file" accept="image/*" className="hidden" ref={backgroundImageRef} onChange={handleBackgroundImageUpload} />
+            <button
+              onClick={() => backgroundImageRef.current?.click()}
+              className="w-full py-2 md:py-2.5 bg-white text-blue-600 rounded-xl font-black text-xs transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
+            >
+              <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              {backgroundImage ? '更换底图' : '导入底图'}
+            </button>
+
+            {backgroundImage && (
+              <>
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[9px] font-bold text-white">透明度</label>
+                    <span className="text-[9px] text-white/90">{Math.round(backgroundImage.opacity * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1"
+                    step="0.1"
+                    value={backgroundImage.opacity}
+                    onChange={(e) => setBackgroundImage({ ...backgroundImage, opacity: parseFloat(e.target.value) })}
+                    className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[9px] font-bold text-white">缩放</label>
+                    <span className="text-[9px] text-white/90">{Math.round(backgroundImage.scale * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    value={backgroundImage.scale}
+                    onChange={(e) => setBackgroundImage({ ...backgroundImage, scale: parseFloat(e.target.value) })}
+                    className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setBackgroundImage({ ...backgroundImage, x: backgroundImage.x - 10 })}
+                    className="flex-1 py-2 md:py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-black text-xs transition-all"
+                  >
+                    ←
+                  </button>
+                  <button
+                    onClick={() => setBackgroundImage({ ...backgroundImage, x: backgroundImage.x + 10 })}
+                    className="flex-1 py-2 md:py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-black text-xs transition-all"
+                  >
+                    →
+                  </button>
+                  <button
+                    onClick={() => setBackgroundImage({ ...backgroundImage, y: backgroundImage.y - 10 })}
+                    className="flex-1 py-2 md:py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-black text-xs transition-all"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    onClick={() => setBackgroundImage({ ...backgroundImage, y: backgroundImage.y + 10 })}
+                    className="flex-1 py-2 md:py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-black text-xs transition-all"
+                  >
+                    ↓
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setBackgroundImage(null)}
+                  className="w-full py-2 md:py-2.5 bg-red-500 hover:bg-red-400 text-white rounded-xl font-black text-xs transition-all"
+                >
+                  清除底图
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="bg-slate-200 rounded-3xl p-4 md:p-5 text-slate-800 shadow-xl space-y-2 md:space-y-3">
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-600">图层选择</h2>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelectedLayer('bead')}
+                className={`flex-1 py-2 md:py-2.5 rounded-xl font-black text-xs transition-all ${selectedLayer === 'bead' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-600'}`}
+              >
+                拼豆层
+              </button>
+              <button
+                onClick={() => setSelectedLayer('background')}
+                className={`flex-1 py-2 md:py-2.5 rounded-xl font-black text-xs transition-all ${selectedLayer === 'background' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-600'}`}
+              >
+                底图层
+              </button>
+            </div>
+          </div>
+
           <div className="mt-auto pt-4 space-y-0">
-            <button 
+            <button
               onClick={resetGrid}
               className="w-full py-3 md:py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-all"
             >
@@ -1249,15 +1414,18 @@ const App: React.FC = () => {
                     transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
                   }}
                 >
-                  <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] bg-white border border-white/60 p-6 md:p-12">
+                   <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] bg-white border border-white/60 p-6 md:p-12">
                     <BeadCanvas
                       grid={grid}
-                      gridSize={gridSize}
+                      gridWidth={gridWidth}
+                      gridHeight={gridHeight}
                       zoom={zoom}
                       showGridLines={showGridLines}
                       showRuler={showRuler}
                       showGuideLines={showGuideLines}
                       pixelStyle={pixelStyle}
+                      backgroundImage={backgroundImage}
+                      selectedLayer={selectedLayer}
                       onPointerDown={handleCanvasAction}
                       onPointerMove={handleCanvasAction}
                       onPointerUp={() => {}}
@@ -1272,7 +1440,7 @@ const App: React.FC = () => {
               <div className="min-w-full min-h-full">
                 <Bead3DViewer
                   grid={grid}
-                  gridSize={gridSize}
+                  gridSize={Math.max(gridWidth, gridHeight)}
                   zoom={zoom}
                   pixelStyle={pixelStyle}
                   showGridLines={showGridLines}
@@ -1284,7 +1452,7 @@ const App: React.FC = () => {
               <div className="min-w-full min-h-full">
                 <BeadSliceViewer
                   grid={grid}
-                  gridSize={gridSize}
+                  gridSize={Math.max(gridWidth, gridHeight)}
                   zoom={zoom}
                   pixelStyle={pixelStyle}
                   showGridLines={showGridLines}
@@ -1296,10 +1464,10 @@ const App: React.FC = () => {
           </div>
 
            <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-4 right-20 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-[45] md:z-50 max-w-fit md:max-w-none">
-             <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridSize}x{gridSize}</div>
-             <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridSize * gridSize}</div>
-             <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
-           </div>
+              <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridWidth}x{gridHeight}</div>
+              <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridWidth * gridHeight}</div>
+              <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
+            </div>
 
            <button
              onClick={() => setHelpModalOpen(true)}
@@ -1389,8 +1557,8 @@ const App: React.FC = () => {
 
             <div className="flex gap-2 md:gap-4">
               <button onClick={() => setPendingImage(null)} className="flex-1 py-3 md:py-4 bg-slate-100 text-slate-500 rounded-xl md:rounded-2xl font-black text-sm">取消</button>
-              <button 
-                onClick={() => processImageToGrid(pendingImage, gridSize, cropOffset.x, cropOffset.y)} 
+              <button
+                onClick={() => processImageToGrid(pendingImage, gridWidth, gridHeight, cropOffset.x, cropOffset.y)}
                 className="flex-[2] py-3 md:py-4 bg-emerald-500 text-white rounded-xl md:rounded-2xl font-black text-sm shadow-xl active:scale-95"
               >
                 确认并转换

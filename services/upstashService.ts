@@ -9,7 +9,9 @@ const redis = new Redis({
 
 export interface ShareData {
   grid: string[][];
-  gridSize: number;
+  gridSize?: number;
+  gridWidth?: number;
+  gridHeight?: number;
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
   createdAt: number;
   expiresAt: number;
@@ -19,7 +21,8 @@ const EXPIRE_HOURS = 24 * 7; // 7天过期
 
 export async function saveToUpstash(
   grid: string[][],
-  gridSize: number,
+  gridWidth: number,
+  gridHeight: number,
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED'
 ): Promise<string | null> {
   try {
@@ -28,7 +31,8 @@ export async function saveToUpstash(
 
     const shareData: ShareData = {
       grid,
-      gridSize,
+      gridWidth,
+      gridHeight,
       pixelStyle,
       createdAt: Date.now(),
       expiresAt: Date.now() + EXPIRE_HOURS * 60 * 60 * 1000,
@@ -95,7 +99,9 @@ export interface MaterialData {
   description: string;
   author: string;
   tags: string[];
-  gridSize: number;
+  gridSize?: number;
+  gridWidth?: number;
+  gridHeight?: number;
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
   grid: string[][];
   createdAt: number;
@@ -107,7 +113,8 @@ const MATERIAL_LIST_KEY = 'materials:list';
 
 export async function saveMaterialToUpstash(
   grid: string[][],
-  gridSize: number,
+  gridWidth: number,
+  gridHeight: number,
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED',
   title: string,
   description: string,
@@ -116,7 +123,7 @@ export async function saveMaterialToUpstash(
 ): Promise<string | null> {
   try {
     const key = `material:${Date.now()}:${Math.random().toString(36).substring(2, 9)}`;
-    
+
     const material: MaterialData = {
       id: key,
       key,
@@ -124,7 +131,8 @@ export async function saveMaterialToUpstash(
       description,
       author,
       tags,
-      gridSize,
+      gridWidth,
+      gridHeight,
       pixelStyle,
       grid,
       createdAt: Date.now(),

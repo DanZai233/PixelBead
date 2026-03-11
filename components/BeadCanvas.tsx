@@ -3,12 +3,15 @@ import { PixelStyle } from '../types';
 
 interface BeadCanvasProps {
   grid: string[][];
-  gridSize: number;
+  gridWidth: number;
+  gridHeight: number;
   zoom: number;
   showGridLines: boolean;
   showRuler: boolean;
   showGuideLines: boolean;
   pixelStyle: PixelStyle;
+  backgroundImage?: { src: string; x: number; y: number; scale: number; opacity: number } | null;
+  selectedLayer?: 'bead' | 'background';
   onPointerDown: (row: number, col: number) => void;
   onPointerMove: (row: number, col: number) => void;
   onPointerUp: () => void;
@@ -19,12 +22,15 @@ interface BeadCanvasProps {
 
 export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   grid,
-  gridSize,
+  gridWidth,
+  gridHeight,
   zoom: propZoom,
   showGridLines,
   showRuler,
   showGuideLines,
   pixelStyle,
+  backgroundImage,
+  selectedLayer,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -51,7 +57,8 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
 
   const cellSize = baseBeadSize * (propZoom / 100);
   const rulerSize = showRuler ? Math.max(20, cellSize * 0.5) : 0;
-  const canvasSize = gridSize * cellSize + rulerSize;
+  const canvasWidth = gridWidth * cellSize + rulerSize;
+  const canvasHeight = gridHeight * cellSize + rulerSize;
 
   const drawPixel = useCallback((
     ctx: CanvasRenderingContext2D,
@@ -152,7 +159,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       ctx.fillStyle = '#94a3b8';
       ctx.fillText('0', rulerSize / 2, rulerSize / 2);
 
-      for (let col = 0; col < gridSize; col++) {
+      for (let col = 0; col < gridWidth; col++) {
         if (col % 5 === 0) {
           const x = rulerSize + col * cellSize + cellSize / 2;
           ctx.fillStyle = '#f8fafc';
@@ -168,7 +175,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         }
       }
 
-      for (let row = 0; row < gridSize; row++) {
+      for (let row = 0; row < gridHeight; row++) {
         if (row % 5 === 0) {
           const y = rulerSize + row * cellSize + cellSize / 2;
           ctx.fillStyle = '#f8fafc';
@@ -191,8 +198,20 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     ctx.save();
     ctx.translate(offsetX, offsetY);
 
-    for (let row = 0; row < gridSize; row++) {
-      for (let col = 0; col < gridSize; col++) {
+    if (backgroundImage) {
+      const img = new Image();
+      img.src = backgroundImage.src;
+      const bgWidth = gridWidth * cellSize * backgroundImage.scale;
+      const bgHeight = gridHeight * cellSize * backgroundImage.scale;
+      const bgX = backgroundImage.x;
+      const bgY = backgroundImage.y;
+      ctx.globalAlpha = backgroundImage.opacity;
+      ctx.drawImage(img, bgX, bgY, bgWidth, bgHeight);
+      ctx.globalAlpha = 1;
+    }
+
+    for (let row = 0; row < gridHeight; row++) {
+      for (let col = 0; col < gridWidth; col++) {
         const color = grid[row][col];
         const x = col * cellSize;
         const y = row * cellSize;
@@ -207,23 +226,27 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       ctx.lineWidth = Math.max(1, cellSize * 0.05);
       ctx.setLineDash([]);
 
-      for (let i = 5; i < gridSize; i += 5) {
+      for (let i = 5; i < gridWidth; i += 5) {
         const pos = i * cellSize;
         
         ctx.beginPath();
         ctx.moveTo(pos, 0);
-        ctx.lineTo(pos, gridSize * cellSize);
+        ctx.lineTo(pos, gridHeight * cellSize);
         ctx.stroke();
+      }
+
+      for (let i = 5; i < gridHeight; i += 5) {
+        const pos = i * cellSize;
         
         ctx.beginPath();
         ctx.moveTo(0, pos);
-        ctx.lineTo(gridSize * cellSize, pos);
+        ctx.lineTo(gridWidth * cellSize, pos);
         ctx.stroke();
       }
     }
 
     ctx.restore();
-  }, [grid, gridSize, cellSize, showGridLines, showRuler, rulerSize, pixelStyle, showGuideLines, drawPixel]);
+  }, [grid, gridWidth, gridHeight, cellSize, showGridLines, showRuler, rulerSize, pixelStyle, showGuideLines, backgroundImage, drawPixel]);
 
   useEffect(() => {
     drawCanvas();
@@ -257,11 +280,11 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     const col = Math.floor((x - offsetX) / cellSize);
     const row = Math.floor((y - offsetY) / cellSize);
 
-    if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) {
+    if (row >= 0 && row < gridHeight && col >= 0 && col < gridWidth) {
       return { row, col };
     }
     return { row: -1, col: -1 };
-  }, [gridSize, cellSize, showRuler]);
+  }, [gridWidth, gridHeight, cellSize, showRuler]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPinchingRef.current) return;
@@ -413,8 +436,8 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     <div ref={containerRef} className="relative">
       <canvas
         ref={canvasRef}
-        width={canvasSize}
-        height={canvasSize}
+        width={canvasWidth}
+        height={canvasHeight}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -426,8 +449,8 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         onTouchCancel={handleTouchEnd}
         className="cursor-crosshair touch-none"
         style={{
-          width: `${canvasSize}px`,
-          height: `${canvasSize}px`,
+          width: `${canvasWidth}px`,
+          height: `${canvasHeight}px`,
         }}
       />
     </div>
