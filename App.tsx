@@ -1124,10 +1124,10 @@ const App: React.FC = () => {
                 placeholder="#RRGGBB (自定义颜色)"
               />
             </div>
-            <div className="space-y-2">
+             <div className="space-y-2">
               {paletteGroups.map(({ letter, colors }) => {
                 const isExpanded = expandedColorGroups.has(letter);
-                const displayColors = isExpanded ? colors : [colors[0]];
+                const displayColors = isExpanded ? colors : colors.slice(0, 6);
 
                 return (
                   <div key={letter} className="space-y-1">
@@ -1136,7 +1136,7 @@ const App: React.FC = () => {
                       className="w-full flex items-center gap-2 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all"
                     >
                       <span className="text-xs font-bold text-slate-700">{letter}</span>
-                      <span className="text-[9px] text-slate-500">{isExpanded ? `${colors.length} 个颜色` : `点击展开 (${colors.length})`}</span>
+                      <span className="text-[9px] text-slate-500">{isExpanded ? `${colors.length} 个颜色` : `展开更多 (${colors.length - 6})`}</span>
                       <svg 
                         className={`ml-auto w-3 h-3 text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
                         fill="none" 
