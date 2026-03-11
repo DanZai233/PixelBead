@@ -22,6 +22,7 @@ import {
   createPaletteFromGrid,
   createFullPaletteFromMapping,
   colorSystemOptions,
+  findClosestColor,
 } from './utils/colorSystemUtils';
 import colorSystemMapping from './colorSystemMapping.json';
 
@@ -459,7 +460,6 @@ const App: React.FC = () => {
           }
         });
         
-        const { findClosestColor } = require('./utils/colorSystemUtils');
         const closest = findClosestColor(backgroundColor, availableColors);
         if (closest) {
           colorToUse = closest.hex;
