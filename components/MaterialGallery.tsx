@@ -99,9 +99,9 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
   const generateThumbnail = useCallback((material: MaterialData): string => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    
+
     if (!ctx) return '';
-    
+
     const roundRect = (x: number, y: number, width: number, height: number, radius: number) => {
       ctx.beginPath();
       ctx.moveTo(x + radius, y);
@@ -115,22 +115,25 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
       ctx.quadraticCurveTo(x, y, x, y + radius);
       ctx.closePath();
     };
-    
-    const scale = PREVIEW_SIZE / material.gridSize;
+
+    const gridWidth = material.gridWidth || material.gridSize || 32;
+    const gridHeight = material.gridHeight || material.gridSize || 32;
+    const maxDim = Math.max(gridWidth, gridHeight);
+    const scale = PREVIEW_SIZE / maxDim;
     const cellSize = Math.max(1, Math.floor(scale));
-    
-    canvas.width = PREVIEW_SIZE;
-    canvas.height = PREVIEW_SIZE;
-    
+
+    canvas.width = gridWidth * cellSize;
+    canvas.height = gridHeight * cellSize;
+
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, PREVIEW_SIZE, PREVIEW_SIZE);
-    
-    for (let row = 0; row < material.gridSize; row++) {
-      for (let col = 0; col < material.gridSize; col++) {
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    for (let row = 0; row < gridHeight; row++) {
+      for (let col = 0; col < gridWidth; col++) {
         const color = material.grid[row]?.[col];
         if (color && color !== '#FFFFFF') {
           ctx.fillStyle = color;
-          
+
           if (material.pixelStyle === PixelStyle.CIRCLE) {
             ctx.beginPath();
             ctx.arc(
@@ -162,7 +165,7 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
         }
       }
     }
-    
+
     return canvas.toDataURL('image/png');
   }, []);
 
@@ -182,13 +185,16 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
     if (selectedMaterial) {
       const detailCanvas = document.createElement('canvas');
       const cellSize = 20;
-      
-      detailCanvas.width = selectedMaterial.gridSize * cellSize;
-      detailCanvas.height = selectedMaterial.gridSize * cellSize;
+
+      const gridWidth = selectedMaterial.gridWidth || selectedMaterial.gridSize || 32;
+      const gridHeight = selectedMaterial.gridHeight || selectedMaterial.gridSize || 32;
+
+      detailCanvas.width = gridWidth * cellSize;
+      detailCanvas.height = gridHeight * cellSize;
       const ctx = detailCanvas.getContext('2d');
-      
+
       if (!ctx) return;
-      
+
       const roundRect = (x: number, y: number, width: number, height: number, radius: number) => {
         ctx.beginPath();
         ctx.moveTo(x + radius, y);
@@ -202,16 +208,16 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
         ctx.quadraticCurveTo(x, y, x, y + radius);
         ctx.closePath();
       };
-      
+
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, detailCanvas.width, detailCanvas.height);
-      
-      for (let row = 0; row < selectedMaterial.gridSize; row++) {
-        for (let col = 0; col < selectedMaterial.gridSize; col++) {
+
+      for (let row = 0; row < gridHeight; row++) {
+        for (let col = 0; col < gridWidth; col++) {
           const color = selectedMaterial.grid[row]?.[col];
           if (color && color !== '#FFFFFF') {
             ctx.fillStyle = color;
-            
+
             if (selectedMaterial.pixelStyle === PixelStyle.CIRCLE) {
               ctx.beginPath();
               ctx.arc(
@@ -243,7 +249,7 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
           }
         }
       }
-      
+
       setDetailImage(detailCanvas.toDataURL('image/png'));
     }
   }, [selectedMaterial]);
@@ -403,14 +409,14 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
                         </div>
                       )}
                     </div>
-                    <div className="p-2 md:p-3">
-                      <h4 className="text-xs md:text-sm font-bold text-slate-900 truncate mb-1">{material.title}</h4>
-                      <div className="flex items-center gap-1 text-[10px] md:text-xs text-slate-500">
-                        <span>{material.author}</span>
-                        <span className="hidden sm:inline">·</span>
-                        <span className="hidden sm:inline">{material.gridSize}×{material.gridSize}</span>
-                      </div>
-                    </div>
+                   <div className="p-2 md:p-3">
+                       <h4 className="text-xs md:text-sm font-bold text-slate-900 truncate mb-1">{material.title}</h4>
+                       <div className="flex items-center gap-1 text-[10px] md:text-xs text-slate-500">
+                         <span>{material.author}</span>
+                         <span className="hidden sm:inline">·</span>
+                         <span className="hidden sm:inline">{material.gridWidth || material.gridSize}×{material.gridHeight || material.gridSize}</span>
+                       </div>
+                     </div>
                   </div>
                 ))}
               </div>
@@ -426,13 +432,13 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
                 <div className="flex-1">
                   <h3 className="text-xl md:text-2xl font-black text-slate-900 italic mb-2">{selectedMaterial.title}</h3>
                   <p className="text-sm md:text-base text-slate-600 mb-3">{selectedMaterial.description}</p>
-                  <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm">
-                    <div className="flex items-center gap-1.5 bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-medium">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                      </svg>
-                      {selectedMaterial.gridSize}×{selectedMaterial.gridSize}
-                    </div>
+                   <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm">
+                     <div className="flex items-center gap-1.5 bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-medium">
+                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                       </svg>
+                       {selectedMaterial.gridWidth || selectedMaterial.gridSize}×{selectedMaterial.gridHeight || selectedMaterial.gridSize}
+                     </div>
                     <div className="flex items-center gap-1.5 bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg font-medium">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 016 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
