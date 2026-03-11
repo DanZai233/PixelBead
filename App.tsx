@@ -595,13 +595,30 @@ const App: React.FC = () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const src = e.target?.result as string;
-      setBackgroundImage({
-        src,
-        x: 0,
-        y: 0,
-        scale: 1,
-        opacity: 0.5,
-      });
+
+      // 加载图片以获取原始宽高
+      const img = new Image();
+      img.onload = () => {
+        const baseBeadSize = 28;
+        const cellSize = baseBeadSize * (zoom / 100);
+
+        const canvasWidth = gridWidth * cellSize;
+        const canvasHeight = gridHeight * cellSize;
+
+        // 计算合适的缩放比例，使图片适配画板（不拉伸）
+        const scaleX = canvasWidth / img.width;
+        const scaleY = canvasHeight / img.height;
+        const autoScale = Math.min(scaleX, scaleY);
+
+        setBackgroundImage({
+          src,
+          x: 0,
+          y: 0,
+          scale: autoScale,
+          opacity: 0.5,
+        });
+      };
+      img.src = src;
     };
     reader.readAsDataURL(file);
     event.target.value = '';
@@ -609,13 +626,16 @@ const App: React.FC = () => {
 
   const handleBackgroundImageDrag = useCallback((deltaX: number, deltaY: number) => {
     if (backgroundImage) {
+      const baseBeadSize = 28;
+      const zoomRatio = (baseBeadSize * (zoom / 100)) / baseBeadSize;
+
       setBackgroundImage({
         ...backgroundImage,
-        x: backgroundImage.x + deltaX,
-        y: backgroundImage.y + deltaY,
+        x: backgroundImage.x + deltaX / zoomRatio,
+        y: backgroundImage.y + deltaY / zoomRatio,
       });
     }
-  }, [backgroundImage]);
+  }, [backgroundImage, zoom, setBackgroundImage]);
 
   const handleExportImage = useCallback(() => {
     const hasContent = grid.some(row => row.some(c => c !== '#FFFFFF'));

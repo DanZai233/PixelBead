@@ -223,10 +223,14 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
 
     if (backgroundImage && backgroundImageImgRef.current) {
       const img = backgroundImageImgRef.current;
-      const bgWidth = img.width * backgroundImage.scale;
-      const bgHeight = img.height * backgroundImage.scale;
-      const bgX = backgroundImage.x;
-      const bgY = backgroundImage.y;
+
+      // 计算相对于基础尺寸的缩放比例
+      const zoomRatio = cellSize / baseBeadSize;
+
+      const bgWidth = img.width * backgroundImage.scale * zoomRatio;
+      const bgHeight = img.height * backgroundImage.scale * zoomRatio;
+      const bgX = backgroundImage.x * zoomRatio;
+      const bgY = backgroundImage.y * zoomRatio;
       ctx.globalAlpha = backgroundImage.opacity;
       ctx.drawImage(img, bgX, bgY, bgWidth, bgHeight);
       ctx.globalAlpha = 1;
