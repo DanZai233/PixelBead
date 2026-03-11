@@ -55,6 +55,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   const lastZoomRef = useRef(propZoom);
   const backgroundImageReadyRef = useRef(false);
   const baseBeadSize = 28;
+  const pendingTouchDrawRef = useRef<{ row: number; col: number } | null>(null);
 
   useEffect(() => {
     lastZoomRef.current = propZoom;
@@ -313,12 +314,17 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       touchStartTimeRef.current = Date.now();
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       isTouchPanningRef.current = false;
-      isDrawingRef.current = true;
-      canvasRef.current?.setPointerCapture(e.pointerId);
 
       const { row, col } = getCellFromEvent(e);
       if (row >= 0 && col >= 0) {
-        onPointerDown(row, col);
+        pendingTouchDrawRef.current = { row, col };
+        setTimeout(() => {
+          if (pendingTouchDrawRef.current && !isPinchingRef.current && !isTouchPanningRef.current) {
+            isDrawingRef.current = true;
+            onPointerDown(pendingTouchDrawRef.current.row, pendingTouchDrawRef.current.col);
+          }
+          pendingTouchDrawRef.current = null;
+        }, 100);
       }
       return;
     }
@@ -397,6 +403,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (e.pointerType === 'touch') {
       isTouchPanningRef.current = false;
+      pendingTouchDrawRef.current = null;
     }
 
     if (e.button === 1) {
@@ -406,6 +413,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
 
     isDraggingBackgroundRef.current = false;
     isDrawingRef.current = false;
+    pendingTouchDrawRef.current = null;
     onPointerUp();
   }, [onPointerUp]);
 
@@ -428,6 +436,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
       if (e.touches.length === 2) {
+        pendingTouchDrawRef.current = null;
         isPinchingRef.current = true;
         isDrawingRef.current = false;
         isMiddleButtonDraggingRef.current = false;
@@ -467,6 +476,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       isDrawingRef.current = false;
       isMiddleButtonDraggingRef.current = false;
       isTouchPanningRef.current = false;
+      pendingTouchDrawRef.current = null;
     }
   }, []);
 
