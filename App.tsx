@@ -643,6 +643,19 @@ const App: React.FC = () => {
 
   const presetSizes = [16, 32, 48, 64, 80, 100];
 
+  const paletteColors = useMemo(() => {
+    const colors: Array<{ hex: ColorHex; key: string }> = [];
+
+    Object.entries(colorSystemMapping).forEach(([hex, mapping]) => {
+      const colorKey = mapping[selectedColorSystem];
+      if (colorKey && !colorKey.startsWith('#')) {
+        colors.push({ hex: hex as ColorHex, key: colorKey });
+      }
+    });
+
+    return colors.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
+  }, [selectedColorSystem]);
+
   const allColors = useMemo(() => {
     const colorSet = new Set<ColorHex>([...DEFAULT_COLORS]);
     stats.forEach(item => colorSet.add(item.hex));
@@ -1076,20 +1089,23 @@ const App: React.FC = () => {
                   }
                 }}
                 className="flex-1 px-2 py-1 text-xs md:text-sm font-mono border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
-                placeholder="#RRGGBB"
+                placeholder="#RRGGBB (自定义颜色)"
               />
             </div>
             <div className="grid grid-cols-5 md:grid-cols-6 gap-1.5">
-              {DEFAULT_COLORS.map(color => (
+              {paletteColors.map(({ hex, key }) => (
                 <button
-                  key={color}
+                  key={hex}
                   onClick={() => {
-                    setSelectedColor(color);
+                    setSelectedColor(hex);
                     if (currentTool === ToolType.ERASER || currentTool === ToolType.PICKER) setCurrentTool(ToolType.PENCIL);
                   }}
-                  className={`aspect-square rounded-full border-2 transition-all hover:scale-110 ${selectedColor === color ? 'border-indigo-600 scale-110 ring-2 ring-indigo-100' : 'border-white'}`}
-                  style={{ backgroundColor: color }}
-                />
+                  className={`relative aspect-square rounded-full border-2 transition-all hover:scale-110 ${selectedColor === hex ? 'border-indigo-600 scale-110 ring-2 ring-indigo-100' : 'border-white'}`}
+                  style={{ backgroundColor: hex }}
+                  title={`${key}: ${hex}`}
+                >
+                  <span className="absolute bottom-0.5 right-0.5 text-[7px] font-bold text-white/90 drop-shadow-md">{key}</span>
+                </button>
               ))}
             </div>
           </div>
