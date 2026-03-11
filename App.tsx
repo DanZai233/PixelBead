@@ -1549,25 +1549,26 @@ const App: React.FC = () => {
                   }}
                 >
                    <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] bg-white border border-white/60 p-6 md:p-12">
-                    <BeadCanvas
-                      grid={grid}
-                      gridWidth={gridWidth}
-                      gridHeight={gridHeight}
-                      zoom={zoom}
-                      showGridLines={showGridLines}
-                      showRuler={showRuler}
-                      showGuideLines={showGuideLines}
-                      pixelStyle={pixelStyle}
-                      backgroundImage={backgroundImage}
-                      selectedLayer={selectedLayer}
-                      onPointerDown={handleCanvasAction}
-                      onPointerMove={handleCanvasAction}
-                      onPointerUp={() => {}}
-                      onMiddleButtonDrag={handleMiddleButtonDrag}
-                      onBackgroundImageDrag={handleBackgroundImageDrag}
-                      onZoomChange={setZoom}
-                      onTouchPan={handleMiddleButtonDrag}
-                    />
+                     <BeadCanvas
+                       grid={grid}
+                       gridWidth={gridWidth}
+                       gridHeight={gridHeight}
+                       zoom={zoom}
+                       showGridLines={showGridLines}
+                       showRuler={showRuler}
+                       showGuideLines={showGuideLines}
+                       pixelStyle={pixelStyle}
+                       backgroundImage={backgroundImage}
+                       selectedLayer={selectedLayer}
+                       currentTool={currentTool}
+                       onPointerDown={handleCanvasAction}
+                       onPointerMove={handleCanvasAction}
+                       onPointerUp={() => {}}
+                       onMiddleButtonDrag={handleMiddleButtonDrag}
+                       onBackgroundImageDrag={handleBackgroundImageDrag}
+                       onZoomChange={setZoom}
+                       onTouchPan={handleMiddleButtonDrag}
+                     />
                   </div>
                 </div>
               </div>

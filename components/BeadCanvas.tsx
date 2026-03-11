@@ -12,6 +12,7 @@ interface BeadCanvasProps {
   pixelStyle: PixelStyle;
   backgroundImage?: { src: string; x: number; y: number; scale: number; opacity: number } | null;
   selectedLayer?: 'bead' | 'background';
+  currentTool?: string;
   onPointerDown: (row: number, col: number, backgroundColor?: string | null) => void;
   onPointerMove: (row: number, col: number, backgroundColor?: string | null) => void;
   onPointerUp: () => void;
@@ -32,6 +33,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   pixelStyle,
   backgroundImage,
   selectedLayer,
+  currentTool,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -367,7 +369,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       return;
     }
 
-    if (e.button === 1) {
+    if (e.button === 1 || currentTool === 'HAND') {
       e.preventDefault();
       isMiddleButtonDraggingRef.current = true;
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
@@ -390,7 +392,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         onPointerDown(row, col, backgroundColor);
       }
     }
-  }, [getCellFromEvent, getBackgroundColorAtPosition, onPointerDown, selectedLayer, backgroundImage]);
+  }, [getCellFromEvent, getBackgroundColorAtPosition, onPointerDown, selectedLayer, backgroundImage, currentTool]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPinchingRef.current) return;
@@ -539,11 +541,11 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
-        className="cursor-crosshair touch-none"
-        style={{
-          width: `${canvasWidth}px`,
-          height: `${canvasHeight}px`,
-        }}
+        className={`${currentTool === 'HAND' ? 'cursor-grab' : 'cursor-crosshair'} touch-none`}
+         style={{
+           width: `${canvasWidth}px`,
+           height: `${canvasHeight}px`,
+         }}
       />
     </div>
   );
