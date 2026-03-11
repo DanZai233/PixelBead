@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { PixelStyle } from '../types';
 
 interface BeadCanvasProps {
@@ -59,6 +59,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   const baseBeadSize = 28;
   const lastTouchDrawRowRef = useRef<number | null>(null);
   const lastTouchDrawColRef = useRef<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     lastZoomRef.current = propZoom;
@@ -372,6 +373,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     if (e.button === 1 || currentTool === 'HAND') {
       e.preventDefault();
       isMiddleButtonDraggingRef.current = true;
+      setIsDragging(true);
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       canvasRef.current?.setPointerCapture(e.pointerId);
       return;
@@ -449,9 +451,9 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       lastTouchDrawColRef.current = null;
     }
 
-    if (e.button === 1) {
+    if (e.button === 1 || currentTool === 'HAND') {
       isMiddleButtonDraggingRef.current = false;
-      return;
+      setIsDragging(false);
     }
 
     isDraggingBackgroundRef.current = false;
@@ -459,7 +461,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     lastTouchDrawRowRef.current = null;
     lastTouchDrawColRef.current = null;
     onPointerUp();
-  }, [onPointerUp]);
+  }, [onPointerUp, currentTool]);
 
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     if (e.ctrlKey) {
@@ -541,7 +543,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
-        className={`${currentTool === 'HAND' ? 'cursor-grab' : 'cursor-crosshair'} touch-none`}
+        className={`${currentTool === 'HAND' ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-crosshair'} touch-none`}
          style={{
            width: `${canvasWidth}px`,
            height: `${canvasHeight}px`,
