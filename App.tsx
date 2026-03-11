@@ -240,16 +240,27 @@ const App: React.FC = () => {
   }, []);
 
   const handleApplyMaterial = useCallback(async (material: any) => {
-    const materialSize = material.gridSize || material.gridWidth || 32;
-    const materialHeight = material.gridHeight || material.gridWidth || 32;
-    const currentMaxSize = Math.max(gridWidth, gridHeight);
-    const materialMaxSize = Math.max(materialSize, materialHeight);
+    let materialWidth, materialHeight;
 
-    if (materialMaxSize !== currentMaxSize || material.gridWidth !== gridWidth || material.gridHeight !== gridHeight) {
-      if (!confirm(`素材尺寸为 ${materialSize}x${materialHeight}，当前为 ${gridWidth}x${gridHeight}。是否切换尺寸并应用？`)) {
+    if (material.gridWidth !== undefined && material.gridHeight !== undefined) {
+      materialWidth = material.gridWidth;
+      materialHeight = material.gridHeight;
+    } else if (material.gridSize !== undefined) {
+      materialWidth = material.gridSize;
+      materialHeight = material.gridSize;
+    } else {
+      materialWidth = 32;
+      materialHeight = 32;
+    }
+
+    const currentMaxSize = Math.max(gridWidth, gridHeight);
+    const materialMaxSize = Math.max(materialWidth, materialHeight);
+
+    if (materialMaxSize !== currentMaxSize || materialWidth !== gridWidth || materialHeight !== gridHeight) {
+      if (!confirm(`素材尺寸为 ${materialWidth}x${materialHeight}，当前为 ${gridWidth}x${gridHeight}。是否切换尺寸并应用？`)) {
         return;
       }
-      setGridWidth(materialSize);
+      setGridWidth(materialWidth);
       setGridHeight(materialHeight);
     }
 
