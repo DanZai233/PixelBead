@@ -24,7 +24,6 @@ import {
   colorSystemOptions,
 } from './utils/colorSystemUtils';
 import colorSystemMapping from './colorSystemMapping.json';
-import { Analytics } from '@vercel/analytics/react';
 
 const App: React.FC = () => {
   const [gridWidth, setGridWidth] = useState(32);
@@ -596,6 +595,16 @@ const App: React.FC = () => {
     reader.readAsDataURL(file);
     event.target.value = '';
   };
+
+  const handleBackgroundImageDrag = useCallback((deltaX: number, deltaY: number) => {
+    if (backgroundImage) {
+      setBackgroundImage({
+        ...backgroundImage,
+        x: backgroundImage.x + deltaX,
+        y: backgroundImage.y + deltaY,
+      });
+    }
+  }, [backgroundImage]);
 
   const handleExportImage = useCallback(() => {
     const hasContent = grid.some(row => row.some(c => c !== '#FFFFFF'));
@@ -1303,9 +1312,9 @@ const App: React.FC = () => {
                   </div>
                   <input
                     type="range"
-                    min="0.5"
-                    max="2"
-                    step="0.1"
+                    min="0.1"
+                    max="3"
+                    step="0.01"
                     value={backgroundImage.scale}
                     onChange={(e) => setBackgroundImage({ ...backgroundImage, scale: parseFloat(e.target.value) })}
                     className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
@@ -1430,6 +1439,7 @@ const App: React.FC = () => {
                       onPointerMove={handleCanvasAction}
                       onPointerUp={() => {}}
                       onMiddleButtonDrag={handleMiddleButtonDrag}
+                      onBackgroundImageDrag={handleBackgroundImageDrag}
                       onZoomChange={setZoom}
                       onTouchPan={handleMiddleButtonDrag}
                     />
@@ -1860,7 +1870,6 @@ const App: React.FC = () => {
           onClose={() => setHelpModalOpen(false)}
         />
       )}
-      <Analytics />
     </div>
   );
 };

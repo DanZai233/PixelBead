@@ -16,6 +16,7 @@ interface BeadCanvasProps {
   onPointerMove: (row: number, col: number) => void;
   onPointerUp: () => void;
   onMiddleButtonDrag: (deltaX: number, deltaY: number) => void;
+  onBackgroundImageDrag?: (deltaX: number, deltaY: number) => void;
   onZoomChange: (zoom: number) => void;
   onTouchPan?: (deltaX: number, deltaY: number) => void;
 }
@@ -35,6 +36,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   onPointerMove,
   onPointerUp,
   onMiddleButtonDrag,
+  onBackgroundImageDrag,
   onZoomChange,
   onTouchPan,
 }) => {
@@ -42,6 +44,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const isDrawingRef = useRef(false);
   const isMiddleButtonDraggingRef = useRef(false);
+  const isDraggingBackgroundRef = useRef(false);
   const isPinchingRef = useRef(false);
   const isTouchPanningRef = useRef(false);
   const touchStartTimeRef = useRef(0);
@@ -288,21 +291,21 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPinchingRef.current) return;
-    
+
     if (e.pointerType === 'touch') {
       touchStartTimeRef.current = Date.now();
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       isTouchPanningRef.current = false;
       isDrawingRef.current = true;
       canvasRef.current?.setPointerCapture(e.pointerId);
-      
+
       const { row, col } = getCellFromEvent(e);
       if (row >= 0 && col >= 0) {
         onPointerDown(row, col);
       }
       return;
     }
-    
+
     if (e.button === 1) {
       e.preventDefault();
       isMiddleButtonDraggingRef.current = true;
@@ -312,23 +315,30 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     }
 
     e.preventDefault();
-    const { row, col } = getCellFromEvent(e);
-    if (row >= 0 && col >= 0) {
-      isDrawingRef.current = true;
+    lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+
+    if (selectedLayer === 'background' && backgroundImage) {
+      isDraggingBackgroundRef.current = true;
       canvasRef.current?.setPointerCapture(e.pointerId);
-      onPointerDown(row, col);
+    } else {
+      const { row, col } = getCellFromEvent(e);
+      if (row >= 0 && col >= 0) {
+        isDrawingRef.current = true;
+        canvasRef.current?.setPointerCapture(e.pointerId);
+        onPointerDown(row, col);
+      }
     }
-  }, [getCellFromEvent, onPointerDown]);
+  }, [getCellFromEvent, onPointerDown, selectedLayer, backgroundImage]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPinchingRef.current) return;
-    
+
     if (e.pointerType === 'touch' && isDrawingRef.current) {
       const deltaX = e.clientX - lastMousePosRef.current.x;
       const deltaY = e.clientY - lastMousePosRef.current.y;
       const distance = Math.hypot(deltaX, deltaY);
       const timeDiff = Date.now() - touchStartTimeRef.current;
-      
+
       if (timeDiff > 200 || distance > 10) {
         if (!isTouchPanningRef.current) {
           isTouchPanningRef.current = true;
@@ -339,13 +349,22 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         return;
       }
     }
-    
+
     if (isMiddleButtonDraggingRef.current) {
       e.preventDefault();
       const deltaX = e.clientX - lastMousePosRef.current.x;
       const deltaY = e.clientY - lastMousePosRef.current.y;
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       onMiddleButtonDrag(deltaX, deltaY);
+      return;
+    }
+
+    if (isDraggingBackgroundRef.current && onBackgroundImageDrag) {
+      e.preventDefault();
+      const deltaX = e.clientX - lastMousePosRef.current.x;
+      const deltaY = e.clientY - lastMousePosRef.current.y;
+      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      onBackgroundImageDrag(deltaX, deltaY);
       return;
     }
 
@@ -356,17 +375,19 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         onPointerMove(row, col);
       }
     }
-  }, [getCellFromEvent, onPointerMove, onMiddleButtonDrag]);
+  }, [getCellFromEvent, onPointerMove, onMiddleButtonDrag, onBackgroundImageDrag]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (e.pointerType === 'touch') {
       isTouchPanningRef.current = false;
     }
-    
+
     if (e.button === 1) {
       isMiddleButtonDraggingRef.current = false;
       return;
     }
+
+    isDraggingBackgroundRef.current = false;
     isDrawingRef.current = false;
     onPointerUp();
   }, [onPointerUp]);
