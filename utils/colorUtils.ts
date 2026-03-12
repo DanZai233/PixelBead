@@ -343,3 +343,141 @@ export function getContrastColor(hexColor: string): string {
   const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
   return luminance > 0.5 ? '#000000' : '#FFFFFF';
 }
+
+export interface ShareImageData {
+  grid: ColorHex[][];
+  gridWidth: number;
+  gridHeight: number;
+  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
+  title?: string;
+}
+
+export async function generateShareImage(data: ShareImageData): Promise<HTMLCanvasElement> {
+  const { grid, gridWidth, gridHeight, pixelStyle, title } = data;
+
+  const W = 1080;
+  const padding = 60;
+  const headerH = 160;
+  const footerH = 120;
+  const artArea = W - padding * 2;
+  const cellSize = Math.floor(artArea / Math.max(gridWidth, gridHeight));
+  const artW = gridWidth * cellSize;
+  const artH = gridHeight * cellSize;
+  const H = headerH + artH + footerH + padding * 2;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
+
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#f8fafc');
+  grad.addColorStop(1, '#e2e8f0');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.shadowColor = 'rgba(0,0,0,0.08)';
+  ctx.shadowBlur = 30;
+  ctx.shadowOffsetY = 4;
+  const rx = padding - 20, ry = headerH - 10;
+  const rw = artW + 40, rh = artH + 20;
+  ctx.beginPath();
+  ctx.roundRect(rx, ry, rw, rh, 20);
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+
+  const artX = padding;
+  const artY = headerH;
+  for (let row = 0; row < gridHeight; row++) {
+    for (let col = 0; col < gridWidth; col++) {
+      const color = grid[row]?.[col];
+      if (!color || color === '#FFFFFF') continue;
+      const x = artX + col * cellSize;
+      const y = artY + row * cellSize;
+      ctx.fillStyle = color;
+      if (pixelStyle === 'CIRCLE') {
+        ctx.beginPath();
+        ctx.arc(x + cellSize / 2, y + cellSize / 2, cellSize / 2 - 1, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (pixelStyle === 'ROUNDED') {
+        ctx.beginPath();
+        ctx.roundRect(x + 1, y + 1, cellSize - 2, cellSize - 2, cellSize / 5);
+        ctx.fill();
+      } else {
+        ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+      }
+    }
+  }
+
+  let logo: HTMLImageElement | null = null;
+  try { logo = await loadLogo(); } catch {}
+
+  if (logo) {
+    ctx.drawImage(logo, padding, 30, 52, 52);
+  }
+  ctx.fillStyle = '#1e293b';
+  ctx.font = 'bold 36px "PingFang SC", "Microsoft YaHei", Arial';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(title || '拼豆图纸分享', logo ? padding + 64 : padding, 45);
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '22px "PingFang SC", "Microsoft YaHei", Arial';
+  ctx.fillText(`${gridWidth}×${gridHeight}  ·  ${getUniqueColors(grid).length} 色`, logo ? padding + 64 : padding, 80);
+
+  const colorCounts = new Map<string, number>();
+  grid.forEach(r => r.forEach(c => {
+    if (c && c !== '#FFFFFF') colorCounts.set(c, (colorCounts.get(c) || 0) + 1);
+  }));
+  const topColors = [...colorCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const chipY = headerH + artH + 30;
+  const chipSize = 32;
+  const chipGap = 10;
+  const chipsW = topColors.length * (chipSize + chipGap) - chipGap;
+  let chipX = (W - chipsW) / 2;
+  topColors.forEach(([color]) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(chipX, chipY, chipSize, chipSize, 8);
+    ctx.fill();
+    chipX += chipSize + chipGap;
+  });
+
+  const footerY = H - footerH + 20;
+  ctx.fillStyle = '#64748b';
+  ctx.font = '20px "PingFang SC", "Microsoft YaHei", Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('扫码或搜索「拼豆糕手」获取完整图纸', W / 2, footerY + 10);
+
+  ctx.fillStyle = '#cbd5e1';
+  ctx.font = '18px "PingFang SC", "Microsoft YaHei", Arial';
+  ctx.fillText('pindou.danzaii.cn', W / 2, footerY + 45);
+
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding, footerY - 10);
+  ctx.lineTo(W - padding, footerY - 10);
+  ctx.stroke();
+
+  return canvas;
+}
+
+export function generateShareCaption(
+  gridWidth: number,
+  gridHeight: number,
+  colorCount: number,
+  title?: string,
+): string {
+  const name = title || '拼豆作品';
+  return `${name} | ${gridWidth}×${gridHeight} 拼豆图纸分享 🧩
+
+✨ ${colorCount} 色 | ${gridWidth * gridHeight} 颗拼豆
+📐 尺寸：${gridWidth}×${gridHeight}
+
+🔗 在线设计工具：pindou.danzaii.cn
+支持 AI 生成、图片转换、多品牌色号
+
+#拼豆 #拼豆图纸 #像素画 #手工 #拼豆糕手 #perlerbeads`;
+}

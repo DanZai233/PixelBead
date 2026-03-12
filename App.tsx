@@ -16,8 +16,9 @@ import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { PromoSection } from './components/PromoSection';
 import { MaterialGallery } from './components/MaterialGallery';
 import { HelpModal } from './components/HelpModal';
+import { OnboardingGuide } from './components/OnboardingGuide';
 import { AdminPanel } from './components/AdminPanel';
-import { generateExportImage } from './utils/colorUtils';
+import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from './utils/colorUtils';
 import {
   mergeSimilarColors,
   mapColorsToPalette,
@@ -108,6 +109,9 @@ const AppMain: React.FC = () => {
   const [isPublishing, setIsPublishing] = useState(false);
 
   const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('onboarding_done');
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -704,6 +708,26 @@ const AppMain: React.FC = () => {
 
     setExportModalOpen(false);
   }, [grid, gridWidth, gridHeight, exportPixelStyle, exportShowGuideLines, exportMirror, selectedColorSystem]);
+
+  const handleShareImageExport = useCallback(async () => {
+    const canvas = await generateShareImage({
+      grid, gridWidth, gridHeight,
+      pixelStyle: exportPixelStyle,
+    });
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `share-${gridWidth}x${gridHeight}.png`;
+    a.click();
+
+    const caption = generateShareCaption(gridWidth, gridHeight, getUniqueColors(grid).length);
+    try {
+      await navigator.clipboard.writeText(caption);
+      alert('分享图已下载！文案已复制到剪贴板 📋');
+    } catch {
+      alert('分享图已下载！\n\n以下文案可手动复制：\n\n' + caption);
+    }
+  }, [grid, gridWidth, gridHeight, exportPixelStyle]);
 
   const baseBeadSize = 28;
   const boardDimension = Math.max(gridWidth, gridHeight) * (baseBeadSize * (zoom / 100));
@@ -1994,9 +2018,18 @@ const AppMain: React.FC = () => {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                导出图片
+                导出图纸
               </button>
             </div>
+
+            <button
+              onClick={handleShareImageExport}
+              className="w-full py-3 md:py-4 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white rounded-xl md:rounded-2xl font-black text-sm shadow-xl active:scale-95 flex items-center justify-center gap-2"
+            >
+              <span className="text-lg">📕</span>
+              生成小红书分享图
+              <span className="text-[10px] font-medium opacity-80 ml-1">含水印 + 自动复制文案</span>
+            </button>
           </div>
         </div>
       )}
@@ -2006,6 +2039,13 @@ const AppMain: React.FC = () => {
           onApplyMaterial={handleApplyMaterial}
           onClose={() => setMaterialGalleryOpen(false)}
         />
+      )}
+
+      {showOnboarding && (
+        <OnboardingGuide onClose={() => {
+          setShowOnboarding(false);
+          localStorage.setItem('onboarding_done', '1');
+        }} />
       )}
 
       {helpModalOpen && (

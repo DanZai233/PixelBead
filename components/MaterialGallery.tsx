@@ -14,6 +14,7 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
   const [filteredMaterials, setFilteredMaterials] = useState<MaterialData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('');
+  const [sortMode, setSortMode] = useState<'latest' | 'hot'>('latest');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialData | null>(null);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
@@ -65,13 +66,12 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
   }, [selectedTag]);
 
   useEffect(() => {
-    if (selectedTag) {
-      const filtered = materials.filter(m => m.tags.includes(selectedTag));
-      setFilteredMaterials(filtered);
-    } else {
-      setFilteredMaterials(materials);
+    let result = selectedTag ? materials.filter(m => m.tags.includes(selectedTag)) : [...materials];
+    if (sortMode === 'hot') {
+      result.sort((a, b) => (b.views + b.likes * 3) - (a.views + a.likes * 3));
     }
-  }, [selectedTag, materials]);
+    setFilteredMaterials(result);
+  }, [selectedTag, materials, sortMode]);
 
   const handleViewMaterial = useCallback(async (material: MaterialData) => {
     setSelectedMaterial(material);
@@ -297,6 +297,24 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
               </div>
             </div>
 
+            <div>
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2 block">排序</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSortMode('latest')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-black transition-all ${sortMode === 'latest' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+                >
+                  🕐 最新
+                </button>
+                <button
+                  onClick={() => setSortMode('hot')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-black transition-all ${sortMode === 'hot' ? 'bg-rose-500 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+                >
+                  🔥 热门
+                </button>
+              </div>
+            </div>
+
             {allTags.length > 0 && (
               <div>
                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2 block">标签</label>
@@ -339,17 +357,25 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
 
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="md:hidden p-4 bg-white border-b border-slate-200 shrink-0">
-              <div className="relative mb-3">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  placeholder="搜索素材..."
-                  className="w-full px-4 py-3 bg-slate-100 border-0 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 transition-all pl-10"
-                />
-                <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+              <div className="flex gap-2 mb-3">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    placeholder="搜索素材..."
+                    className="w-full px-4 py-3 bg-slate-100 border-0 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 transition-all pl-10"
+                  />
+                  <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <button
+                  onClick={() => setSortMode(s => s === 'latest' ? 'hot' : 'latest')}
+                  className={`px-3 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all ${sortMode === 'hot' ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-600'}`}
+                >
+                  {sortMode === 'hot' ? '🔥 热门' : '🕐 最新'}
+                </button>
               </div>
               {allTags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
@@ -411,10 +437,16 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
                     </div>
                    <div className="p-2 md:p-3">
                        <h4 className="text-xs md:text-sm font-bold text-slate-900 truncate mb-1">{material.title}</h4>
-                       <div className="flex items-center gap-1 text-[10px] md:text-xs text-slate-500">
-                         <span>{material.author}</span>
-                         <span className="hidden sm:inline">·</span>
-                         <span className="hidden sm:inline">{material.gridWidth || material.gridSize}×{material.gridHeight || material.gridSize}</span>
+                       <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-1 text-[10px] md:text-xs text-slate-500">
+                           <span>{material.author}</span>
+                           <span className="hidden sm:inline">·</span>
+                           <span className="hidden sm:inline">{material.gridWidth || material.gridSize}×{material.gridHeight || material.gridSize}</span>
+                         </div>
+                         <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                           {material.views > 0 && <span>👁 {material.views}</span>}
+                           {material.likes > 0 && <span>❤️ {material.likes}</span>}
+                         </div>
                        </div>
                      </div>
                   </div>
