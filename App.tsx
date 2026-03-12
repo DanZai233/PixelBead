@@ -39,7 +39,7 @@ const App: React.FC = () => {
   const [selectedLayer, setSelectedLayer] = useState<'bead' | 'background'>('bead');
   const [selectedColor, setSelectedColor] = useState(DEFAULT_COLORS[0]);
   const [currentTool, setCurrentTool] = useState<ToolType>(ToolType.PENCIL);
-  const [pixelStyle, setPixelStyle] = useState<PixelStyle>(PixelStyle.CIRCLE);
+  const [pixelStyle, setPixelStyle] = useState<PixelStyle>(PixelStyle.SQUARE);
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
@@ -74,7 +74,7 @@ const App: React.FC = () => {
 
   const [showRuler, setShowRuler] = useState(true);
 
-  const [showGuideLines, setShowGuideLines] = useState(false);
+  const [showGuideLines, setShowGuideLines] = useState(true);
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportPixelStyle, setExportPixelStyle] = useState<PixelStyle>(PixelStyle.CIRCLE);
