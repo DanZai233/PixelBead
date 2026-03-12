@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import client from './_lib/mongodb';
+import { getDb } from '../lib/mongodb';
 
-const DB_NAME = 'pixelbead';
 const COLLECTION = 'materials';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -14,7 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const db = client.db(DB_NAME);
+    const db = await getDb();
     const collection = db.collection(COLLECTION);
 
     if (req.method === 'GET') {
@@ -60,16 +59,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'POST') {
-      const {
-        title,
-        description,
-        author,
-        tags,
-        gridWidth,
-        gridHeight,
-        pixelStyle,
-        grid,
-      } = req.body;
+      const { title, description, author, tags, gridWidth, gridHeight, pixelStyle, grid } = req.body;
 
       if (!title || !author || !grid) {
         return res.status(400).json({ error: '缺少必填字段' });
@@ -94,8 +84,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('API error:', error);
-    return res.status(500).json({ error: '服务器内部错误' });
+    return res.status(500).json({ error: error.message || '服务器内部错误' });
   }
 }
