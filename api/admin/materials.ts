@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { ObjectId } from 'mongodb';
-import client from '../lib/mongodb';
-import { withAuth } from '../lib/auth';
+import client from '../_lib/mongodb';
+import { withAuth } from '../_lib/auth';
 
 const DB_NAME = 'pixelbead';
 const COLLECTION = 'materials';
