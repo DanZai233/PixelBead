@@ -1647,14 +1647,23 @@ const AppMain: React.FC = () => {
               <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
             </div>
 
-           <button
-             onClick={() => setHelpModalOpen(true)}
-             className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-4 z-[45] md:z-50 w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-95"
-           >
-             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-             </svg>
-           </button>
+           <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-4 z-[45] md:z-50 group">
+             <button
+               className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-95 peer"
+             >
+               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+               </svg>
+             </button>
+             <div className="hidden group-hover:flex group-focus-within:flex flex-col gap-2 absolute bottom-14 right-0 bg-white rounded-xl shadow-xl border border-slate-200 p-2 min-w-[140px]">
+               <button onClick={() => { setShowOnboarding(true); }} className="flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-all whitespace-nowrap">
+                 <span>👋</span> 新手引导
+               </button>
+               <button onClick={() => setHelpModalOpen(true)} className="flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-all whitespace-nowrap">
+                 <span>📖</span> 使用指南
+               </button>
+             </div>
+           </div>
 
           <button
             onClick={() => setIsMobileRightOpen(!isMobileRightOpen)}
