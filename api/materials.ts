@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb } from './_lib/mongodb';
+import { getDb } from '../lib/mongodb';
 
 const COLLECTION = 'materials';
 

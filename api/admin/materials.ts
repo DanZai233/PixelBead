@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { ObjectId } from 'mongodb';
-import { getDb } from '../_lib/mongodb';
-import { withAuth } from '../_lib/auth';
+import { getDb } from '../../lib/mongodb';
+import { withAuth } from '../../lib/auth';
 
 export default withAuth(async (req: VercelRequest, res: VercelResponse) => {
   try {
