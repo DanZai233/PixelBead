@@ -18,8 +18,14 @@ See `package.json` scripts. Summary:
 - **Build:** `npm run build` (runs `tsc && vite build`)
 - **Type check only:** `npx tsc --noEmit`
 
+### Data storage architecture
+
+- **Redis (Upstash):** Used for share links only — ephemeral data with 7-day TTL. Called directly from the browser via REST API. Env vars: `VITE_UPSTASH_REDIS_REST_URL`, `VITE_UPSTASH_REDIS_REST_TOKEN`.
+- **MongoDB (Atlas):** Used for material gallery (素材广场) — persistent storage, supports larger grids (100x100+). Accessed via Vercel serverless API routes in `/api/`. Env var: `MONGODB_URI` (set in Vercel project settings, not exposed to browser).
+- The `/api/` directory is excluded from `tsconfig.json` and Vite build; it is compiled separately by Vercel's `@vercel/node` builder.
+
 ### Caveats
 
 - **No ESLint config:** The `npm run lint` script exists in `package.json` but there is no `.eslintrc*` or `eslint.config.*` file, and `eslint` is not in `devDependencies`. The lint command will fail. Use `npx tsc --noEmit` for static analysis instead.
-- **All external services are optional:** Upstash Redis (share/gallery) and AI API keys (generation) are not required for the core pixel art editor to function. API keys are configured in-app by users.
+- **Material gallery API routes only work on Vercel:** The `/api/materials` endpoints require Vercel serverless functions and MongoDB. Locally, only the core editor and Redis share features are functional.
 - **Tailwind CSS is loaded via CDN** in `index.html`, not installed as a dependency.
