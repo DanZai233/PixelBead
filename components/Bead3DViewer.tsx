@@ -31,6 +31,7 @@ export const Bead3DViewer: React.FC<Bead3DViewerProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
   const lastMouseRef = useRef({ x: 0, y: 0 });
+  const lastTouchDistRef = useRef(0);
   const targetRotationRef = useRef({ x: -25, y: -35 });
 
   const baseBeadSize = 28;
@@ -214,6 +215,42 @@ export const Bead3DViewer: React.FC<Bead3DViewerProps> = ({
     setZoom3D(prev => Math.max(0.3, Math.min(3, prev + delta)));
   }, []);
 
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      lastMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastTouchDistRef.current = Math.sqrt(dx * dx + dy * dy);
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && isDragging) {
+      const deltaX = e.touches[0].clientX - lastMouseRef.current.x;
+      const deltaY = e.touches[0].clientY - lastMouseRef.current.y;
+      targetRotationRef.current.y += deltaX * 0.5;
+      targetRotationRef.current.x = Math.max(-90, Math.min(90, targetRotationRef.current.x - deltaY * 0.5));
+      lastMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (lastTouchDistRef.current > 0) {
+        const scale = dist / lastTouchDistRef.current;
+        setZoom3D(prev => Math.max(0.3, Math.min(3, prev * scale)));
+      }
+      lastTouchDistRef.current = dist;
+    }
+  }, [isDragging]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsDragging(false);
+    lastTouchDistRef.current = 0;
+  }, []);
+
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex-1 overflow-hidden flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
@@ -226,12 +263,16 @@ export const Bead3DViewer: React.FC<Bead3DViewerProps> = ({
             className="w-full h-full"
             style={{
               cursor: isDragging ? 'grabbing' : 'grab',
+              touchAction: 'none',
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
             onWheel={handleWheel}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           />
         </div>
       </div>
@@ -305,7 +346,7 @@ export const Bead3DViewer: React.FC<Bead3DViewerProps> = ({
           </button>
         </div>
 
-        <p className="text-[9px] text-slate-400 text-center">拖拽旋转 | 滚轮缩放 | 性能优化中</p>
+        <p className="text-[9px] text-slate-400 text-center">拖拽旋转 | 滚轮/双指缩放</p>
       </div>
     </div>
   );
