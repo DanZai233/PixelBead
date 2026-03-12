@@ -1,8 +1,27 @@
-import type { MaterialData } from './upstashService';
+import {
+  type MaterialData,
+  saveMaterialToUpstash,
+  getMaterialList as redisGetMaterialList,
+  searchMaterials as redisSearchMaterials,
+  incrementMaterialViews as redisIncrementViews,
+  incrementMaterialLikes as redisIncrementLikes,
+} from './upstashService';
 
 const API_BASE = '/api';
 
 export type { MaterialData };
+
+async function tryApi(url: string, init?: RequestInit): Promise<Response | null> {
+  try {
+    const resp = await fetch(url, init);
+    const ct = resp.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) return null;
+    if (!resp.ok) return null;
+    return resp;
+  } catch {
+    return null;
+  }
+}
 
 export async function saveMaterial(
   grid: string[][],
@@ -14,51 +33,29 @@ export async function saveMaterial(
   author: string,
   tags: string[]
 ): Promise<string | null> {
-  try {
-    const resp = await fetch(`${API_BASE}/materials`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        grid,
-        gridWidth,
-        gridHeight,
-        pixelStyle,
-        title,
-        description,
-        author,
-        tags,
-      }),
-    });
+  const resp = await tryApi(`${API_BASE}/materials`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ grid, gridWidth, gridHeight, pixelStyle, title, description, author, tags }),
+  });
 
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      console.error('保存素材失败:', err);
-      return null;
-    }
-
+  if (resp) {
     const data = await resp.json();
     return data.id;
-  } catch (error) {
-    console.error('保存素材失败:', error);
-    return null;
   }
+
+  return saveMaterialToUpstash(grid, gridWidth, gridHeight, pixelStyle, title, description, author, tags);
 }
 
 export async function getMaterialList(search?: string): Promise<MaterialData[]> {
-  try {
-    const params = search ? `?search=${encodeURIComponent(search)}` : '';
-    const resp = await fetch(`${API_BASE}/materials${params}`);
+  const params = search ? `?search=${encodeURIComponent(search)}` : '';
+  const resp = await tryApi(`${API_BASE}/materials${params}`);
 
-    if (!resp.ok) {
-      console.error('获取素材列表失败:', resp.status);
-      return [];
-    }
-
-    return await resp.json();
-  } catch (error) {
-    console.error('获取素材列表失败:', error);
-    return [];
+  if (resp) {
+    return resp.json();
   }
+
+  return search ? redisSearchMaterials(search) : redisGetMaterialList();
 }
 
 export async function searchMaterials(query: string): Promise<MaterialData[]> {
@@ -66,30 +63,28 @@ export async function searchMaterials(query: string): Promise<MaterialData[]> {
 }
 
 export async function incrementMaterialViews(id: string): Promise<void> {
-  try {
-    await fetch(`${API_BASE}/material-views`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
-  } catch (error) {
-    console.error('增加浏览数失败:', error);
+  const resp = await tryApi(`${API_BASE}/material-views`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
+
+  if (!resp) {
+    await redisIncrementViews(id);
   }
 }
 
 export async function incrementMaterialLikes(id: string): Promise<number | null> {
-  try {
-    const resp = await fetch(`${API_BASE}/material-likes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
+  const resp = await tryApi(`${API_BASE}/material-likes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
 
-    if (!resp.ok) return null;
+  if (resp) {
     const data = await resp.json();
     return data.likes;
-  } catch (error) {
-    console.error('增加点赞数失败:', error);
-    return null;
   }
+
+  return redisIncrementLikes(id);
 }
