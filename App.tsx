@@ -16,6 +16,7 @@ import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { PromoSection } from './components/PromoSection';
 import { MaterialGallery } from './components/MaterialGallery';
 import { HelpModal } from './components/HelpModal';
+import { AdminPanel } from './components/AdminPanel';
 import { generateExportImage } from './utils/colorUtils';
 import {
   mergeSimilarColors,
@@ -28,6 +29,22 @@ import {
 import colorSystemMapping from './colorSystemMapping.json';
 
 const App: React.FC = () => {
+  const [isAdminRoute, setIsAdminRoute] = useState(() => window.location.hash === '#admin');
+
+  useEffect(() => {
+    const onHashChange = () => setIsAdminRoute(window.location.hash === '#admin');
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  if (isAdminRoute) {
+    return <AdminPanel onBack={() => { window.location.hash = ''; setIsAdminRoute(false); }} />;
+  }
+
+  return <AppMain />;
+};
+
+const AppMain: React.FC = () => {
   const [gridWidth, setGridWidth] = useState(32);
   const [gridHeight, setGridHeight] = useState(32);
   const [customWidth, setCustomWidth] = useState('');

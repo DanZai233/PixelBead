@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import client from './lib/mongodb';
+import client from './_lib/mongodb';
 
 const DB_NAME = 'pixelbead';
 const COLLECTION = 'materials';
