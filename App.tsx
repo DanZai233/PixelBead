@@ -5,7 +5,8 @@ import {
   ColorSystem, PaletteColor, PALETTE_PRESETS
 } from './types';
 import { generatePixelArtImage } from './services/aiService';
-import { saveToUpstash, saveMaterialToUpstash, generateShareUrl, getShareKeyFromUrl, loadFromUpstash } from './services/upstashService';
+import { saveToUpstash, generateShareUrl, getShareKeyFromUrl, loadFromUpstash } from './services/upstashService';
+import { saveMaterial } from './services/materialService';
 import { BeadCanvas } from './components/BeadCanvas';
 import { Bead3DViewer } from './components/Bead3DViewer';
 import { BeadSliceViewer } from './components/BeadSliceViewer';
@@ -798,7 +799,7 @@ const App: React.FC = () => {
 
       setIsPublishing(true);
       try {
-        const key = await saveMaterialToUpstash(
+        const key = await saveMaterial(
           grid,
           gridWidth,
           gridHeight,

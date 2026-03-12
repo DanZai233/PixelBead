@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getMaterialList, searchMaterials, incrementMaterialViews, incrementMaterialLikes, type MaterialData } from '../services/upstashService';
+import { getMaterialList, searchMaterials, incrementMaterialViews, incrementMaterialLikes, type MaterialData } from '../services/materialService';
 import { PixelStyle } from '../types';
 
 interface MaterialGalleryProps {
