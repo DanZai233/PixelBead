@@ -16,6 +16,7 @@ import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { PromoSection } from './components/PromoSection';
 import { MaterialGallery } from './components/MaterialGallery';
 import { HelpModal } from './components/HelpModal';
+import { OnboardingGuide } from './components/OnboardingGuide';
 import { AdminPanel } from './components/AdminPanel';
 import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from './utils/colorUtils';
 import {
@@ -108,6 +109,9 @@ const AppMain: React.FC = () => {
   const [isPublishing, setIsPublishing] = useState(false);
 
   const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('onboarding_done');
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -2035,6 +2039,13 @@ const AppMain: React.FC = () => {
           onApplyMaterial={handleApplyMaterial}
           onClose={() => setMaterialGalleryOpen(false)}
         />
+      )}
+
+      {showOnboarding && (
+        <OnboardingGuide onClose={() => {
+          setShowOnboarding(false);
+          localStorage.setItem('onboarding_done', '1');
+        }} />
       )}
 
       {helpModalOpen && (
