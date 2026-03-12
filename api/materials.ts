@@ -1,85 +1,49 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb } from '../lib/mongodb';
+import { MongoClient, Db } from 'mongodb';
 
-const COLLECTION = 'materials';
+let cachedDb: Db | null = null;
+async function getDb(): Promise<Db> {
+  if (cachedDb) return cachedDb;
+  const client = new MongoClient(process.env.MONGODB_URI!);
+  await client.connect();
+  cachedDb = client.db('pixelbead');
+  return cachedDb;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
     const db = await getDb();
-    const collection = db.collection(COLLECTION);
+    const col = db.collection('materials');
 
     if (req.method === 'GET') {
       const { search } = req.query;
       let filter = {};
-
       if (search && typeof search === 'string' && search.trim()) {
         const regex = { $regex: search.trim(), $options: 'i' };
-        filter = {
-          $or: [
-            { title: regex },
-            { description: regex },
-            { author: regex },
-            { tags: regex },
-          ],
-        };
+        filter = { $or: [{ title: regex }, { description: regex }, { author: regex }, { tags: regex }] };
       }
-
-      const materials = await collection
-        .find(filter)
-        .sort({ createdAt: -1 })
-        .limit(200)
-        .toArray();
-
-      const result = materials.map((m) => ({
-        id: m._id.toString(),
-        key: m._id.toString(),
-        title: m.title,
-        description: m.description,
-        author: m.author,
-        tags: m.tags,
-        gridWidth: m.gridWidth,
-        gridHeight: m.gridHeight,
-        gridSize: m.gridSize,
-        pixelStyle: m.pixelStyle,
-        grid: m.grid,
-        createdAt: m.createdAt,
-        views: m.views || 0,
-        likes: m.likes || 0,
-      }));
-
-      return res.status(200).json(result);
+      const materials = await col.find(filter).sort({ createdAt: -1 }).limit(200).toArray();
+      return res.status(200).json(materials.map(m => ({
+        id: m._id.toString(), key: m._id.toString(), title: m.title,
+        description: m.description, author: m.author, tags: m.tags,
+        gridWidth: m.gridWidth, gridHeight: m.gridHeight, gridSize: m.gridSize,
+        pixelStyle: m.pixelStyle, grid: m.grid, createdAt: m.createdAt,
+        views: m.views || 0, likes: m.likes || 0,
+      })));
     }
 
     if (req.method === 'POST') {
       const { title, description, author, tags, gridWidth, gridHeight, pixelStyle, grid } = req.body;
-
-      if (!title || !author || !grid) {
-        return res.status(400).json({ error: '缺少必填字段' });
-      }
-
-      const doc = {
-        title,
-        description: description || '',
-        author,
-        tags: tags || [],
-        gridWidth,
-        gridHeight,
-        pixelStyle,
-        grid,
-        createdAt: Date.now(),
-        views: 0,
-        likes: 0,
-      };
-
-      const result = await collection.insertOne(doc);
+      if (!title || !author || !grid) return res.status(400).json({ error: '缺少必填字段' });
+      const result = await col.insertOne({
+        title, description: description || '', author, tags: tags || [],
+        gridWidth, gridHeight, pixelStyle, grid, createdAt: Date.now(), views: 0, likes: 0,
+      });
       return res.status(201).json({ id: result.insertedId.toString() });
     }
 

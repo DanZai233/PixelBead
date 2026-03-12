@@ -1,26 +1,31 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { ObjectId } from 'mongodb';
-import { getDb } from '../../lib/mongodb';
+import { MongoClient, Db, ObjectId } from 'mongodb';
+
+let cachedDb: Db | null = null;
+async function getDb(): Promise<Db> {
+  if (cachedDb) return cachedDb;
+  const client = new MongoClient(process.env.MONGODB_URI!);
+  await client.connect();
+  cachedDb = client.db('pixelbead');
+  return cachedDb;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const { id } = req.query;
-    if (!id || typeof id !== 'string') return res.status(400).json({ error: '缺少 id 参数' });
-
+    if (!id || typeof id !== 'string') return res.status(400).json({ error: '缺少 id' });
     const db = await getDb();
     const m = await db.collection('materials').findOne({ _id: new ObjectId(id) });
     if (!m) return res.status(404).json({ error: '素材不存在' });
-
     return res.status(200).json({
-      id: m._id.toString(), key: m._id.toString(),
-      title: m.title, description: m.description, author: m.author, tags: m.tags,
+      id: m._id.toString(), key: m._id.toString(), title: m.title,
+      description: m.description, author: m.author, tags: m.tags,
       gridWidth: m.gridWidth, gridHeight: m.gridHeight, gridSize: m.gridSize,
       pixelStyle: m.pixelStyle, grid: m.grid, createdAt: m.createdAt,
       views: m.views || 0, likes: m.likes || 0,
