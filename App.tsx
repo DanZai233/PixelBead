@@ -499,8 +499,11 @@ const AppMain: React.FC = () => {
     pushUndo(gridRef.current);
     setGrid(prev => {
       const newGrid = prev.map(r => [...r]);
-      for (let r = rMin; r <= rMax; r++) {
-        for (let c = cMin; c <= cMax; c++) {
+      for (let r = 0; r < gridHeight; r++) {
+        for (let c = 0; c < gridWidth; c++) {
+          if (r >= rMin && r <= rMax && c >= cMin && c <= cMax) {
+            continue;
+          }
           if (newGrid[r][c] === '#FFFFFF') {
             newGrid[r][c] = selectedColor;
           } else {
@@ -510,7 +513,7 @@ const AppMain: React.FC = () => {
       }
       return newGrid;
     });
-  }, [selection, selectedColor, pushUndo]);
+  }, [selection, selectedColor, pushUndo, gridHeight, gridWidth]);
 
   const handleExcludeColorFromSelection = useCallback(() => {
     if (!selection) return;
@@ -1483,7 +1486,7 @@ const AppMain: React.FC = () => {
                   onClick={handleInvertSelection}
                   className="px-3 py-2 bg-white text-indigo-700 rounded-lg text-[9px] font-black hover:bg-indigo-100 transition-all shadow-sm flex items-center justify-center gap-1 col-span-2"
                 >
-                  <span>🔄</span> 反选（白色→当前色，其他→白色）
+                  <span>🔄</span> 反选（对选区外：白色→当前色，其他→白色）
                 </button>
                 <button
                   onClick={handleExcludeColorFromSelection}
