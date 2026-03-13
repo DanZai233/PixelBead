@@ -99,15 +99,17 @@ function loadLogo(): Promise<HTMLImageElement> {
 
 export async function generateExportImage(data: ExportImageData): Promise<HTMLCanvasElement> {
   const { grid, gridWidth, gridHeight, pixelStyle, colorSystem, colorSystemMapping, showGuideLines, mirror } = data;
-
+  
   const mirroredGrid = mirror ? grid.map(row => [...row].reverse()) : grid;
   const uniqueColors = getUniqueColors(mirroredGrid);
   
   const cellSize = 30;
+  const rulerSize = 20;
   const headerHeight = 60;
   const gridOffsetY = headerHeight;
-  const canvasWidth = gridWidth * cellSize;
-  const canvasHeight = gridHeight * cellSize + 60 + headerHeight;
+  const gridOffsetX = rulerSize;
+  const canvasWidth = gridWidth * cellSize + rulerSize;
+  const canvasHeight = gridHeight * cellSize + rulerSize + headerHeight;
   
   const canvas = document.createElement('canvas');
   canvas.width = canvasWidth;
@@ -161,10 +163,48 @@ export async function generateExportImage(data: ExportImageData): Promise<HTMLCa
   ctx.font = '12px Arial';
   ctx.fillText('pindou.danzaii.cn', logo ? 65 : 15, 48);
   
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(gridOffsetX, gridOffsetY, gridWidth * cellSize, gridHeight * cellSize);
+  
+  ctx.strokeStyle = '#E5E7EB';
+  ctx.beginPath();
+  ctx.moveTo(gridOffsetX, gridOffsetY);
+  ctx.lineTo(gridOffsetX, gridOffsetY + gridHeight * cellSize);
+  ctx.lineTo(gridOffsetX + gridWidth * cellSize, gridOffsetY + gridHeight * cellSize);
+  ctx.lineTo(gridOffsetX + gridWidth * cellSize, gridOffsetY);
+  ctx.lineTo(gridOffsetX, gridOffsetY);
+  ctx.stroke();
+  
+  ctx.font = '9px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  
+  for (let col = 0; col < gridWidth; col++) {
+    const x = gridOffsetX + col * cellSize;
+    const isEven = col % 2 === 0;
+    ctx.fillStyle = isEven ? '#FFFFFF' : '#000000';
+    ctx.fillRect(x, gridOffsetY - rulerSize, cellSize, rulerSize);
+    ctx.fillStyle = isEven ? '#000000' : '#FFFFFF';
+    ctx.fillText(col.toString(), x + cellSize / 2, gridOffsetY - rulerSize / 2);
+  }
+  
+  ctx.font = '9px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  
   for (let row = 0; row < gridHeight; row++) {
-    for (let col = 0; col < gridWidth; col++) {
+    const y = gridOffsetY + row * cellSize;
+    const isEven = row % 2 === 0;
+    ctx.fillStyle = isEven ? '#FFFFFF' : '#000000';
+    ctx.fillRect(gridOffsetX - rulerSize, y, rulerSize, cellSize);
+    ctx.fillStyle = isEven ? '#000000' : '#FFFFFF';
+    ctx.fillText(row.toString(), gridOffsetX - rulerSize / 2, y + cellSize / 2);
+  }
+  
+  for (let row =0; row < gridHeight; row++) {
+    for (let col =0; col < gridWidth; col++) {
       const color = mirroredGrid[row][col];
-      const x = col * cellSize;
+      const x = gridOffsetX + col * cellSize;
       const y = gridOffsetY + row * cellSize;
       
       if (color && color !== '#FFFFFF') {
@@ -215,30 +255,30 @@ export async function generateExportImage(data: ExportImageData): Promise<HTMLCa
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
     ctx.lineWidth = 2;
     ctx.setLineDash([]);
-
+    
     for (let i = 5; i < gridWidth; i += 5) {
-      const pos = i * cellSize;
+      const pos = gridOffsetX + i * cellSize;
       ctx.beginPath();
       ctx.moveTo(pos, gridOffsetY);
       ctx.lineTo(pos, gridOffsetY + gridHeight * cellSize);
       ctx.stroke();
     }
-
+    
     for (let i = 5; i < gridHeight; i += 5) {
-      const pos = i * cellSize;
+      const pos = gridOffsetY + i * cellSize;
       ctx.beginPath();
-      ctx.moveTo(0, gridOffsetY + pos);
-      ctx.lineTo(gridWidth * cellSize, gridOffsetY + pos);
+      ctx.moveTo(gridOffsetX, pos);
+      ctx.lineTo(gridOffsetX + gridWidth * cellSize, pos);
       ctx.stroke();
     }
   }
-
+  
   const legendY = gridOffsetY + gridHeight * cellSize + 15;
   const legendHeight = 22;
   const itemGap = 5;
   const barPadding = 15;
-  const barWidth = canvasWidth - barPadding * 2;
-  const barX = barPadding;
+  const barWidth = canvasWidth - rulerSize - barPadding * 2;
+  const barX = gridOffsetX + barPadding;
   
   if (uniqueColors.length > 0) {
     const colorCountMap = new Map<ColorHex, number>();
