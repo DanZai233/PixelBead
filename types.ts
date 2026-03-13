@@ -49,6 +49,7 @@ export enum ToolType {
   CIRCLE = 'CIRCLE',
   SMART_PENCIL = 'SMART_PENCIL',
   HAND = 'HAND',
+  SELECT = 'SELECT',
 }
 
 export enum PixelStyle {
@@ -141,6 +142,7 @@ export const TOOLS_INFO: ToolInfo[] = [
   { type: ToolType.CIRCLE, name: '圆形', icon: '⭕', shortcut: 'C', description: '绘制圆形' },
   { type: ToolType.SMART_PENCIL, name: '智能画笔', icon: '✨', shortcut: 'M', description: '根据底图颜色自动切换颜色' },
   { type: ToolType.HAND, name: '拖拽', icon: '✋', shortcut: 'H', description: '拖动画布移动视图' },
+  { type: ToolType.SELECT, name: '框选', icon: '⬚', shortcut: 'S', description: '框选区域进行复制、粘贴等操作' },
 ];
 
 export const PIXEL_STYLES = [
@@ -159,12 +161,16 @@ export const SHORTCUTS = [
   { key: 'C', action: '圆形工具' },
   { key: 'M', action: '智能画笔工具' },
   { key: 'H', action: '拖拽工具' },
+  { key: 'S', action: '框选工具' },
   { key: 'Ctrl + 滚轮', action: '缩放画布' },
   { key: '中键拖动', action: '移动画布' },
   { key: 'Space + 拖动', action: '移动画布' },
   { key: 'Ctrl + Z', action: '撤销' },
   { key: 'Ctrl + Shift + Z', action: '重做' },
   { key: 'Delete / Backspace', action: '清空选区' },
+  { key: 'Ctrl + C', action: '复制选区' },
+  { key: 'Ctrl + V', action: '粘贴选区' },
+  { key: 'Ctrl + X', action: '剪切选区' },
   { key: '[', action: '减小画笔大小' },
   { key: ']', action: '增大画笔大小' },
 ];
@@ -191,3 +197,18 @@ export interface PaletteConfig {
   showColorKeys: boolean;
   selectedColorSystem: ColorSystem;
 }
+
+export interface Selection {
+  startRow: number;
+  startCol: number;
+  endRow: number;
+  endCol: number;
+}
+
+export const BRUSH_SIZES = [
+  { value: 1, name: '1x1' },
+  { value: 2, name: '2x2' },
+  { value: 3, name: '3x3' },
+  { value: 4, name: '4x4' },
+  { value: 5, name: '5x5' },
+];

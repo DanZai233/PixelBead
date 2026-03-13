@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { PixelStyle } from '../types';
+import { PixelStyle, Selection } from '../types';
 
 interface BeadCanvasProps {
   grid: string[][];
@@ -13,6 +13,7 @@ interface BeadCanvasProps {
   backgroundImage?: { src: string; x: number; y: number; scale: number; opacity: number } | null;
   selectedLayer?: 'bead' | 'background';
   currentTool?: string;
+  selection?: Selection | null;
   onPointerDown: (row: number, col: number, backgroundColor?: string | null) => void;
   onPointerMove: (row: number, col: number, backgroundColor?: string | null) => void;
   onPointerUp: () => void;
@@ -20,6 +21,7 @@ interface BeadCanvasProps {
   onBackgroundImageDrag?: (deltaX: number, deltaY: number) => void;
   onZoomChange: (zoom: number) => void;
   onTouchPan?: (deltaX: number, deltaY: number) => void;
+  onSelectionChange?: (selection: Selection | null) => void;
 }
 
 export const BeadCanvas: React.FC<BeadCanvasProps> = ({
@@ -34,6 +36,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   backgroundImage,
   selectedLayer,
   currentTool,
+  selection: propSelection,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -41,6 +44,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   onBackgroundImageDrag,
   onZoomChange,
   onTouchPan,
+  onSelectionChange,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -60,6 +64,8 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   const lastTouchDrawRowRef = useRef<number | null>(null);
   const lastTouchDrawColRef = useRef<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const [selectionStart, setSelectionStart] = useState<{ row: number; col: number } | null>(null);
 
   useEffect(() => {
     lastZoomRef.current = propZoom;
@@ -274,8 +280,24 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       }
     }
 
+    if (selection) {
+      const { startRow, startCol, endRow, endCol } = selection;
+      const x = Math.min(startCol, endCol) * cellSize;
+      const y = Math.min(startRow, endRow) * cellSize;
+      const width = (Math.abs(endCol - startCol) + 1) * cellSize;
+      const height = (Math.abs(endRow - startRow) + 1) * cellSize;
+
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.8)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 3]);
+      ctx.strokeRect(x, y, width, height);
+
+      ctx.fillStyle = 'rgba(99, 102, 241, 0.1)';
+      ctx.fillRect(x, y, width, height);
+    }
+
     ctx.restore();
-  }, [grid, gridWidth, gridHeight, cellSize, showGridLines, showRuler, rulerSize, pixelStyle, showGuideLines, backgroundImage, drawPixel]);
+  }, [grid, gridWidth, gridHeight, cellSize, showGridLines, showRuler, rulerSize, pixelStyle, showGuideLines, backgroundImage, drawPixel, selection]);
 
   useEffect(() => {
     drawCanvas();
@@ -382,6 +404,16 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     e.preventDefault();
     lastMousePosRef.current = { x: e.clientX, y: e.clientY };
 
+    if (currentTool === 'SELECT') {
+      const { row, col } = getCellFromEvent(e);
+      if (row >= 0 && col >= 0) {
+        setSelectionStart({ row, col });
+        setSelection({ startRow: row, startCol: col, endRow: row, endCol: col });
+        canvasRef.current?.setPointerCapture(e.pointerId);
+      }
+      return;
+    }
+
     if (selectedLayer === 'background' && backgroundImage) {
       isDraggingBackgroundRef.current = true;
       canvasRef.current?.setPointerCapture(e.pointerId);
@@ -434,6 +466,20 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       return;
     }
 
+    if (currentTool === 'SELECT' && selectionStart) {
+      e.preventDefault();
+      const { row, col } = getCellFromEvent(e);
+      if (row >= 0 && row < gridHeight && col >= 0 && col < gridWidth) {
+        setSelection({
+          startRow: selectionStart.row,
+          startCol: selectionStart.col,
+          endRow: row,
+          endCol: col,
+        });
+      }
+      return;
+    }
+
     if (isDrawingRef.current && !isTouchPanningRef.current) {
       e.preventDefault();
       const { row, col } = getCellFromEvent(e);
@@ -442,7 +488,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         onPointerMove(row, col, backgroundColor);
       }
     }
-  }, [getCellFromEvent, getBackgroundColorAtPosition, onPointerMove, onMiddleButtonDrag, onBackgroundImageDrag]);
+  }, [getCellFromEvent, getBackgroundColorAtPosition, onPointerMove, onMiddleButtonDrag, onBackgroundImageDrag, currentTool, selectionStart, gridHeight, gridWidth]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (e.pointerType === 'touch') {
@@ -456,12 +502,17 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       setIsDragging(false);
     }
 
+    if (currentTool === 'SELECT' && selection && onSelectionChange) {
+      onSelectionChange(selection);
+      setSelectionStart(null);
+    }
+
     isDraggingBackgroundRef.current = false;
     isDrawingRef.current = false;
     lastTouchDrawRowRef.current = null;
     lastTouchDrawColRef.current = null;
     onPointerUp();
-  }, [onPointerUp, currentTool]);
+  }, [onPointerUp, currentTool, selection, onSelectionChange]);
 
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     if (e.ctrlKey) {

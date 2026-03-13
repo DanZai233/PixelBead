@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import {
   ToolType, DEFAULT_COLORS, AIConfig, PixelStyle,
   TOOLS_INFO, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES,
-  ColorSystem, PaletteColor, PALETTE_PRESETS
+  ColorSystem, PaletteColor, PALETTE_PRESETS, Selection, BRUSH_SIZES, ToolInfo
 } from './types';
 import { generatePixelArtImage } from './services/aiService';
 import { saveToUpstash, generateShareUrl, getShareKeyFromUrl, loadFromUpstash } from './services/upstashService';
@@ -99,6 +99,7 @@ const AppMain: React.FC = () => {
   const [exportPixelStyle, setExportPixelStyle] = useState<PixelStyle>(PixelStyle.CIRCLE);
   const [exportShowGuideLines, setExportShowGuideLines] = useState(false);
   const [exportMirror, setExportMirror] = useState(false);
+  const [exportSelectionOnly, setExportSelectionOnly] = useState(false);
 
   const [materialGalleryOpen, setMaterialGalleryOpen] = useState(false);
   const [shareToGallery, setShareToGallery] = useState(false);
@@ -112,6 +113,10 @@ const AppMain: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('onboarding_done');
   });
+
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const [clipboard, setClipboard] = useState<string[][] | null>(null);
+  const [brushSize, setBrushSize] = useState(1);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -311,32 +316,6 @@ const AppMain: React.FC = () => {
     setHistoryVersion(v => v + 1);
   }, [grid]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (isSettingsOpen || isColorPickerOpen || isShortcutsOpen) return;
-      const activeElement = document.activeElement;
-      const isInputFocused = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA' || activeElement?.tagName === 'SELECT' || (activeElement as HTMLElement)?.isContentEditable;
-      if (isInputFocused) return;
-      if (e.ctrlKey && e.key === 'z') {
-        e.preventDefault();
-        if (e.shiftKey) redo();
-        else undo();
-        return;
-      }
-      if (e.key === 'Delete' || e.key === 'Backspace' || e.key === '[' || e.key === ']') {
-        e.preventDefault();
-        return;
-      }
-      const tool = TOOLS_INFO.find(t => t.shortcut.toLowerCase() === e.key.toLowerCase());
-      if (tool) {
-        e.preventDefault();
-        setCurrentTool(tool.type);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSettingsOpen, isColorPickerOpen, isShortcutsOpen, undo, redo]);
-
   const handleResize = useCallback((newWidth: number, newHeight?: number) => {
     const finalHeight = newHeight || newWidth;
     if (grid.some(row => row.some(c => c !== '#FFFFFF'))) {
@@ -435,6 +414,202 @@ const AppMain: React.FC = () => {
     img.src = imageSrc;
   }, [pushUndo]);
 
+  const handleCopySelection = useCallback(() => {
+    if (!selection) return;
+    const { startRow, startCol, endRow, endCol } = selection;
+    const rMin = Math.min(startRow, endRow);
+    const rMax = Math.max(startRow, endRow);
+    const cMin = Math.min(startCol, endCol);
+    const cMax = Math.max(startCol, endCol);
+
+    const copiedGrid: string[][] = [];
+    for (let r = rMin; r <= rMax; r++) {
+      const row: string[] = [];
+      for (let c = cMin; c <= cMax; c++) {
+        row.push(grid[r][c]);
+      }
+      copiedGrid.push(row);
+    }
+    setClipboard(copiedGrid);
+    alert('已复制选区内容');
+  }, [selection, grid]);
+
+  const handleCutSelection = useCallback(() => {
+    if (!selection) return;
+    const { startRow, startCol, endRow, endCol } = selection;
+    const rMin = Math.min(startRow, endRow);
+    const rMax = Math.max(startRow, endRow);
+    const cMin = Math.min(startCol, endCol);
+    const cMax = Math.max(startCol, endCol);
+
+    const copiedGrid: string[][] = [];
+    for (let r = rMin; r <= rMax; r++) {
+      const row: string[] = [];
+      for (let c = cMin; c <= cMax; c++) {
+        row.push(grid[r][c]);
+      }
+      copiedGrid.push(row);
+    }
+    setClipboard(copiedGrid);
+
+    pushUndo(gridRef.current);
+    setGrid(prev => {
+      const newGrid = prev.map(r => [...r]);
+      for (let r = rMin; r <= rMax; r++) {
+        for (let c = cMin; c <= cMax; c++) {
+          newGrid[r][c] = '#FFFFFF';
+        }
+      }
+      return newGrid;
+    });
+    setSelection(null);
+    alert('已剪切选区内容');
+  }, [selection, grid, pushUndo]);
+
+  const handlePasteSelection = useCallback((pasteRow: number, pasteCol: number) => {
+    if (!clipboard) return;
+    const clipboardHeight = clipboard.length;
+    const clipboardWidth = clipboard[0].length;
+
+    pushUndo(gridRef.current);
+    setGrid(prev => {
+      const newGrid = prev.map(r => [...r]);
+      for (let r = 0; r < clipboardHeight; r++) {
+        for (let c = 0; c < clipboardWidth; c++) {
+          const targetRow = pasteRow + r;
+          const targetCol = pasteCol + c;
+          if (targetRow >= 0 && targetRow < gridHeight && targetCol >= 0 && targetCol < gridWidth) {
+            newGrid[targetRow][targetCol] = clipboard[r][c];
+          }
+        }
+      }
+      return newGrid;
+    });
+    alert('已粘贴内容');
+  }, [clipboard, gridHeight, gridWidth, pushUndo]);
+
+  const handleInvertSelection = useCallback(() => {
+    if (!selection) return;
+    const { startRow, startCol, endRow, endCol } = selection;
+    const rMin = Math.min(startRow, endRow);
+    const rMax = Math.max(startRow, endRow);
+    const cMin = Math.min(startCol, endCol);
+    const cMax = Math.max(startCol, endCol);
+
+    pushUndo(gridRef.current);
+    setGrid(prev => {
+      const newGrid = prev.map(r => [...r]);
+      for (let r = rMin; r <= rMax; r++) {
+        for (let c = cMin; c <= cMax; c++) {
+          if (newGrid[r][c] === '#FFFFFF') {
+            newGrid[r][c] = selectedColor;
+          } else {
+            newGrid[r][c] = '#FFFFFF';
+          }
+        }
+      }
+      return newGrid;
+    });
+  }, [selection, selectedColor, pushUndo]);
+
+  const handleExcludeColorFromSelection = useCallback(() => {
+    if (!selection) return;
+    const { startRow, startCol, endRow, endCol } = selection;
+    const rMin = Math.min(startRow, endRow);
+    const rMax = Math.max(startRow, endRow);
+    const cMin = Math.min(startCol, endCol);
+    const cMax = Math.max(startCol, endCol);
+
+    pushUndo(gridRef.current);
+    setGrid(prev => {
+      const newGrid = prev.map(r => [...r]);
+      for (let r = rMin; r <= rMax; r++) {
+        for (let c = cMin; c <= cMax; c++) {
+          if (newGrid[r][c] === selectedColor) {
+            newGrid[r][c] = '#FFFFFF';
+          }
+        }
+      }
+      return newGrid;
+    });
+  }, [selection, selectedColor, pushUndo]);
+
+  const handleClearSelection = useCallback(() => {
+    if (!selection) return;
+    const { startRow, startCol, endRow, endCol } = selection;
+    const rMin = Math.min(startRow, endRow);
+    const rMax = Math.max(startRow, endRow);
+    const cMin = Math.min(startCol, endCol);
+    const cMax = Math.max(startCol, endCol);
+
+    pushUndo(gridRef.current);
+    setGrid(prev => {
+      const newGrid = prev.map(r => [...r]);
+      for (let r = rMin; r <= rMax; r++) {
+        for (let c = cMin; c <= cMax; c++) {
+          newGrid[r][c] = '#FFFFFF';
+        }
+      }
+      return newGrid;
+    });
+    setSelection(null);
+  }, [selection, pushUndo]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isSettingsOpen || isColorPickerOpen || isShortcutsOpen) return;
+      const activeElement = document.activeElement;
+      const isInputFocused = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA' || activeElement?.tagName === 'SELECT' || (activeElement as HTMLElement)?.isContentEditable;
+      if (isInputFocused) return;
+      if (e.ctrlKey && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
+      if (e.ctrlKey && e.key === 'c') {
+        e.preventDefault();
+        handleCopySelection();
+        return;
+      }
+      if (e.ctrlKey && e.key === 'v') {
+        e.preventDefault();
+        const { startRow, startCol } = selection || { startRow: Math.floor(gridHeight / 2), startCol: Math.floor(gridWidth / 2) };
+        handlePasteSelection(startRow, startCol);
+        return;
+      }
+      if (e.ctrlKey && e.key === 'x') {
+        e.preventDefault();
+        handleCutSelection();
+        return;
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        if (selection) {
+          handleClearSelection();
+        }
+        return;
+      }
+      if (e.key === '[') {
+        e.preventDefault();
+        setBrushSize(prev => Math.max(1, prev - 1));
+        return;
+      }
+      if (e.key === ']') {
+        e.preventDefault();
+        setBrushSize(prev => Math.min(5, prev + 1));
+        return;
+      }
+      const tool = TOOLS_INFO.find(t => t.shortcut.toLowerCase() === e.key.toLowerCase());
+      if (tool) {
+        e.preventDefault();
+        setCurrentTool(tool.type);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSettingsOpen, isColorPickerOpen, isShortcutsOpen, undo, redo, handleCopySelection, handlePasteSelection, handleCutSelection, handleClearSelection, selection, gridHeight, gridWidth]);
+
   const handleCanvasAction = useCallback((row: number, col: number, backgroundColor?: string | null) => {
     if (currentTool === ToolType.PICKER) {
       const colorAt = grid[row][col];
@@ -488,14 +663,49 @@ const AppMain: React.FC = () => {
         }
       }
       
+      const brushOffset = Math.floor(brushSize / 2);
+      const cellsToDraw: [number, number][] = [];
+
+      for (let r = -brushOffset; r <= brushOffset; r++) {
+        for (let c = -brushOffset; c <= brushOffset; c++) {
+          cellsToDraw.push([row + r, col + c]);
+        }
+      }
+
+      let shouldDraw = false;
+
       if (currentTool === ToolType.PENCIL || currentTool === ToolType.SMART_PENCIL) {
-        if (newGrid[row][col] === colorToUse) return prev;
+        for (const [r, c] of cellsToDraw) {
+          if (r >= 0 && r < gridHeight && c >= 0 && c < gridWidth) {
+            if (newGrid[r][c] !== colorToUse) {
+              shouldDraw = true;
+              break;
+            }
+          }
+        }
+        if (!shouldDraw) return prev;
         pushUndo(prev);
-        newGrid[row][col] = colorToUse;
+        for (const [r, c] of cellsToDraw) {
+          if (r >= 0 && r < gridHeight && c >= 0 && c < gridWidth) {
+            newGrid[r][c] = colorToUse;
+          }
+        }
       } else if (currentTool === ToolType.ERASER) {
-        if (newGrid[row][col] === '#FFFFFF') return prev;
+        for (const [r, c] of cellsToDraw) {
+          if (r >= 0 && r < gridHeight && c >= 0 && c < gridWidth) {
+            if (newGrid[r][c] !== '#FFFFFF') {
+              shouldDraw = true;
+              break;
+            }
+          }
+        }
+        if (!shouldDraw) return prev;
         pushUndo(prev);
-        newGrid[row][col] = '#FFFFFF';
+        for (const [r, c] of cellsToDraw) {
+          if (r >= 0 && r < gridHeight && c >= 0 && c < gridWidth) {
+            newGrid[r][c] = '#FFFFFF';
+          }
+        }
       } else if (currentTool === ToolType.FILL) {
         const targetColor = prev[row][col];
         const fillColor = selectedColor;
@@ -514,7 +724,7 @@ const AppMain: React.FC = () => {
       }
       return newGrid;
     });
-  }, [selectedColor, currentTool, gridWidth, gridHeight, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo, selectedColorSystem]);
+  }, [selectedColor, currentTool, gridWidth, gridHeight, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo, selectedColorSystem, brushSize]);
 
   const handleMiddleButtonDrag = useCallback((deltaX: number, deltaY: number) => {
     setPanOffset(prev => ({
@@ -689,10 +899,33 @@ const AppMain: React.FC = () => {
   }, [grid, gridWidth, gridHeight, pixelStyle]);
 
   const handleConfirmExport = useCallback(async () => {
+    let exportGrid = grid;
+    let exportWidth = gridWidth;
+    let exportHeight = gridHeight;
+
+    if (exportSelectionOnly && selection) {
+      const { startRow, startCol, endRow, endCol } = selection;
+      const rMin = Math.min(startRow, endRow);
+      const rMax = Math.max(startRow, endRow);
+      const cMin = Math.min(startCol, endCol);
+      const cMax = Math.max(startCol, endCol);
+
+      exportGrid = [];
+      for (let r = rMin; r <= rMax; r++) {
+        const row: string[] = [];
+        for (let c = cMin; c <= cMax; c++) {
+          row.push(grid[r][c]);
+        }
+        exportGrid.push(row);
+      }
+      exportWidth = cMax - cMin + 1;
+      exportHeight = rMax - rMin + 1;
+    }
+
     const canvas = await generateExportImage({
-      grid,
-      gridWidth,
-      gridHeight,
+      grid: exportGrid,
+      gridWidth: exportWidth,
+      gridHeight: exportHeight,
       pixelStyle: exportPixelStyle,
       colorSystem: selectedColorSystem,
       colorSystemMapping: colorSystemMapping as Record<string, Record<string, string>>,
@@ -703,11 +936,12 @@ const AppMain: React.FC = () => {
     const url = canvas.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = url;
-    a.download = exportMirror ? `pixel-bead-${gridWidth}x${gridHeight}-mirrored.png` : `pixel-bead-${gridWidth}x${gridHeight}.png`;
+    const fileName = exportSelectionOnly ? `pixel-bead-${exportWidth}x${exportHeight}-selection.png` : (exportMirror ? `pixel-bead-${gridWidth}x${gridHeight}-mirrored.png` : `pixel-bead-${gridWidth}x${gridHeight}.png`);
+    a.download = fileName;
     a.click();
-
+    
     setExportModalOpen(false);
-  }, [grid, gridWidth, gridHeight, exportPixelStyle, exportShowGuideLines, exportMirror, selectedColorSystem]);
+  }, [grid, gridWidth, gridHeight, exportPixelStyle, exportShowGuideLines, exportMirror, selectedColorSystem, exportSelectionOnly, selection]);
 
   const handleShareImageExport = useCallback(async () => {
     const canvas = await generateShareImage({
@@ -1189,6 +1423,80 @@ const AppMain: React.FC = () => {
 
           <div className="space-y-3">
             <div className="flex justify-between items-center">
+              <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">画笔大小</h2>
+              <span className="text-[9px] text-indigo-600 font-bold">{brushSize}x{brushSize}</span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {BRUSH_SIZES.map(size => (
+                <button
+                  key={size.value}
+                  onClick={() => setBrushSize(size.value)}
+                  className={`px-3 py-2 rounded-lg text-[10px] font-black transition-all ${brushSize === size.value ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                  title={`${size.name} 画笔`}
+                >
+                  {size.value}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {selection && (
+            <div className="space-y-3 bg-indigo-50 rounded-3xl p-4 border-2 border-indigo-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">框选操作</h2>
+                <button
+                  onClick={() => setSelection(null)}
+                  className="text-[8px] text-indigo-400 hover:text-red-500 font-black"
+                >
+                  ✕ 清除选区
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleCopySelection}
+                  className="px-3 py-2 bg-white text-indigo-700 rounded-lg text-[9px] font-black hover:bg-indigo-100 transition-all shadow-sm flex items-center justify-center gap-1"
+                >
+                  <span>📋</span> 复制
+                </button>
+                <button
+                  onClick={() => {
+                    const { startRow, startCol } = selection;
+                    handlePasteSelection(startRow, startCol);
+                  }}
+                  className="px-3 py-2 bg-white text-indigo-700 rounded-lg text-[9px] font-black hover:bg-indigo-100 transition-all shadow-sm flex items-center justify-center gap-1"
+                >
+                  <span>📝</span> 粘贴
+                </button>
+                <button
+                  onClick={handleCutSelection}
+                  className="px-3 py-2 bg-white text-indigo-700 rounded-lg text-[9px] font-black hover:bg-indigo-100 transition-all shadow-sm flex items-center justify-center gap-1"
+                >
+                  <span>✂️</span> 剪切
+                </button>
+                <button
+                  onClick={handleClearSelection}
+                  className="px-3 py-2 bg-white text-indigo-700 rounded-lg text-[9px] font-black hover:bg-indigo-100 transition-all shadow-sm flex items-center justify-center gap-1"
+                >
+                  <span>🗑️</span> 清除
+                </button>
+                <button
+                  onClick={handleInvertSelection}
+                  className="px-3 py-2 bg-white text-indigo-700 rounded-lg text-[9px] font-black hover:bg-indigo-100 transition-all shadow-sm flex items-center justify-center gap-1 col-span-2"
+                >
+                  <span>🔄</span> 反选（白色→当前色，其他→白色）
+                </button>
+                <button
+                  onClick={handleExcludeColorFromSelection}
+                  className="px-3 py-2 bg-white text-indigo-700 rounded-lg text-[9px] font-black hover:bg-indigo-100 transition-all shadow-sm flex items-center justify-center gap-1 col-span-2"
+                >
+                  <span>🚫</span> 排除当前色（将当前色替换为白色）
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
               <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">调色盘</h2>
               <button
                 onClick={() => setIsColorPickerOpen(true)}
@@ -1603,6 +1911,7 @@ const AppMain: React.FC = () => {
                        backgroundImage={backgroundImage}
                        selectedLayer={selectedLayer}
                        currentTool={currentTool}
+                       selection={selection}
                        onPointerDown={handleCanvasAction}
                        onPointerMove={handleCanvasAction}
                        onPointerUp={() => {}}
@@ -1610,6 +1919,7 @@ const AppMain: React.FC = () => {
                        onBackgroundImageDrag={handleBackgroundImageDrag}
                        onZoomChange={setZoom}
                        onTouchPan={handleMiddleButtonDrag}
+                       onSelectionChange={setSelection}
                      />
                   </div>
                 </div>
@@ -2000,18 +2310,33 @@ const AppMain: React.FC = () => {
               </label>
             </div>
 
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="exportMirror"
-                checked={exportMirror}
-                onChange={(e) => setExportMirror(e.target.checked)}
-                className="w-5 h-5 rounded border-2 border-slate-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <label htmlFor="exportMirror" className="text-sm font-black text-slate-700 cursor-pointer">
-                水平镜像
-              </label>
-            </div>
+             <div className="flex items-center gap-3">
+               <input
+                 type="checkbox"
+                 id="exportMirror"
+                 checked={exportMirror}
+                 onChange={(e) => setExportMirror(e.target.checked)}
+                 className="w-5 h-5 rounded border-2 border-slate-300 text-indigo-600 focus:ring-indigo-500"
+               />
+               <label htmlFor="exportMirror" className="text-sm font-black text-slate-700 cursor-pointer">
+                 水平镜像
+               </label>
+             </div>
+
+             {selection && (
+               <div className="flex items-center gap-3">
+                 <input
+                   type="checkbox"
+                   id="exportSelectionOnly"
+                   checked={exportSelectionOnly}
+                   onChange={(e) => setExportSelectionOnly(e.target.checked)}
+                   className="w-5 h-5 rounded border-2 border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                 />
+                 <label htmlFor="exportSelectionOnly" className="text-sm font-black text-slate-700 cursor-pointer">
+                   仅导出选区
+                 </label>
+               </div>
+             )}
 
             <div className="flex gap-3">
               <button
