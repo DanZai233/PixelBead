@@ -30,9 +30,13 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
   const [isLocked, setIsLocked] = useState(false);
   const [highlightedColor, setHighlightedColor] = useState<ColorHex | null>(null);
   const [highlightOpacity, setHighlightOpacity] = useState(90);
+  const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
+  const [showMobileTools, setShowMobileTools] = useState(false);
 
   const isDraggingRef = useRef(false);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
+  const lastPinchDistanceRef = useRef(0);
+  const lastZoomRef = useRef(zoom);
 
   const baseBeadSize = 28;
 
@@ -264,6 +268,10 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
     drawCanvas();
   }, [drawCanvas]);
 
+  useEffect(() => {
+    lastZoomRef.current = zoom;
+  }, [zoom]);
+
   const handleWheel = useCallback((e: React.WheelEvent) => {
     if (isLocked) return;
     if (e.ctrlKey) {
@@ -299,16 +307,34 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
     if (e.touches.length === 1) {
       isDraggingRef.current = true;
       lastMousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else if (e.touches.length === 2) {
+      isDraggingRef.current = false;
+      const distance = Math.hypot(
+        e.touches[1].clientX - e.touches[0].clientX,
+        e.touches[1].clientY - e.touches[0].clientY
+      );
+      lastPinchDistanceRef.current = distance;
+      lastZoomRef.current = zoom;
     }
-  }, [isLocked]);
+  }, [isLocked, zoom]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDraggingRef.current || isLocked) return;
-    if (e.touches.length === 1) {
+    if (isLocked) return;
+    if (e.touches.length === 1 && isDraggingRef.current) {
       const deltaX = e.touches[0].clientX - lastMousePosRef.current.x;
       const deltaY = e.touches[0].clientY - lastMousePosRef.current.y;
       lastMousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       setPanOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
+    } else if (e.touches.length === 2) {
+      e.preventDefault();
+      const distance = Math.hypot(
+        e.touches[1].clientX - e.touches[0].clientX,
+        e.touches[1].clientY - e.touches[0].clientY
+      );
+      const scale = distance / lastPinchDistanceRef.current;
+      const newZoom = Math.min(Math.max(Math.round(lastZoomRef.current * scale), 20), 300);
+      setZoom(newZoom);
+      lastPinchDistanceRef.current = distance;
     }
   }, [isLocked]);
 
@@ -328,7 +354,52 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
 
   return (
     <div className="fixed inset-0 z-[9999] bg-slate-900 flex flex-col">
-      <div className="bg-slate-800 border-b border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
+      {/* 移动端顶部工具栏 */}
+      <div className="lg:hidden bg-slate-800 border-b border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <h2 className="text-white font-bold text-sm">沉浸拼豆</h2>
+          <button
+            onClick={() => setShowMobileTools(!showMobileTools)}
+            className="p-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsLocked(!isLocked)}
+            className={`p-2 rounded-lg transition-all ${isLocked ? 'bg-red-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isLocked ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+              )}
+            </svg>
+          </button>
+          <button
+            onClick={() => setIsMobilePanelOpen(true)}
+            className="p-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-xs font-bold"
+          >
+            退出
+          </button>
+        </div>
+      </div>
+
+      {/* 桌面端顶部工具栏 */}
+      <div className="hidden lg:flex bg-slate-800 border-b border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
           <h2 className="text-white font-bold text-lg">沉浸拼豆模式</h2>
           <div className="h-6 w-px bg-slate-600"></div>
@@ -360,7 +431,7 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="hidden lg:flex items-center gap-4">
           <div className="flex items-center gap-2">
             <button onClick={() => setZoom(z => Math.max(20, z - 10))} className="w-8 h-8 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 transition-all">-</button>
             <input type="range" min="20" max="300" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} className="w-24 accent-indigo-500" />
@@ -399,6 +470,44 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* 移动端工具菜单 */}
+      {showMobileTools && (
+        <div className="lg:hidden bg-slate-800 border-b border-slate-700 px-4 py-3">
+          <div className="grid grid-cols-4 gap-2">
+            <button
+              onClick={() => setShowGridLines(!showGridLines)}
+              className={`p-2 rounded-lg text-[10px] font-bold transition-all ${showGridLines ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+            >
+              网格
+            </button>
+            <button
+              onClick={() => setShowRuler(!showRuler)}
+              className={`p-2 rounded-lg text-[10px] font-bold transition-all ${showRuler ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+            >
+              标尺
+            </button>
+            <button
+              onClick={() => setShowGuideLines(!showGuideLines)}
+              className={`p-2 rounded-lg text-[10px] font-bold transition-all ${showGuideLines ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+            >
+              辅助线
+            </button>
+            <button
+              onClick={() => setShowColorKeys(!showColorKeys)}
+              className={`p-2 rounded-lg text-[10px] font-bold transition-all ${showColorKeys ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+            >
+              色号
+            </button>
+          </div>
+          <div className="flex items-center gap-2 mt-3">
+            <span className="text-slate-400 text-xs">缩放</span>
+            <input type="range" min="20" max="300" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} className="flex-1 accent-indigo-500" />
+            <span className="text-slate-400 text-xs w-10">{zoom}%</span>
+          </div>
+        </div>
+      )}
+
 
       <div className="flex flex-1 overflow-hidden">
         <div

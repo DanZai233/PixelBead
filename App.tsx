@@ -11,6 +11,7 @@ import { BeadCanvas } from './components/BeadCanvas';
 import { Bead3DViewer } from './components/Bead3DViewer';
 import { BeadSliceViewer } from './components/BeadSliceViewer';
 import { BeadPlannerView } from './components/BeadPlannerView';
+import { ImageCropSelector } from './components/ImageCropSelector';
 import { SettingsPanel } from './components/SettingsPanel';
 import { ColorPicker } from './components/ColorPicker';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
@@ -86,6 +87,8 @@ const AppMain: React.FC = () => {
   const [highlightedColor, setHighlightedColor] = useState<ColorHex | null>(null);
   const [highlightOpacity, setHighlightOpacity] = useState(90);
   const [isPlannerViewOpen, setIsPlannerViewOpen] = useState(false);
+  const [customCrop, setCustomCrop] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [useAdvancedCrop, setUseAdvancedCrop] = useState(false);
 
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
@@ -358,7 +361,7 @@ const AppMain: React.FC = () => {
     }
   }, [gridWidth, gridHeight, pushUndo]);
 
-  const processImageToGrid = useCallback((imageSrc: string, width: number, height: number, xAlign: number = 0, yAlign: number = 0) => {
+  const processImageToGrid = useCallback((imageSrc: string, width: number, height: number, xAlign: number = 0, yAlign: number = 0, customCrop?: { x: number; y: number; width: number; height: number }) => {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
@@ -367,25 +370,35 @@ const AppMain: React.FC = () => {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      const sourceWidth = img.width;
-      const sourceHeight = img.height;
       let sourceX = 0;
       let sourceY = 0;
-      let sourceDrawWidth = sourceWidth;
-      let sourceDrawHeight = sourceHeight;
+      let sourceDrawWidth = img.width;
+      let sourceDrawHeight = img.height;
 
-      if (xAlign === -1) {
-        sourceDrawWidth = Math.min(sourceWidth, sourceHeight * width / height);
-      } else if (xAlign === 1) {
-        sourceX = sourceWidth - Math.min(sourceWidth, sourceHeight * width / height);
-        sourceDrawWidth = Math.min(sourceWidth, sourceHeight * width / height);
-      }
+      if (customCrop) {
+        // 使用自定义裁切区域
+        sourceX = customCrop.x;
+        sourceY = customCrop.y;
+        sourceDrawWidth = customCrop.width;
+        sourceDrawHeight = customCrop.height;
+      } else {
+        // 使用传统的对齐方式
+        const sourceWidth = img.width;
+        const sourceHeight = img.height;
 
-      if (yAlign === -1) {
-        sourceDrawHeight = Math.min(sourceHeight, sourceWidth * height / width);
-      } else if (yAlign === 1) {
-        sourceY = sourceHeight - Math.min(sourceHeight, sourceWidth * height / width);
-        sourceDrawHeight = Math.min(sourceHeight, sourceWidth * height / width);
+        if (xAlign === -1) {
+          sourceDrawWidth = Math.min(sourceWidth, sourceHeight * width / height);
+        } else if (xAlign === 1) {
+          sourceX = sourceWidth - Math.min(sourceWidth, sourceHeight * width / height);
+          sourceDrawWidth = Math.min(sourceWidth, sourceHeight * width / height);
+        }
+
+        if (yAlign === -1) {
+          sourceDrawHeight = Math.min(sourceHeight, sourceWidth * height / width);
+        } else if (yAlign === 1) {
+          sourceY = sourceHeight - Math.min(sourceHeight, sourceWidth * height / width);
+          sourceDrawHeight = Math.min(sourceHeight, sourceWidth * height / width);
+        }
       }
 
       ctx.drawImage(img, sourceX, sourceY, sourceDrawWidth, sourceDrawHeight, 0, 0, width, height);
@@ -667,12 +680,23 @@ const AppMain: React.FC = () => {
         }
       }
       
-      const brushOffset = Math.floor(brushSize / 2);
+      const isEven = brushSize % 2 === 0;
       const cellsToDraw: [number, number][] = [];
 
-      for (let r = -brushOffset; r <= brushOffset; r++) {
-        for (let c = -brushOffset; c <= brushOffset; c++) {
-          cellsToDraw.push([row + r, col + c]);
+      if (isEven) {
+        // 偶数大小：以左上角为基准
+        for (let r = 0; r < brushSize; r++) {
+          for (let c = 0; c < brushSize; c++) {
+            cellsToDraw.push([row + r, col + c]);
+          }
+        }
+      } else {
+        // 奇数大小：以中心点为基准
+        const brushOffset = Math.floor(brushSize / 2);
+        for (let r = -brushOffset; r <= brushOffset; r++) {
+          for (let c = -brushOffset; c <= brushOffset; c++) {
+            cellsToDraw.push([row + r, col + c]);
+          }
         }
       }
 
@@ -2094,28 +2118,79 @@ const AppMain: React.FC = () => {
               <p className="text-xs md:text-sm text-slate-400 font-medium">请选择图像在 1:1 画布中的对齐位置</p>
             </div>
             
-            <div className="aspect-square bg-slate-100 rounded-2xl md:rounded-3xl overflow-hidden relative border-4 border-slate-200 flex items-center justify-center">
-               <img src={pendingImage} alt="Preview" className="max-w-none max-h-none opacity-50 absolute w-full h-full object-contain" />
-               <div className="z-10 text-[9px] md:text-[10px] font-black bg-slate-900 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-full uppercase tracking-widest">预览 1:1 区域</div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 md:gap-3">
-              <button onClick={() => setCropOffset({x: -1, y: -1})} className="p-3 md:p-4 bg-slate-50 hover:bg-slate-100 rounded-xl md:rounded-2xl font-bold text-[10px] md:text-xs">左上</button>
-              <button onClick={() => setCropOffset({x: 0, y: 0})} className="p-3 md:p-4 bg-indigo-50 border-2 border-indigo-500 text-indigo-700 rounded-xl md:rounded-2xl font-bold text-[10px] md:text-xs">居中</button>
-              <button onClick={() => setCropOffset({x: 1, y: 1})} className="p-3 md:p-4 bg-slate-50 hover:bg-slate-100 rounded-xl md:rounded-2xl font-bold text-[10px] md:text-xs">右下</button>
-            </div>
-
-            <div className="flex gap-2 md:gap-4">
-              <button onClick={() => setPendingImage(null)} className="flex-1 py-3 md:py-4 bg-slate-100 text-slate-500 rounded-xl md:rounded-2xl font-black text-sm">取消</button>
+            <div className="flex gap-2 mb-4">
               <button
-                onClick={() => processImageToGrid(pendingImage, gridWidth, gridHeight, cropOffset.x, cropOffset.y)}
-                className="flex-[2] py-3 md:py-4 bg-emerald-500 text-white rounded-xl md:rounded-2xl font-black text-sm shadow-xl active:scale-95"
+                onClick={() => setUseAdvancedCrop(!useAdvancedCrop)}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${useAdvancedCrop ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
               >
-                确认并转换
+                {useAdvancedCrop ? '高级裁切 ✓' : '高级裁切'}
               </button>
             </div>
+
+            {useAdvancedCrop ? (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-500 text-center">使用高级裁切可以自由选择图片的任意区域</p>
+                <button
+                  onClick={() => {
+                    setUseAdvancedCrop(false);
+                    setCustomCrop(null);
+                  }}
+                  className="w-full py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200"
+                >
+                  切换到简单裁切
+                </button>
+                <button
+                  onClick={() => {
+                    setCustomCrop({ x: 0, y: 0, width: 0, height: 0 });
+                  }}
+                  className="w-full py-3 rounded-lg bg-emerald-500 text-white font-bold shadow-xl active:scale-95 hover:bg-emerald-600 transition-all"
+                >
+                  开始裁切
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="aspect-square bg-slate-100 rounded-2xl md:rounded-3xl overflow-hidden relative border-4 border-slate-200 flex items-center justify-center">
+                   <img src={pendingImage} alt="Preview" className="max-w-none max-h-none opacity-50 absolute w-full h-full object-contain" />
+                   <div className="z-10 text-[9px] md:text-[10px] font-black bg-slate-900 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-full uppercase tracking-widest">预览 1:1 区域</div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 md:gap-3">
+                  <button onClick={() => setCropOffset({x: -1, y: -1})} className="p-3 md:p-4 bg-slate-50 hover:bg-slate-100 rounded-xl md:rounded-2xl font-bold text-[10px] md:text-xs">左上</button>
+                  <button onClick={() => setCropOffset({x: 0, y: 0})} className="p-3 md:p-4 bg-indigo-50 border-2 border-indigo-500 text-indigo-700 rounded-xl md:rounded-2xl font-bold text-[10px] md:text-xs">居中</button>
+                  <button onClick={() => setCropOffset({x: 1, y: 1})} className="p-3 md:p-4 bg-slate-50 hover:bg-slate-100 rounded-xl md:rounded-2xl font-bold text-[10px] md:text-xs">右下</button>
+                </div>
+
+                <div className="flex gap-2 md:gap-4">
+                  <button onClick={() => {
+                    setPendingImage(null);
+                    setUseAdvancedCrop(false);
+                  }} className="flex-1 py-3 md:py-4 bg-slate-100 text-slate-500 rounded-xl md:rounded-2xl font-black text-sm">取消</button>
+                  <button
+                    onClick={() => processImageToGrid(pendingImage, gridWidth, gridHeight, cropOffset.x, cropOffset.y)}
+                    className="flex-[2] py-3 md:py-4 bg-emerald-500 text-white rounded-xl md:rounded-2xl font-black text-sm shadow-xl active:scale-95"
+                  >
+                    确认并转换
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
+      )}
+
+      {customCrop && pendingImage && (
+        <ImageCropSelector
+          imageSrc={pendingImage}
+          gridWidth={gridWidth}
+          gridHeight={gridHeight}
+          onConfirm={(x, y, width, height) => {
+            processImageToGrid(pendingImage, gridWidth, gridHeight, 0, 0, { x, y, width, height });
+            setCustomCrop(null);
+            setPendingImage(null);
+          }}
+          onCancel={() => setCustomCrop(null)}
+        />
       )}
 
       {isMobileLeftOpen && (
