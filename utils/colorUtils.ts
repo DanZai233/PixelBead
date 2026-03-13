@@ -109,7 +109,7 @@ export async function generateExportImage(data: ExportImageData): Promise<HTMLCa
   const gridOffsetY = headerHeight;
   const gridOffsetX = rulerSize;
   const canvasWidth = gridWidth * cellSize + rulerSize;
-  const canvasHeight = gridHeight * cellSize + rulerSize + headerHeight;
+  const canvasHeight = gridHeight * cellSize + 120 + headerHeight;
   
   const canvas = document.createElement('canvas');
   canvas.width = canvasWidth;
