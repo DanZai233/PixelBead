@@ -105,7 +105,7 @@ export async function generateExportImage(data: ExportImageData): Promise<HTMLCa
   
   const cellSize = 30;
   const rulerSize = 20;
-  const headerHeight = 60;
+  const headerHeight = 80;
   const gridOffsetY = headerHeight;
   const gridOffsetX = rulerSize;
   const canvasWidth = gridWidth * cellSize + rulerSize;
