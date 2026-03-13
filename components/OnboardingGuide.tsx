@@ -163,6 +163,48 @@ const steps: Step[] = [
     ),
   },
   {
+    icon: '👁️',
+    title: '颜色高亮 & 沉浸拼豆',
+    subtitle: '专业的拼豆体验工具',
+    accent: 'from-amber-500 to-orange-500',
+    content: (
+      <div className="space-y-4">
+        <div className="bg-amber-50 p-4 rounded-xl">
+          <p className="text-sm text-slate-700 leading-relaxed">
+            拼豆糕手提供了专业的拼豆辅助功能，让你的拼豆过程更轻松、更准确！
+          </p>
+        </div>
+        <div className="space-y-3">
+          <div className="flex gap-3 items-start">
+            <span className="text-lg">👁️</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">颜色高亮</p>
+              <p className="text-xs text-slate-500">在右侧颜色列表，点击颜色旁的 <strong>「眼睛图标」</strong> 即可高亮该颜色，其他颜色变透明。可调节透明度（50%-100%），让你专注于某一种颜色的拼豆。</p>
+            </div>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="text-lg">🎯</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">沉浸拼豆模式</p>
+              <p className="text-xs text-slate-500">点击顶部 <strong>「拼豆」</strong> 按钮进入全屏模式。每个像素显示色号，右侧有完整图例。支持缩放、拖动、锁定，让你专心拼豆！</p>
+            </div>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="text-lg">🔒</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">锁定功能</p>
+              <p className="text-xs text-slate-500">拼豆时可以锁定画布，防止误触。锁定后无法缩放、拖动，确保你的拼豆进度安全。</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-4 rounded-xl">
+          <p className="text-sm font-bold text-amber-600 mb-1">💡 拼豆小技巧</p>
+          <p className="text-xs text-amber-700">使用沉浸模式 + 颜色高亮，按照图例逐个颜色完成拼豆，效率翻倍！</p>
+        </div>
+      </div>
+    ),
+  },
+  {
     icon: '💾',
     title: '导出 & 导入 & 保存',
     subtitle: '多种方式保存和分享你的作品',

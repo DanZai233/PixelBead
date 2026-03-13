@@ -99,7 +99,40 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
 
           <section>
             <h3 className="text-lg font-black text-slate-900 mb-3 flex items-center gap-2">
-              <span className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-sm">6</span>
+              <span className="w-6 h-6 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center text-sm">6</span>
+              专业拼豆工具
+            </h3>
+            <div className="space-y-3">
+              <div className="bg-amber-50 p-4 rounded-xl">
+                <p className="text-sm font-bold text-slate-800 mb-2">👁️ 颜色高亮</p>
+                <p className="text-xs text-slate-600 mb-2">在右侧颜色列表中，点击颜色旁的眼睛图标，可以高亮该颜色，其他颜色会变透明，方便你专注于某一种颜色的拼豆。</p>
+                <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
+                  <li>默认透明度 90%，可调节范围 50%-100%</li>
+                  <li>点击已高亮颜色的眼睛图标可取消高亮</li>
+                  <li>支持在主编辑器和沉浸拼豆模式中使用</li>
+                </ul>
+              </div>
+              <div className="bg-orange-50 p-4 rounded-xl">
+                <p className="text-sm font-bold text-slate-800 mb-2">🎯 沉浸拼豆模式</p>
+                <p className="text-xs text-slate-600 mb-2">点击顶部工具栏的「拼豆」按钮，进入全屏沉浸模式，像看图纸一样拼豆！</p>
+                <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
+                  <li>每个像素显示色号，对照拼豆更准确</li>
+                  <li>右侧显示完整图例和颜色数量</li>
+                  <li>支持标尺、辅助线、网格线开关</li>
+                  <li>可自由缩放和拖动画布</li>
+                  <li>锁定功能防止误触，专注拼豆</li>
+                  <li>按 ESC 键退出沉浸模式</li>
+                </ul>
+              </div>
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-3 rounded-xl">
+                <p className="text-xs text-amber-700"><strong>💡 推荐工作流：</strong>设计图纸 → 进入沉浸模式 → 按颜色高亮 → 逐个颜色完成拼豆</p>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-lg font-black text-slate-900 mb-3 flex items-center gap-2">
+              <span className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-sm">7</span>
               快捷键
             </h3>
             <div className="space-y-2 text-sm text-slate-600">
