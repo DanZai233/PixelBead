@@ -316,7 +316,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     }
 
     ctx.restore();
-  }, [grid, gridWidth, gridHeight, cellSize, showGridLines, showRuler, rulerSize, pixelStyle, showGuideLines, backgroundImage, drawPixel, selection]);
+  }, [grid, gridWidth, gridHeight, cellSize, showGridLines, showRuler, rulerSize, pixelStyle, showGuideLines, backgroundImage, drawPixel, selection, highlightedColor, highlightOpacity]);
 
   useEffect(() => {
     drawCanvas();
