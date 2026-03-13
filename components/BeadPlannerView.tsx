@@ -541,8 +541,97 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
             </div>
           </div>
         </div>
+ 
+        {/* 移动端图例面板 */}
+        {isMobilePanelOpen && (
+          <div className="lg:hidden fixed inset-0 z-[10000] bg-black/50">
+            <div className="absolute bottom-0 left-0 right-0 bg-slate-800 rounded-t-3xl max-h-[70vh] overflow-hidden flex flex-col">
+              <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+                <h3 className="text-white font-bold text-sm">图例 ({stats.length} 色)</h3>
+                <button
+                  onClick={() => setIsMobilePanelOpen(false)}
+                  className="p-2 rounded-lg bg-slate-700 text-slate-300"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-3 mb-4">
+                  <div className="bg-slate-700 rounded-xl p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-slate-400 text-xs">透明度</span>
+                      <input
+                        type="range"
+                        min="50"
+                        max="100"
+                        value={highlightOpacity}
+                        onChange={(e) => setHighlightOpacity(parseInt(e.target.value))}
+                        className="flex-1 accent-indigo-500"
+                        disabled={!highlightedColor}
+                      />
+                      <span className="text-slate-400 text-xs w-10">{highlightOpacity}%</span>
+                    </div>
+                    {highlightedColor && (
+                      <button
+                        onClick={() => setHighlightedColor(null)}
+                        className="w-full py-2 rounded-lg bg-slate-600 text-slate-300 text-xs font-bold"
+                      >
+                        取消高亮
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  {stats.map((item) => {
+                    const colorKey = getColorKey(item.hex);
+                    return (
+                      <div
+                        key={item.hex}
+                        onClick={() => setHighlightedColor(highlightedColor === item.hex ? null : item.hex)}
+                        className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${highlightedColor === item.hex ? 'bg-indigo-600' : 'bg-slate-700'}`}
+                      >
+                        <div
+                          className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: item.hex }}
+                        >
+                          {showColorKeys && colorKey && (
+                            <span className="text-[10px] font-bold text-white drop-shadow-md">{colorKey}</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-white text-sm font-bold truncate">{colorKey || item.hex}</div>
+                          <div className="text-slate-400 text-xs">{item.count} 颗</div>
+                        </div>
+                        <div
+                          className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${highlightedColor === item.hex ? 'bg-white/20' : 'bg-slate-600'}`}
+                        >
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              <div className="p-4 border-t border-slate-700 bg-slate-900">
+                <div className="flex justify-between text-slate-400 text-xs">
+                  <span>尺寸: {gridWidth}x{gridHeight}</span>
+                  <span>总计: {stats.reduce((a, b) => a + b.count, 0)} 颗</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-        <div className="w-80 bg-slate-800 border-l border-slate-700 flex flex-col shrink-0">
+        {/* 桌面端图例面板 */}
+        <div className="hidden lg:block w-80 bg-slate-800 border-l border-slate-700 flex flex-col shrink-0">
           <div className="p-4 border-b border-slate-700">
             <h3 className="text-white font-bold text-sm mb-3">颜色高亮</h3>
             <div className="space-y-3">
