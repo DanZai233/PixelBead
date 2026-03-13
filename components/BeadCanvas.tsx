@@ -14,6 +14,8 @@ interface BeadCanvasProps {
   selectedLayer?: 'bead' | 'background';
   currentTool?: string;
   selection?: Selection | null;
+  highlightedColor?: string | null;
+  highlightOpacity?: number;
   onPointerDown: (row: number, col: number, backgroundColor?: string | null) => void;
   onPointerMove: (row: number, col: number, backgroundColor?: string | null) => void;
   onPointerUp: () => void;
@@ -37,6 +39,8 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   selectedLayer,
   currentTool,
   selection: propSelection,
+  highlightedColor,
+  highlightOpacity = 90,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -252,7 +256,22 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         const y = row * cellSize;
 
         const isTransparent = color === 'transparent' || color === '#FFFFFF' || color === '';
-        drawPixel(ctx, x, y, cellSize, color, isTransparent);
+
+        let drawColor = color;
+        let drawIsTransparent = isTransparent;
+
+        if (highlightedColor && !isTransparent) {
+          if (color !== highlightedColor) {
+            ctx.globalAlpha = 1 - (highlightOpacity / 100);
+          } else {
+            ctx.globalAlpha = 1;
+          }
+        } else {
+          ctx.globalAlpha = 1;
+        }
+
+        drawPixel(ctx, x, y, cellSize, drawColor, drawIsTransparent);
+        ctx.globalAlpha = 1;
       }
     }
 

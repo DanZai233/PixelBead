@@ -82,6 +82,8 @@ const AppMain: React.FC = () => {
   const [showColorKeys, setShowColorKeys] = useState(true);
   const [selectedColorSystem, setSelectedColorSystem] = useState<ColorSystem>('MARD');
   const [isPalettePanelOpen, setIsPalettePanelOpen] = useState(true);
+  const [highlightedColor, setHighlightedColor] = useState<ColorHex | null>(null);
+  const [highlightOpacity, setHighlightOpacity] = useState(90);
 
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
@@ -1912,6 +1914,8 @@ const AppMain: React.FC = () => {
                        selectedLayer={selectedLayer}
                        currentTool={currentTool}
                        selection={selection}
+                       highlightedColor={highlightedColor}
+                       highlightOpacity={highlightOpacity}
                        onPointerDown={handleCanvasAction}
                        onPointerMove={handleCanvasAction}
                        onPointerUp={() => {}}
@@ -1998,15 +2002,39 @@ const AppMain: React.FC = () => {
           <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 md:mb-6 flex justify-between">
             所需拼豆清单 <span>数量</span>
           </h2>
+
+          {highlightedColor && (
+            <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-3 mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">高亮透明度</span>
+                <button
+                  onClick={() => setHighlightedColor(null)}
+                  className="text-[8px] text-indigo-400 hover:text-red-500 font-black"
+                >
+                  ✕ 关闭高亮
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min="50"
+                  max="100"
+                  value={highlightOpacity}
+                  onChange={(e) => setHighlightOpacity(parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                />
+                <span className="text-xs font-bold text-indigo-700 w-12 text-center">{highlightOpacity}%</span>
+              </div>
+            </div>
+          )}
           
           <div className="space-y-2 md:space-y-3">
             {displayStats.length > 0 ? displayStats.map((item) => (
               <div 
                 key={item.hex} 
-                className="flex items-center justify-between bg-slate-50 p-2 md:p-3 rounded-2xl border border-slate-100 group hover:bg-white hover:shadow-lg transition-all cursor-pointer"
-                onClick={() => setSelectedColor(item.hex)}
+                className={`flex items-center justify-between bg-slate-50 p-2 md:p-3 rounded-2xl border transition-all cursor-pointer group ${highlightedColor === item.hex ? 'border-indigo-400 bg-indigo-50 shadow-lg' : 'border-slate-100 hover:bg-white hover:shadow-lg'}`}
               >
-                <div className="flex items-center gap-2 md:gap-3">
+                <div className="flex items-center gap-2 md:gap-3" onClick={() => setSelectedColor(item.hex)}>
                   <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bead-shadow relative" style={{ backgroundColor: item.hex }}>
                     {showColorKeys && item.key && (
                       <span className="absolute inset-0 flex items-center justify-center text-[8px] md:text-[9px] font-black text-white" style={{ textShadow: '0 0 2px rgba(0,0,0,0.5)' }}>
@@ -2023,6 +2051,19 @@ const AppMain: React.FC = () => {
                     <div className="text-xs md:text-sm font-black text-slate-800">{item.count} <span className="text-[9px] md:text-[10px] font-medium opacity-40">颗</span></div>
                   </div>
                 </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setHighlightedColor(highlightedColor === item.hex ? null : item.hex);
+                  }}
+                  className={`p-1.5 md:p-2 rounded-lg transition-all ${highlightedColor === item.hex ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 hover:bg-indigo-100 hover:text-indigo-600'} opacity-0 group-hover:opacity-100`}
+                  title={highlightedColor === item.hex ? '取消高亮' : '高亮此颜色'}
+                >
+                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
               </div>
             )) : (
               <div className="py-10 md:py-20 text-center text-slate-200">
