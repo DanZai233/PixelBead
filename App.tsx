@@ -10,6 +10,7 @@ import { saveMaterial } from './services/materialService';
 import { BeadCanvas } from './components/BeadCanvas';
 import { Bead3DViewer } from './components/Bead3DViewer';
 import { BeadSliceViewer } from './components/BeadSliceViewer';
+import { BeadPlannerView } from './components/BeadPlannerView';
 import { SettingsPanel } from './components/SettingsPanel';
 import { ColorPicker } from './components/ColorPicker';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
@@ -84,6 +85,7 @@ const AppMain: React.FC = () => {
   const [isPalettePanelOpen, setIsPalettePanelOpen] = useState(true);
   const [highlightedColor, setHighlightedColor] = useState<ColorHex | null>(null);
   const [highlightOpacity, setHighlightOpacity] = useState(90);
+  const [isPlannerViewOpen, setIsPlannerViewOpen] = useState(false);
 
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
@@ -1324,9 +1326,19 @@ const AppMain: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
               <span className="hidden sm:inline">广场</span>
-            </button>
+             </button>
+             <button
+               onClick={() => setIsPlannerViewOpen(true)}
+               className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-3 md:px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 flex items-center gap-2"
+               title="沉浸拼豆"
+             >
+               <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+               </svg>
+               <span className="hidden sm:inline">拼豆</span>
+             </button>
 
-            <div className="flex gap-1 md:gap-2">
+             <div className="flex gap-1 md:gap-2">
               <button
                 onClick={() => setIsShortcutsOpen(true)}
                 className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
@@ -2133,6 +2145,17 @@ const AppMain: React.FC = () => {
         selectedColor={selectedColor}
         onColorChange={setSelectedColor}
       />
+
+      {isPlannerViewOpen && (
+        <BeadPlannerView
+          grid={grid}
+          gridWidth={gridWidth}
+          gridHeight={gridHeight}
+          pixelStyle={pixelStyle}
+          selectedColorSystem={selectedColorSystem}
+          onClose={() => setIsPlannerViewOpen(false)}
+        />
+      )}
 
       <ShortcutsPanel
         isOpen={isShortcutsOpen}
