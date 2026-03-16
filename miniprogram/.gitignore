@@ -1,0 +1,5 @@
+# 微信小程序
+miniprogram/.DS_Store
+miniprogram/*.sourcemap
+miniprogram/project.private.config.json
+miniprogram/miniprogram_npm/

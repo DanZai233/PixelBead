@@ -22,6 +22,7 @@ import { OnboardingGuide } from './components/OnboardingGuide';
 import { AdminPanel } from './components/AdminPanel';
 import { VirtualJoystick } from './components/VirtualJoystick';
 import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from './utils/colorUtils';
+import wechatBridge from './utils/wechatBridge';
 import {
   mergeSimilarColors,
   mapColorsToPalette,
@@ -1012,6 +1013,17 @@ const AppMain: React.FC = () => {
     });
 
     const url = canvas.toDataURL('image/png');
+
+    // 检查是否在小程序中，使用小程序的保存方式
+    if (wechatBridge.isInMiniProgramEnv()) {
+      const success = await wechatBridge.saveToAlbum(url);
+      if (success) {
+        setExportModalOpen(false);
+      }
+      return;
+    }
+
+    // Web 端保存方式
     const a = document.createElement('a');
     a.href = url;
     const fileName = exportSelectionOnly ? `pixel-bead-${exportWidth}x${exportHeight}-selection.png` : (exportMirror ? `pixel-bead-${gridWidth}x${gridHeight}-mirrored.png` : `pixel-bead-${gridWidth}x${gridHeight}.png`);

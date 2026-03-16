@@ -1,0 +1,7 @@
+<view class="container">
+  <web-view
+    src="{{webSrc}}"
+    bindmessage="handleMessage"
+    class="webview"
+  ></web-view>
+</view>
