@@ -122,21 +122,33 @@ export const VirtualJoystick: React.FC<VirtualJoystickProps> = ({
       onMouseLeave={handleEnd}
     >
       {type === 'move' && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <svg width={size * 0.4} height={size * 0.4} viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" />
-          </svg>
-        </div>
+        <>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <svg width={size * 0.4} height={size * 0.4} viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" />
+            </svg>
+          </div>
+          <div className="absolute -bottom-8 left-0 right-0 flex justify-center gap-2 pointer-events-none">
+            <span className="text-[9px] text-slate-500 font-bold">上</span>
+            <span className="text-[9px] text-slate-500 font-bold">下</span>
+            <span className="text-[9px] text-slate-500 font-bold">左</span>
+            <span className="text-[9px] text-slate-500 font-bold">右</span>
+          </div>
+        </>
       )}
-      
+
       {type === 'zoom' && (
-        <div className="absolute inset-0 flex items-center justify-between px-2 pointer-events-none">
-          <svg width={size * 0.25} height={size * 0.25} viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="3">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-          </svg>
-          <svg width={size * 0.25} height={size * 0.25} viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="3">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
+        <div className="absolute inset-0 flex flex-col justify-between py-3 pointer-events-none">
+          <div className="flex justify-center">
+            <svg width={size * 0.35} height={size * 0.35} viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="3">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" />
+            </svg>
+          </div>
+          <div className="flex justify-center">
+            <svg width={size * 0.35} height={size * 0.35} viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="3">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+            </svg>
+          </div>
         </div>
       )}
 
