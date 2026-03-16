@@ -2059,7 +2059,7 @@ const AppMain: React.FC = () => {
             ) : null}
           </div>
 
-           <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-28 right-20 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-[45] md:z-50 max-w-fit md:max-w-none">
+           <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-4 right-20 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-[45] md:z-50 max-w-fit md:max-w-none">
                <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridWidth}x{gridHeight}</div>
                <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridWidth * gridHeight}</div>
                <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
@@ -2083,10 +2083,10 @@ const AppMain: React.FC = () => {
              </div>
            </div>
 
-          <button
-            onClick={() => setIsMobileRightOpen(!isMobileRightOpen)}
-            className="lg:hidden fixed right-4 z-40 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center touch-manipulation safe-area-bottom"
-          >
+           <button
+             onClick={() => setIsMobileRightOpen(!isMobileRightOpen)}
+             className="lg:hidden fixed right-20 z-40 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center touch-manipulation safe-area-bottom"
+           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
