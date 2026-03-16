@@ -2015,7 +2015,7 @@ const AppMain: React.FC = () => {
                      </div>
                   </div>
                 </div>
-                <div className="lg:hidden fixed bottom-[8.5rem] left-4 z-[50] safe-area-bottom">
+                <div className="lg:hidden fixed bottom-[8.5rem] left-6 z-[50] safe-area-bottom">
                   <VirtualJoystick
                     type="move"
                     onMove={(x, y) => setJoystickMove({ x, y })}

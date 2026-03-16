@@ -104,7 +104,8 @@ export const VirtualJoystick: React.FC<VirtualJoystickProps> = ({
     activePointerId.current = null;
 
     onMove?.(0, 0);
-  }, [onMove]);
+    onZoom?.(0);
+  }, [onMove, onZoom]);
 
   return (
     <div
