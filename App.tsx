@@ -20,6 +20,7 @@ import { MaterialGallery } from './components/MaterialGallery';
 import { HelpModal } from './components/HelpModal';
 import { OnboardingGuide } from './components/OnboardingGuide';
 import { AdminPanel } from './components/AdminPanel';
+import { VirtualJoystick } from './components/VirtualJoystick';
 import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from './utils/colorUtils';
 import {
   mergeSimilarColors,
@@ -124,6 +125,11 @@ const AppMain: React.FC = () => {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [clipboard, setClipboard] = useState<string[][] | null>(null);
   const [brushSize, setBrushSize] = useState(1);
+
+  const [joystickMove, setJoystickMove] = useState({ x: 0, y: 0 });
+  const [joystickZoom, setJoystickZoom] = useState(0);
+  const joystickMoveRef = useRef({ x: 0, y: 0 });
+  const joystickZoomRef = useRef(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -261,6 +267,50 @@ const AppMain: React.FC = () => {
 
     window.addEventListener('wheel', handleWheel, { passive: false });
     return () => window.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  useEffect(() => {
+    joystickMoveRef.current = joystickMove;
+  }, [joystickMove]);
+
+  useEffect(() => {
+    joystickZoomRef.current = joystickZoom;
+  }, [joystickZoom]);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    let lastTime = performance.now();
+
+    const updateJoystickState = () => {
+      const currentTime = performance.now();
+      const deltaTime = currentTime - lastTime;
+
+      if (joystickMoveRef.current.x !== 0 || joystickMoveRef.current.y !== 0) {
+        const speed = 0.3;
+        const deltaPan = deltaTime * speed;
+        setPanOffset(prev => ({
+          x: prev.x + joystickMoveRef.current.x * deltaPan,
+          y: prev.y + joystickMoveRef.current.y * deltaPan,
+        }));
+      }
+
+      if (joystickZoomRef.current !== 0) {
+        const zoomSpeed = 0.1;
+        const deltaZoom = deltaTime * zoomSpeed * joystickZoomRef.current;
+        setZoom(prev => Math.min(Math.max(prev + deltaZoom, 10), 400));
+      }
+
+      lastTime = currentTime;
+      animationFrameId = requestAnimationFrame(updateJoystickState);
+    };
+
+    animationFrameId = requestAnimationFrame(updateJoystickState);
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, []);
 
   const handleSaveSettings = useCallback((config: AIConfig) => {
@@ -1927,43 +1977,61 @@ const AppMain: React.FC = () => {
             <span className="md:hidden text-[9px] text-slate-400 ml-1">双指缩放/拖动</span>
           </div>
 
-           <div className="w-full h-full overflow-auto no-scrollbar bg-dots">
+            <div className="w-full h-full overflow-auto no-scrollbar bg-dots">
             {viewType === ViewType.TWO_D ? (
-              <div className="min-w-full min-h-full flex items-center justify-center p-4 md:p-40 pt-16 md:pt-8">
-                <div 
-                  className="relative transition-transform duration-75"
-                  style={{
-                    transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
-                  }}
-                >
-                   <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] bg-white border border-white/60 p-6 md:p-12">
-                     <BeadCanvas
-                       grid={grid}
-                       gridWidth={gridWidth}
-                       gridHeight={gridHeight}
-                       zoom={zoom}
-                       showGridLines={showGridLines}
-                       showRuler={showRuler}
-                       showGuideLines={showGuideLines}
-                       pixelStyle={pixelStyle}
-                       backgroundImage={backgroundImage}
-                       selectedLayer={selectedLayer}
-                       currentTool={currentTool}
-                       selection={selection}
-                       highlightedColor={highlightedColor}
-                       highlightOpacity={highlightOpacity}
-                       onPointerDown={handleCanvasAction}
-                       onPointerMove={handleCanvasAction}
-                       onPointerUp={() => {}}
-                       onMiddleButtonDrag={handleMiddleButtonDrag}
-                       onBackgroundImageDrag={handleBackgroundImageDrag}
-                       onZoomChange={setZoom}
-                       onTouchPan={handleMiddleButtonDrag}
-                       onSelectionChange={setSelection}
-                     />
+              <>
+                <div className="min-w-full min-h-full flex items-center justify-center p-4 md:p-40 pt-16 md:pt-8">
+                  <div 
+                    className="relative transition-transform duration-75"
+                    style={{
+                      transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+                    }}
+                  >
+                     <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] bg-white border border-white/60 p-6 md:p-12">
+                        <BeadCanvas
+                          grid={grid}
+                          gridWidth={gridWidth}
+                          gridHeight={gridHeight}
+                          zoom={zoom}
+                          showGridLines={showGridLines}
+                          showRuler={showRuler}
+                          showGuideLines={showGuideLines}
+                          pixelStyle={pixelStyle}
+                          backgroundImage={backgroundImage}
+                          selectedLayer={selectedLayer}
+                          currentTool={currentTool}
+                          selection={selection}
+                          highlightedColor={highlightedColor}
+                          highlightOpacity={highlightOpacity}
+                          onPointerDown={handleCanvasAction}
+                          onPointerMove={handleCanvasAction}
+                          onPointerUp={() => {}}
+                          onMiddleButtonDrag={handleMiddleButtonDrag}
+                          onBackgroundImageDrag={handleBackgroundImageDrag}
+                          onZoomChange={setZoom}
+                          onTouchPan={handleMiddleButtonDrag}
+                          onSelectionChange={setSelection}
+                        />
+                     </div>
                   </div>
                 </div>
-              </div>
+                <div className="lg:hidden fixed bottom-[8.5rem] left-4 z-[50] safe-area-bottom">
+                  <VirtualJoystick
+                    type="move"
+                    onMove={(x, y) => setJoystickMove({ x, y })}
+                    size={80}
+                    knobSize={40}
+                  />
+                </div>
+                <div className="lg:hidden fixed bottom-[8.5rem] right-20 z-[50] safe-area-bottom">
+                  <VirtualJoystick
+                    type="zoom"
+                    onZoom={(delta) => setJoystickZoom(delta)}
+                    size={80}
+                    knobSize={40}
+                  />
+                </div>
+              </>
             ) : viewType === ViewType.THREE_D ? (
               <div className="min-w-full min-h-full">
                 <Bead3DViewer
