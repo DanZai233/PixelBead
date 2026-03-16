@@ -2015,10 +2015,10 @@ const AppMain: React.FC = () => {
                      </div>
                   </div>
                 </div>
-                <div className="lg:hidden fixed bottom-[8.5rem] left-6 z-[50] safe-area-bottom">
+                <div className="lg:hidden fixed bottom-[8.5rem] left-20 z-[50] safe-area-bottom">
                   <VirtualJoystick
                     type="move"
-                    onMove={(x, y) => setJoystickMove({ x, y })}
+                    onMove={(x, y) => setJoystickMove({ x: -x, y: -y })}
                     size={80}
                     knobSize={40}
                   />
@@ -2059,11 +2059,11 @@ const AppMain: React.FC = () => {
             ) : null}
           </div>
 
-           <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-4 right-20 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-[45] md:z-50 max-w-fit md:max-w-none">
-              <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridWidth}x{gridHeight}</div>
-              <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridWidth * gridHeight}</div>
-              <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
-            </div>
+           <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-28 right-20 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-[45] md:z-50 max-w-fit md:max-w-none">
+               <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridWidth}x{gridHeight}</div>
+               <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridWidth * gridHeight}</div>
+               <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
+             </div>
 
            <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-4 z-[45] md:z-50 group">
              <button
