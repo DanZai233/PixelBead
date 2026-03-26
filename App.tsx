@@ -1981,8 +1981,8 @@ const AppMain: React.FC = () => {
             {viewType === ViewType.TWO_D ? (
               <>
                 <div className="min-w-full min-h-full flex items-center justify-center p-4 md:p-40 pt-16 md:pt-8">
-                  <div 
-                    className="relative transition-transform duration-75"
+                  <div
+                    className={`relative ${joystickMove.x === 0 && joystickMove.y === 0 ? 'transition-transform duration-75' : ''}`}
                     style={{
                       transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
                     }}
