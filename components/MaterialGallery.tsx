@@ -19,6 +19,7 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialData | null>(null);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [detailImage, setDetailImage] = useState<string | null>(null);
+  const [isTagsExpanded, setIsTagsExpanded] = useState(false);
 
   const allTags = React.useMemo(() => {
     const tagSet = new Set<string>();
@@ -325,7 +326,7 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
                   >
                     全部
                   </button>
-                  {allTags.map(tag => (
+                  {allTags.slice(0, isTagsExpanded ? allTags.length : 6).map(tag => (
                     <button
                       key={tag}
                       onClick={() => handleTagFilter(tag)}
@@ -334,6 +335,14 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
                       {tag}
                     </button>
                   ))}
+                  {allTags.length > 6 && (
+                    <button
+                      onClick={() => setIsTagsExpanded(!isTagsExpanded)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
+                    >
+                      {isTagsExpanded ? '收起' : `+${allTags.length - 6}`}
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -385,7 +394,7 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
                   >
                     全部
                   </button>
-                  {allTags.map(tag => (
+                  {allTags.slice(0, isTagsExpanded ? allTags.length : 6).map(tag => (
                     <button
                       key={tag}
                       onClick={() => handleTagFilter(tag)}
@@ -394,6 +403,14 @@ export const MaterialGallery: React.FC<MaterialGalleryProps> = ({ onApplyMateria
                       {tag}
                     </button>
                   ))}
+                  {allTags.length > 6 && (
+                    <button
+                      onClick={() => setIsTagsExpanded(!isTagsExpanded)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
+                    >
+                      {isTagsExpanded ? '收起' : `+${allTags.length - 6}`}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
