@@ -18,13 +18,15 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [imageInfo, setImageInfo] = useState<{ width: number; height: number } | null>(null);
-  const [crop, setCrop] = useState({ x: 0, y: 0, width: 100, height: 100 });
+  const [crop, setCrop] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [scale, setScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [createStart, setCreateStart] = useState({ x: 0, y: 0 });
 
   const handleSize = 600;
   const cornerSize = 15;
@@ -43,26 +45,8 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
 
       setScale(initialScale);
 
-      // 计算初始裁切区域，居中且保持 1:1 或目标宽高比
-      const targetRatio = gridWidth / gridHeight;
-      const imageRatio = img.width / img.height;
-
-      let cropWidth, cropHeight;
-
-      if (imageRatio > targetRatio) {
-        // 图片更宽，以高度为准
-        cropHeight = img.height;
-        cropWidth = cropHeight * targetRatio;
-      } else {
-        // 图片更高，以宽度为准
-        cropWidth = img.width;
-        cropHeight = cropWidth / targetRatio;
-      }
-
-      const cropX = (img.width - cropWidth) / 2;
-      const cropY = (img.height - cropHeight) / 2;
-
-      setCrop({ x: cropX, y: cropY, width: cropWidth, height: cropHeight });
+      // 初始不设置裁切框，让用户自己选择
+      setCrop(null);
       setPanOffset({ x: 0, y: 0 });
     };
     img.src = imageSrc;
@@ -120,8 +104,18 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
     );
 
     // 绘制半透明遮罩
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillStyle = 'rgba(0, 0, 0,0.5)';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // 如果没有裁切框，直接显示提示文字
+    if (!crop) {
+      ctx.fillStyle = '#6366f1';
+      ctx.font = 'bold 18px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('在图片上拖动鼠标创建选区', canvasWidth / 2, canvasHeight / 2);
+      return;
+    }
 
     // 清除裁切区域的遮罩
     const cropDisplayX = displayX + crop.x * scale;
@@ -189,7 +183,7 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
     drawCanvas();
   }, [drawCanvas]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+   const handleMouseDown = (e: React.MouseEvent) => {
     const canvas = canvasRef.current;
     if (!canvas || !imageInfo) return;
 
@@ -203,6 +197,14 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
     const displayHeight = imageInfo.height * scale;
     const displayX = (canvasWidth - displayWidth) / 2 + panOffset.x;
     const displayY = (canvasHeight - displayHeight) / 2 + panOffset.y;
+
+    // 如果没有裁切框，开始创建新的裁切框
+    if (!crop) {
+      setIsCreating(true);
+      setCreateStart({ x, y });
+      setPanOffset({ x: 0, y: 0 });
+      return;
+    }
 
     const cropDisplayX = displayX + crop.x * scale;
     const cropDisplayY = displayY + crop.y * scale;
@@ -284,8 +286,57 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!imageInfo) return;
+   const handleMouseMove = (e: React.MouseEvent) => {
+     if (!imageInfo) return;
+
+    // 处理创建选区
+    if (isCreating) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      const canvasWidth = containerRef.current?.clientWidth || handleSize;
+      const canvasHeight = containerRef.current?.clientHeight || handleSize;
+      const displayWidth = imageInfo.width * scale;
+      const displayHeight = imageInfo.height * scale;
+      const displayX = (canvasWidth - displayWidth) / 2 + panOffset.x;
+      const displayY = (canvasHeight - displayHeight) / 2 + panOffset.y;
+
+      // 计算选区
+      const startX = Math.max(displayX, Math.min(createStart.x, mouseX));
+      const startY = Math.max(displayY, Math.min(createStart.y, mouseY));
+      const endX = Math.min(displayX + displayWidth, Math.max(createStart.x, mouseX));
+      const endY = Math.min(displayY + displayHeight, Math.max(createStart.y, mouseY));
+
+      const newCropX = (startX - displayX) / scale;
+      const newCropY = (startY - displayY) / scale;
+      const newCropWidth = (endX - startX) / scale;
+      const newCropHeight = (endY - startY) / scale;
+
+      // 保持宽高比
+      const targetRatio = gridWidth / gridHeight;
+      let finalCropX = newCropX;
+      let finalCropY = newCropY;
+      let finalCropWidth = newCropWidth;
+      let finalCropHeight = newCropHeight;
+
+      const currentRatio = newCropWidth / newCropHeight;
+      if (currentRatio > targetRatio) {
+        finalCropHeight = newCropWidth / targetRatio;
+      } else {
+        finalCropWidth = newCropHeight * targetRatio;
+      }
+
+      setCrop({
+        x: finalCropX,
+        y: finalCropY,
+        width: finalCropWidth,
+        height: finalCropHeight,
+      });
+      return;
+    }
 
     if (isResizing && resizeHandle && !isDragging) {
       const canvas = canvasRef.current;
@@ -380,11 +431,16 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
     }
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    setIsResizing(false);
-    setResizeHandle(null);
-  };
+   const handleMouseUp = () => {
+     setIsDragging(false);
+     setIsResizing(false);
+     setIsCreating(false);
+     setResizeHandle(null);
+   };
+
+   const handleResetCrop = () => {
+     setCrop(null);
+   };
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
@@ -392,9 +448,10 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
     setScale(prev => Math.min(Math.max(prev + delta, 0.5), 3));
   };
 
-  const handleConfirm = () => {
-    onConfirm(crop.x, crop.y, crop.width, crop.height);
-  };
+   const handleConfirm = () => {
+     if (!crop) return;
+     onConfirm(crop.x, crop.y, crop.width, crop.height);
+   };
 
   if (!imageInfo) {
     return (
@@ -445,41 +502,50 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
           />
 
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur text-white px-4 py-2 rounded-full text-xs font-bold">
-            拖动裁切框 • 拖动角标调整大小 • 滚轮缩放图片
+            {crop ? '拖动裁切框 • 拖动角标调整大小 • 滚轮缩放图片' : '在图片上拖动鼠标创建选区'}
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-xs md:text-sm text-slate-600">
-          <div className="flex items-center gap-2">
-            <span className="font-bold">图片尺寸:</span>
-            <span className="font-mono">{imageInfo.width} × {imageInfo.height}</span>
-          </div>
-          <div className="h-4 w-px bg-slate-300"></div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold">裁切区域:</span>
-            <span className="font-mono">{Math.round(crop.width)} × {Math.round(crop.height)}</span>
-          </div>
-          <div className="h-4 w-px bg-slate-300"></div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold">缩放:</span>
-            <span className="font-mono">{Math.round(scale * 100)}%</span>
-          </div>
-        </div>
+         <div className="flex items-center gap-4 text-xs md:text-sm text-slate-600">
+           <div className="flex items-center gap-2">
+             <span className="font-bold">图片尺寸:</span>
+             <span className="font-mono">{imageInfo.width} × {imageInfo.height}</span>
+           </div>
+           <div className="h-4 w-px bg-slate-300"></div>
+           <div className="flex items-center gap-2">
+             <span className="font-bold">裁切区域:</span>
+             <span className="font-mono">{crop ? `${Math.round(crop.width)} × ${Math.round(crop.height)}` : '未选择'}</span>
+           </div>
+           <div className="h-4 w-px bg-slate-300"></div>
+           <div className="flex items-center gap-2">
+             <span className="font-bold">缩放:</span>
+             <span className="font-mono">{Math.round(scale * 100)}%</span>
+           </div>
+         </div>
 
-        <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-3 md:py-4 bg-slate-100 text-slate-500 rounded-xl md:rounded-2xl font-black text-sm hover:bg-slate-200 transition-all"
-          >
-            取消
-          </button>
-          <button
-            onClick={handleConfirm}
-            className="flex-[2] py-3 md:py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-all"
-          >
-            确认并转换
-          </button>
-        </div>
+         <div className="flex gap-3">
+           {crop && (
+             <button
+               onClick={handleResetCrop}
+               className="py-3 md:py-4 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl md:rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-all"
+             >
+               重新选区
+             </button>
+           )}
+           <button
+             onClick={onCancel}
+             className="flex-1 py-3 md:py-4 bg-slate-100 text-slate-500 rounded-xl md:rounded-2xl font-black text-sm hover:bg-slate-200 transition-all"
+           >
+             取消
+           </button>
+           <button
+             onClick={handleConfirm}
+             disabled={!crop}
+             className="flex-[2] py-3 md:py-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 disabled:cursor-not-allowed text-white rounded-xl md:rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-all"
+           >
+             确认并转换
+           </button>
+         </div>
       </div>
     </div>
   );
