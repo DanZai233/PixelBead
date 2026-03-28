@@ -79,6 +79,9 @@ importers:
       '@types/react':
         specifier: ~19.2.2
         version: 19.2.14
+      babel-plugin-remove-console:
+        specifier: ^1.0.1
+        version: 1.0.1
       typescript:
         specifier: ~5.9.2
         version: 5.9.3
@@ -1819,6 +1822,10 @@ packages:
 
   babel-plugin-react-native-web@0.21.2:
     resolution: {integrity: sha512-SPD0J6qjJn8231i0HZhlAGH6NORe+QvRSQM2mwQEzJ2Fb3E4ruWTiiicPlHjmeWShDXLcvoorOCXjeR7k/lyWA==}
+
+  babel-plugin-remove-console@1.0.1:
+    resolution: {integrity: sha512-dNNqqYeRa0HpJbL+bXgSXeNnkgHbpLuU9o3040iyQjzHoTrIRUwltRWy1ZZgluuw/P0j1ukUOZsiudLLVRCmKw==}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
   babel-plugin-syntax-hermes-parser@0.32.0:
     resolution: {integrity: sha512-m5HthL++AbyeEA2FcdwOLfVFvWYECOBObLHNqdR8ceY4TsEdn4LdX2oTvbB2QJSSElE2AWA/b2MXZ/PF/CqLZg==}
@@ -6030,6 +6037,8 @@ snapshots:
       '@babel/types': 7.29.0
 
   babel-plugin-react-native-web@0.21.2: {}
+
+  babel-plugin-remove-console@1.0.1: {}
 
   babel-plugin-syntax-hermes-parser@0.32.0:
     dependencies:
