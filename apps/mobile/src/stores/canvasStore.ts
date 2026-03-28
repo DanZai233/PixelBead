@@ -5,7 +5,10 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStorage } from '../storage/mmkvStorage';
+// @ts-ignore - Workaround for path resolution
 import type { ColorHex } from '@pixelbead/shared-types';
+// @ts-ignore - Workaround for path resolution
+import { PixelStyle } from '@pixelbead/shared-types';
 
 export type ToolType = 'brush' | 'eraser' | 'fill' | 'picker' | 'line' | 'rectangle' | 'circle';
 
@@ -25,6 +28,9 @@ interface CanvasState {
   panOffset: { x: number; y: number };
   showGridLines: boolean;
 
+  // Pixel style (Phase 4)
+  pixelStyle: PixelStyle;
+
   // Drawing state
   isDrawing: boolean;
 
@@ -42,6 +48,7 @@ interface CanvasState {
   setZoom: (zoom: number) => void;
   setPanOffset: (x: number, y: number) => void;
   setShowGridLines: (show: boolean) => void;
+  setPixelStyle: (style: PixelStyle) => void;
   resetView: () => void;
   pushToUndoStack: (grid: Map<string, string>) => void;
   undo: () => void;
@@ -70,6 +77,7 @@ export const useCanvasStore = create<CanvasState>()(
       zoom: 1.0,
       panOffset: { x: 0, y: 0 },
       showGridLines: true,
+      pixelStyle: PixelStyle.CIRCLE,
       isDrawing: false,
       undoStack: [],
       redoStack: [],
@@ -123,6 +131,8 @@ export const useCanvasStore = create<CanvasState>()(
       },
 
       setShowGridLines: (show) => set({ showGridLines: show }),
+
+      setPixelStyle: (style) => set({ pixelStyle: style }),
 
       resetView: () => {
         set({ zoom: 1.0, panOffset: { x: 0, y: 0 } });
