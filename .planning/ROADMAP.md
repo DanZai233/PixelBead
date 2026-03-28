@@ -9,7 +9,7 @@
 
 - [ ] **Phase 1: Foundation & Infrastructure** - Monorepo structure, state management, and offline storage
 - [ ] **Phase 2: Canvas Core & Performance** - High-performance canvas editor with touch controls
-- [ ] **Phase 3: Drawing & Tools** - Drawing tools, shapes, and haptic feedback
+- [x] **Phase 3: Drawing & Tools** - Drawing tools, shapes, and haptic feedback (completed 2026-03-28)
 - [ ] **Phase 4: Colors & Advanced Features** - Color system, image import, selection tools
 - [ ] **Phase 5: Projects & Export** - Project management, persistence, and export
 - [ ] **Phase 6: AI, Gallery & Deployment** - AI generation, material gallery, and app store deployment
@@ -124,11 +124,11 @@
 
 **Plans**: 5 plans
 
-- [ ] 03-01-PLAN.md — Basic drawing tools (brush, eraser, fill, color picker) with touch-optimized controls
-- [ ] 03-02-PLAN.md — Shape tools (line, rectangle, circle) with drag-to-draw interaction and preview
-- [ ] 03-03-PLAN.md — Brush size adjustment slider (1-5 pixels) and unified tool panel with accessibility
-- [ ] 03-04-PLAN.md — Haptic feedback system and smooth animations using requestAnimationFrame
-- [ ] 03-05-PLAN.md — Virtual joystick controls (left: pan, right: zoom) with proper color contrast
+- [x] 03-01-PLAN.md — Basic drawing tools (brush, eraser, fill, color picker) with touch-optimized controls
+- [x] 03-02-PLAN.md — Shape tools (line, rectangle, circle) with drag-to-draw interaction and preview
+- [x] 03-03-PLAN.md — Brush size adjustment slider (1-5 pixels) and unified tool panel with accessibility
+- [x] 03-04-PLAN.md — Haptic feedback system and smooth animations using requestAnimationFrame
+- [x] 03-05-PLAN.md — Virtual joystick controls (left: pan, right: zoom) with proper color contrast
 **UI hint**: yes
 
 ---
@@ -267,7 +267,7 @@
 |-------|----------------|--------|-----------|
 | 1. Foundation & Infrastructure | 4/4 | Ready to execute | - |
 | 2. Canvas Core & Performance | 0/5 | Ready to execute | - |
-| 3. Drawing & Tools | 0/0 | Not started | - |
+| 3. Drawing & Tools | 5/5 | Complete   | 2026-03-28 |
 | 4. Colors & Advanced Features | 0/0 | Not started | - |
 | 5. Projects & Export | 0/0 | Not started | - |
 | 6. AI, Gallery & Deployment | 0/0 | Not started | - |
