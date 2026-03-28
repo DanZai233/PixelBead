@@ -72,6 +72,12 @@ importers:
       expo-haptics:
         specifier: ~13.0.1
         version: 13.0.1(expo@55.0.10-canary-20260327-0789fbc)
+      expo-image-manipulator:
+        specifier: ~12.0.5
+        version: 12.0.5(expo@55.0.10-canary-20260327-0789fbc)
+      expo-image-picker:
+        specifier: ~15.0.7
+        version: 15.0.7(expo@55.0.10-canary-20260327-0789fbc)
       expo-router:
         specifier: ^4.0.0
         version: 4.0.22(5c2d755e9d4f50d21738a1353435c292)
@@ -2371,6 +2377,21 @@ packages:
 
   expo-haptics@13.0.1:
     resolution: {integrity: sha512-qG0EOLDE4bROVT3DtUSyV9g3iB3YFu9j3711X7SNNEnBDXc+2/p3wGDPTnJvPW0ao6HG3/McAOrBQA5hVSdWng==}
+    peerDependencies:
+      expo: '*'
+
+  expo-image-loader@4.7.0:
+    resolution: {integrity: sha512-cx+MxxsAMGl9AiWnQUzrkJMJH4eNOGlu7XkLGnAXSJrRoIiciGaKqzeaD326IyCTV+Z1fXvIliSgNW+DscvD8g==}
+    peerDependencies:
+      expo: '*'
+
+  expo-image-manipulator@12.0.5:
+    resolution: {integrity: sha512-zJ8yINjckYw/yfoSuICt4yJ9xr112+W9e5QVXwK3nCAHr7sv45RQ5sxte0qppf594TPl+UoV6Tjim7WpoKipRQ==}
+    peerDependencies:
+      expo: '*'
+
+  expo-image-picker@15.0.7:
+    resolution: {integrity: sha512-u8qiPZNfDb+ap6PJ8pq2iTO7JKX+ikAUQ0K0c7gXGliKLxoXgDdDmXxz9/6QdICTshJBJlBvI0MwY5NWu7A/uw==}
     peerDependencies:
       expo: '*'
 
@@ -6806,6 +6827,20 @@ snapshots:
   expo-haptics@13.0.1(expo@55.0.10-canary-20260327-0789fbc):
     dependencies:
       expo: 55.0.10-canary-20260327-0789fbc(@babel/core@7.29.0)(@expo/dom-webview@55.0.4-canary-20260327-0789fbc)(expo-router@4.0.22)(react-dom@19.2.4(react@19.2.0))(react-native@0.83.4(@babel/core@7.29.0)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+
+  expo-image-loader@4.7.0(expo@55.0.10-canary-20260327-0789fbc):
+    dependencies:
+      expo: 55.0.10-canary-20260327-0789fbc(@babel/core@7.29.0)(@expo/dom-webview@55.0.4-canary-20260327-0789fbc)(expo-router@4.0.22)(react-dom@19.2.4(react@19.2.0))(react-native@0.83.4(@babel/core@7.29.0)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+
+  expo-image-manipulator@12.0.5(expo@55.0.10-canary-20260327-0789fbc):
+    dependencies:
+      expo: 55.0.10-canary-20260327-0789fbc(@babel/core@7.29.0)(@expo/dom-webview@55.0.4-canary-20260327-0789fbc)(expo-router@4.0.22)(react-dom@19.2.4(react@19.2.0))(react-native@0.83.4(@babel/core@7.29.0)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+      expo-image-loader: 4.7.0(expo@55.0.10-canary-20260327-0789fbc)
+
+  expo-image-picker@15.0.7(expo@55.0.10-canary-20260327-0789fbc):
+    dependencies:
+      expo: 55.0.10-canary-20260327-0789fbc(@babel/core@7.29.0)(@expo/dom-webview@55.0.4-canary-20260327-0789fbc)(expo-router@4.0.22)(react-dom@19.2.4(react@19.2.0))(react-native@0.83.4(@babel/core@7.29.0)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+      expo-image-loader: 4.7.0(expo@55.0.10-canary-20260327-0789fbc)
 
   expo-json-utils@0.14.0: {}
 
