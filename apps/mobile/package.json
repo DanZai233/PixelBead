@@ -19,6 +19,7 @@
     "@react-native-community/slider": "^5.1.2",
     "@shopify/react-native-skia": "^2.5.4",
     "expo": "55.0.10-canary-20260327-0789fbc",
+    "expo-clipboard": "55.0.10-canary-20260328-2049187",
     "expo-dev-client": "~5.0.0",
     "expo-haptics": "~13.0.1",
     "expo-router": "^4.0.0",
