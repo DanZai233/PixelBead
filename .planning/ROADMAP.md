@@ -122,7 +122,13 @@
 4. User feels haptic feedback on tool changes and drawing actions
 5. All interactive elements are accessible via screen reader with proper labels
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+- [ ] 03-01-PLAN.md — Basic drawing tools (brush, eraser, fill, color picker) with touch-optimized controls
+- [ ] 03-02-PLAN.md — Shape tools (line, rectangle, circle) with drag-to-draw interaction and preview
+- [ ] 03-03-PLAN.md — Brush size adjustment slider (1-5 pixels) and unified tool panel with accessibility
+- [ ] 03-04-PLAN.md — Haptic feedback system and smooth animations using requestAnimationFrame
+- [ ] 03-05-PLAN.md — Virtual joystick controls (left: pan, right: zoom) with proper color contrast
 **UI hint**: yes
 
 ---
