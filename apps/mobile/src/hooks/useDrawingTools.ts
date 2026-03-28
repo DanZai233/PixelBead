@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useCanvasStore } from '../stores/canvasStore';
 import { isValidHexColor } from '@pixelbead/shared-utils';
+import { calculateLinePoints, calculateRectanglePoints, calculateCirclePoints } from '../utils/shapeUtils';
 import * as Haptics from 'expo-haptics';
 
 export function useDrawingTools() {
@@ -134,10 +135,58 @@ export function useDrawingTools() {
     return null;
   }, [grid, setSelectedColor]);
 
+  const applyLine = useCallback((x1: number, y1: number, x2: number, y2: number, color: string) => {
+    const points = calculateLinePoints(x1, y1, x2, y2);
+    const modified = new Set<string>();
+
+    points.forEach(({ x, y }) => {
+      if (x >= 0 && x < gridSize.width && y >= 0 && y < gridSize.height) {
+        const key = `${x},${y}`;
+        if (!modified.has(key)) {
+          setPixel(x, y, color);
+          modified.add(key);
+        }
+      }
+    });
+  }, [setPixel, gridSize]);
+
+  const applyRectangle = useCallback((x1: number, y1: number, x2: number, y2: number, color: string, fill: boolean = false) => {
+    const points = calculateRectanglePoints(x1, y1, x2, y2, fill);
+    const modified = new Set<string>();
+
+    points.forEach(({ x, y }) => {
+      if (x >= 0 && x < gridSize.width && y >= 0 && y < gridSize.height) {
+        const key = `${x},${y}`;
+        if (!modified.has(key)) {
+          setPixel(x, y, color);
+          modified.add(key);
+        }
+      }
+    });
+  }, [setPixel, gridSize]);
+
+  const applyCircle = useCallback((centerX: number, centerY: number, radius: number, color: string, fill: boolean = false) => {
+    const points = calculateCirclePoints(centerX, centerY, radius, fill);
+    const modified = new Set<string>();
+
+    points.forEach(({ x, y }) => {
+      if (x >= 0 && x < gridSize.width && y >= 0 && y < gridSize.height) {
+        const key = `${x},${y}`;
+        if (!modified.has(key)) {
+          setPixel(x, y, color);
+          modified.add(key);
+        }
+      }
+    });
+  }, [setPixel, gridSize]);
+
   return {
     applyBrush,
     applyEraser,
     applyFill,
     applyColorPicker,
+    applyLine,
+    applyRectangle,
+    applyCircle,
   };
 }
