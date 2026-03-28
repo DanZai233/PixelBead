@@ -172,7 +172,13 @@
 4. User can select, copy, paste, cut, and manipulate regions on canvas
 5. User can view color mappings for multiple Perler bead brands
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+- [ ] 04-01-PLAN.md — Deliver predefined Perler bead color palette system with multiple presets and multi-brand support
+- [ ] 04-02-PLAN.md — Deliver HSL color picker, HEX input, and pixel style selection for custom color and appearance control
+- [ ] 04-03-PLAN.md — Deliver image import with intelligent pixelation, cropping, and background removal
+- [ ] 04-04-PLAN.md — Deliver selection tools with clipboard operations and region manipulation
+- [ ] 04-05-PLAN.md — Deliver color statistics, color merging, immersive view mode, and context menus
 **UI hint**: yes
 
 ---
@@ -268,7 +274,7 @@
 | 1. Foundation & Infrastructure | 4/4 | Ready to execute | - |
 | 2. Canvas Core & Performance | 0/5 | Ready to execute | - |
 | 3. Drawing & Tools | 5/5 | Complete   | 2026-03-28 |
-| 4. Colors & Advanced Features | 0/0 | Not started | - |
+| 4. Colors & Advanced Features | 0/5 | Ready to execute | - |
 | 5. Projects & Export | 0/0 | Not started | - |
 | 6. AI, Gallery & Deployment | 0/0 | Not started | - |
 
