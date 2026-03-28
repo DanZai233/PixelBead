@@ -83,11 +83,11 @@
 
 **Plans**: 5 plans
 
-- [ ] 02-编辑器功能与数据管理-01-PLAN.md — Canvas grid rendering with React Native Skia and viewport culling
-- [ ] 02-编辑器功能与数据管理-02-PLAN.md — Touch interaction for pixel placement with gesture handler
-- [ ] 02-编辑器功能与数据管理-03-PLAN.md — Canvas navigation with pinch-to-zoom and pan gestures
-- [ ] 02-编辑器功能与数据管理-04-PLAN.md — Responsive UI shell with bottom tab bar and deep links
-- [ ] 02-编辑器功能与数据管理-05-PLAN.md — Sliding tool drawer and dark/light theme toggle
+- [x] 02-编辑器功能与数据管理-01-PLAN.md — Canvas grid rendering with React Native Skia and viewport culling
+- [x] 02-编辑器功能与数据管理-02-PLAN.md — Touch interaction for pixel placement with gesture handler
+- [x] 02-编辑器功能与数据管理-03-PLAN.md — Canvas navigation with pinch-to-zoom and pan gestures
+- [x] 02-编辑器功能与数据管理-04-PLAN.md — Responsive UI shell with bottom tab bar and deep links
+- [x] 02-编辑器功能与数据管理-05-PLAN.md — Sliding tool drawer and dark/light theme toggle
 **UI hint**: yes
 
 ---
