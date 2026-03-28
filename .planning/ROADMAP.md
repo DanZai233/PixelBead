@@ -40,10 +40,10 @@
 
 **Plans**: 4 plans
 
-- [ ] 01-基础架构与核心渲染-01-PLAN.md — Establish monorepo structure with Expo SDK 55 mobile app
-- [ ] 01-基础架构与核心渲染-02-PLAN.md — Create three shared packages (types, color-system, shared-utils)
-- [ ] 01-基础架构与核心渲染-03-PLAN.md — Implement Zustand state management with MMKV persistence
-- [ ] 01-基础架构与核心渲染-04-PLAN.md — Configure build pipeline with console.log removal and TypeScript strict mode
+- [x] 01-基础架构与核心渲染-01-PLAN.md — Establish monorepo structure with Expo SDK 55 mobile app
+- [x] 01-基础架构与核心渲染-02-PLAN.md — Create three shared packages (types, color-system, shared-utils)
+- [x] 01-基础架构与核心渲染-03-PLAN.md — Implement Zustand state management with MMKV persistence
+- [x] 01-基础架构与核心渲染-04-PLAN.md — Configure build pipeline with console.log removal and TypeScript strict mode
 
 ---
 
@@ -81,7 +81,13 @@
 4. App renders correctly on phone and tablet in both orientations
 5. User can navigate between screens using gestures and back button
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+- [ ] 02-编辑器功能与数据管理-01-PLAN.md — Canvas grid rendering with React Native Skia and viewport culling
+- [ ] 02-编辑器功能与数据管理-02-PLAN.md — Touch interaction for pixel placement with gesture handler
+- [ ] 02-编辑器功能与数据管理-03-PLAN.md — Canvas navigation with pinch-to-zoom and pan gestures
+- [ ] 02-编辑器功能与数据管理-04-PLAN.md — Responsive UI shell with bottom tab bar and deep links
+- [ ] 02-编辑器功能与数据管理-05-PLAN.md — Sliding tool drawer and dark/light theme toggle
 **UI hint**: yes
 
 ---
@@ -253,8 +259,8 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Infrastructure | 0/4 | Ready to execute | - |
-| 2. Canvas Core & Performance | 0/0 | Not started | - |
+| 1. Foundation & Infrastructure | 4/4 | Ready to execute | - |
+| 2. Canvas Core & Performance | 0/5 | Ready to execute | - |
 | 3. Drawing & Tools | 0/0 | Not started | - |
 | 4. Colors & Advanced Features | 0/0 | Not started | - |
 | 5. Projects & Export | 0/0 | Not started | - |
