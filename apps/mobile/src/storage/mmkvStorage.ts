@@ -24,5 +24,18 @@ export function getJSON<T>(key: string): T | null {
   return json ? JSON.parse(json) : null;
 }
 
+// Custom MMKV storage adapter for Zustand (per D-05: Use MMKV persistence middleware for Zustand stores)
+export const mmkvStorage = {
+  getItem: (name: string): string | null => {
+    return storage.getString(name) ?? null;
+  },
+  setItem: (name: string, value: string): void => {
+    storage.set(name, value);
+  },
+  removeItem: (name: string): void => {
+    storage.remove(name);
+  },
+};
+
 // Export storage instance for direct use if needed
 export { storage };
