@@ -3,7 +3,7 @@ import { TouchableOpacity, StyleSheet } from 'react-native';
 
 export type ToolType = 'brush' | 'eraser' | 'fill' | 'picker' | 'line' | 'rectangle' | 'circle';
 
-interface ToolButtonProps {
+export interface ToolButtonProps {
   tool: ToolType;
   icon: React.ReactNode;
   label: string;
