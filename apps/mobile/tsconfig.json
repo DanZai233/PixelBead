@@ -1,0 +1,12 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@pixelbead/shared-types": ["../../packages/shared-types/src"],
+      "@pixelbead/shared-utils": ["../../packages/shared-utils/src"],
+      "@pixelbead/color-system": ["../../packages/color-system/src"]
+    }
+  }
+}
