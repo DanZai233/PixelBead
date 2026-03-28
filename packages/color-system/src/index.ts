@@ -7,13 +7,13 @@ import type { ColorHex, PaletteColor } from '@pixelbead/shared-types';
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
-    : null;
+  if (!result) return null;
+
+  return {
+    r: parseInt(result[1]!, 16),
+    g: parseInt(result[2]!, 16),
+    b: parseInt(result[3]!, 16),
+  };
 }
 
 export function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
@@ -114,15 +114,20 @@ export function mergeSimilarColors(
     if (processed.has(i)) continue;
 
     const current = merged[i];
+    if (!current) continue;
+
     const group: PaletteColor[] = [current];
     processed.add(i);
 
     for (let j = i + 1; j < merged.length; j++) {
       if (processed.has(j)) continue;
 
-      const distance = colorDistanceHSL(current.hex, merged[j].hex);
+      const otherColor = merged[j];
+      if (!otherColor) continue;
+
+      const distance = colorDistanceHSL(current.hex, otherColor.hex);
       if (distance <= threshold) {
-        group.push(merged[j]);
+        group.push(otherColor);
         processed.add(j);
       }
     }
@@ -130,10 +135,13 @@ export function mergeSimilarColors(
     const totalCount = group.reduce((sum, c) => sum + (c.count || 0), 0);
     const dominantColor = group.sort((a, b) => (b.count || 0) - (a.count || 0))[0];
 
-    result.push({
-      ...dominantColor,
-      count: totalCount,
-    });
+    if (dominantColor) {
+      result.push({
+        hex: dominantColor.hex,
+        key: dominantColor.key,
+        count: totalCount,
+      });
+    }
   }
 
   return result.sort((a, b) => (b.count || 0) - (a.count || 0));
@@ -215,7 +223,8 @@ export const SYMBOLS = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱�
 
 export function getSymbol(index: number): string {
   if (index < SYMBOLS.length) {
-    return SYMBOLS[index];
+    const symbol = SYMBOLS[index];
+    return symbol !== undefined ? symbol : String.fromCharCode(0x2460 + (index % 50));
   }
   return String.fromCharCode(0x2460 + (index % 50));
 }
