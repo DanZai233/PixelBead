@@ -7,7 +7,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStorage } from '../storage/mmkvStorage';
 import type { ColorHex } from '@pixelbead/shared-types';
 
-export type ToolType = 'brush' | 'eraser' | 'fill' | 'picker';
+export type ToolType = 'brush' | 'eraser' | 'fill' | 'picker' | 'line' | 'rectangle' | 'circle';
 
 interface CanvasState {
   // Grid state - use Map for O(1) lookups (Phase 2 change from 2D array)
