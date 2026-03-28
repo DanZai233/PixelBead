@@ -35,6 +35,9 @@ interface CanvasState {
   importedImage: string | null;
   cropRegion: { x: number; y: number; width: number; height: number } | null;
 
+  // Selection (Phase 4)
+  selectionRegion: { x1: number; y1: number; x2: number; y2: number } | null;
+
   // Drawing state
   isDrawing: boolean;
 
@@ -55,6 +58,7 @@ interface CanvasState {
   setPixelStyle: (style: PixelStyle) => void;
   setImportedImage: (uri: string | null) => void;
   setCropRegion: (region) => void;
+  setSelectionRegion: (region) => void;
   resetView: () => void;
   pushToUndoStack: (grid: Map<string, string>) => void;
   undo: () => void;
@@ -86,6 +90,7 @@ export const useCanvasStore = create<CanvasState>()(
       pixelStyle: PixelStyle.CIRCLE,
       importedImage: null,
       cropRegion: null,
+      selectionRegion: null,
       isDrawing: false,
       undoStack: [],
       redoStack: [],
@@ -146,6 +151,8 @@ export const useCanvasStore = create<CanvasState>()(
 
       setCropRegion: (region) => set({ cropRegion: region }),
 
+      setSelectionRegion: (region) => set({ selectionRegion: region }),
+
       resetView: () => {
         set({ zoom: 1.0, panOffset: { x: 0, y: 0 } });
       },
@@ -189,6 +196,10 @@ export const useCanvasStore = create<CanvasState>()(
         const { pushToUndoStack, grid } = get();
         pushToUndoStack(grid);
         set({ grid: new Map() });
+      },
+
+      setImportedImage: (uri) => {
+        set({ importedImage: uri });
       },
     }),
     {
