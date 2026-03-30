@@ -95,14 +95,13 @@ export function ProjectManager() {
 
       const jsonData = await exportProjectAsJson(currentProjectId);
 
-      // Write to temporary file using new File API
-      const { Paths, File } = FileSystem;
-      const file = new File(Paths.document, 'project_export.json');
-      await file.write(jsonData);
+      // Write to temporary file
+      const file = FileSystem.documentDirectory + 'project_export.json';
+      await FileSystem.writeAsStringAsync(file, jsonData);
 
       // Share file
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(file.uri, {
+        await Sharing.shareAsync(file, {
           mimeType: 'application/json',
           dialogTitle: 'Share Project',
         });

@@ -13,8 +13,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAiStore } from '../../stores/aiStore';
 import { validateApiKey } from '../../services/aiService';
-// @ts-ignore - Workaround for path resolution
-import { AIProvider, AI_MODELS, DEFAULT_ENDPOINTS } from '../../../packages/shared-types/src';
+import { AIProvider, AI_MODELS, DEFAULT_ENDPOINTS } from '../../types/shared';
 
 interface AiSettingsModalProps {
   visible: boolean;

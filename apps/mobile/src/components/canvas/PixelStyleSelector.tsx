@@ -5,8 +5,7 @@ import React, { memo } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useCanvasStore } from '../../stores/canvasStore';
-// @ts-ignore - Workaround for path resolution
-import { PixelStyle } from '../../../packages/shared-types/src';
+import { PixelStyle } from '../../types/shared';
 
 interface StyleOption {
   value: PixelStyle;

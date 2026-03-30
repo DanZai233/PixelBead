@@ -1,12 +1,9 @@
-// MMKV storage initialization and helper functions
-// Simple key-value schema with JSON serialization for complex data
+// In-memory storage adapter for Expo Go compatibility
+// Replaces MMKV (native module) with a simple Map-based store
+// Data persists within a session but not across app restarts in Expo Go
 
-import { createMMKV } from 'react-native-mmkv';
+const store = new Map<string, string>();
 
-// Initialize MMKV instance (uses New Architecture automatically if enabled in app.json)
-const storage = createMMKV();
-
-// Simple key-value schema (per D-09)
 export const STORAGE_KEYS = {
   canvasCurrent: 'canvas:current',
   canvasUndo: 'canvas:history:undo',
@@ -14,28 +11,25 @@ export const STORAGE_KEYS = {
   userPreferences: 'user:preferences',
 } as const;
 
-// Helper functions for JSON serialization (per D-09)
 export function setJSON<T>(key: string, value: T): void {
-  storage.set(key, JSON.stringify(value));
+  store.set(key, JSON.stringify(value));
 }
 
 export function getJSON<T>(key: string): T | null {
-  const json = storage.getString(key);
+  const json = store.get(key);
   return json ? JSON.parse(json) : null;
 }
 
-// Custom MMKV storage adapter for Zustand (per D-05: Use MMKV persistence middleware for Zustand stores)
 export const mmkvStorage = {
   getItem: (name: string): string | null => {
-    return storage.getString(name) ?? null;
+    return store.get(name) ?? null;
   },
   setItem: (name: string, value: string): void => {
-    storage.set(name, value);
+    store.set(name, value);
   },
   removeItem: (name: string): void => {
-    storage.remove(name);
+    store.delete(name);
   },
 };
 
-// Export storage instance for direct use if needed
-export { storage };
+export { store as storage };

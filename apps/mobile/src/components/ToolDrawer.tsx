@@ -1,14 +1,8 @@
-import React, { memo, useEffect } from 'react';
-import { View, StyleSheet, Pressable, Text } from 'react-native';
+import React, { memo, useEffect, useRef } from 'react';
+import { View, StyleSheet, Pressable, Text, Animated } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
-import { useCanvasStore } from '../stores/canvasStore';
+import { useCanvasStore, ToolType } from '../stores/canvasStore';
 import { useSettingsStore } from '../stores/settingsStore';
-import { ToolType } from '../stores/canvasStore';
 
 interface ToolButtonProps {
   tool: ToolType;
@@ -18,30 +12,19 @@ interface ToolButtonProps {
   onPress: (tool: ToolType) => void;
 }
 
-const ToolButton = memo<ToolButtonProps>(({ tool, icon, label, selected, onPress }) => {
-  const handlePress = () => onPress(tool);
-
-  return (
-    <Pressable
-      onPress={handlePress}
-      style={[styles.toolButton, selected && styles.selected]}
-      accessible={true}
-      accessibilityLabel={`${label} tool`}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      accessibilityHint="Double tap to select tool"
-    >
-      <MaterialIcons
-        name={icon}
-        size={32}
-        color={selected ? '#fff' : '#666'}
-      />
-      <Text style={[styles.toolLabel, selected && styles.labelSelected]}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-});
+const ToolButton = memo<ToolButtonProps>(({ tool, icon, label, selected, onPress }) => (
+  <Pressable
+    onPress={() => onPress(tool)}
+    style={[styles.toolButton, selected && styles.selected]}
+    accessible={true}
+    accessibilityLabel={`${label} tool`}
+    accessibilityRole="button"
+    accessibilityState={{ selected }}
+  >
+    <MaterialIcons name={icon} size={32} color={selected ? '#fff' : '#666'} />
+    <Text style={[styles.toolLabel, selected && styles.labelSelected]}>{label}</Text>
+  </Pressable>
+));
 
 ToolButton.displayName = 'ToolButton';
 
@@ -56,18 +39,17 @@ const ToolDrawer = memo<ToolDrawerProps>(({ isOpen, onClose }) => {
   const currentTool = useCanvasStore((state) => state.currentTool);
   const setTool = useCanvasStore((state) => state.setSelectedTool);
   const theme = useSettingsStore((state) => state.theme);
-  const translateY = useSharedValue(DRAWER_HEIGHT);
+  const translateY = useRef(new Animated.Value(DRAWER_HEIGHT)).current;
 
   useEffect(() => {
-    translateY.value = withSpring(isOpen ? 0 : DRAWER_HEIGHT, {
+    Animated.spring(translateY, {
+      toValue: isOpen ? 0 : DRAWER_HEIGHT,
       damping: 20,
       stiffness: 300,
-    });
-  }, [isOpen]);
-
-  const drawerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
+      useNativeDriver: true,
+      mass: 1,
+    }).start();
+  }, [isOpen, translateY]);
 
   const tools: { tool: ToolType; icon: keyof typeof MaterialIcons.glyphMap; label: string }[] = [
     { tool: 'brush', icon: 'brush', label: 'Brush' },
@@ -79,7 +61,7 @@ const ToolDrawer = memo<ToolDrawerProps>(({ isOpen, onClose }) => {
   const backgroundColor = theme === 'dark' ? '#2c2c2e' : '#f2f2f7';
 
   return (
-    <Animated.View style={[styles.drawer, drawerStyle, { backgroundColor }]}>
+    <Animated.View style={[styles.drawer, { backgroundColor, transform: [{ translateY }] }]}>
       <View style={styles.header}>
         <Text style={[styles.headerText, { color: theme === 'dark' ? '#fff' : '#000' }]}>
           Tools
@@ -88,7 +70,6 @@ const ToolDrawer = memo<ToolDrawerProps>(({ isOpen, onClose }) => {
           <MaterialIcons name="close" size={24} color={theme === 'dark' ? '#fff' : '#000'} />
         </Pressable>
       </View>
-
       <View style={styles.toolsContainer}>
         {tools.map((item) => (
           <ToolButton
@@ -129,21 +110,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  headerText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  closeButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  toolsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    flex: 1,
-  },
+  headerText: { fontSize: 20, fontWeight: 'bold' },
+  closeButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  toolsContainer: { flexDirection: 'row', justifyContent: 'space-around', flex: 1 },
   toolButton: {
     width: 80,
     height: 80,
@@ -153,16 +122,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  selected: {
-    backgroundColor: '#007AFF',
-  },
-  toolLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-  labelSelected: {
-    color: '#fff',
-  },
+  selected: { backgroundColor: '#007AFF' },
+  toolLabel: { fontSize: 12, color: '#666' },
+  labelSelected: { color: '#fff' },
 });
 
 export default ToolDrawer;

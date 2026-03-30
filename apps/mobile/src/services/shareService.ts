@@ -1,7 +1,5 @@
-// @ts-ignore - Workaround for path resolution
-import type { ColorHex } from '../../../packages/shared-types/src';
-// @ts-ignore - Workaround for path resolution
-import { PixelStyle } from '../../../packages/shared-types/src';
+import type { ColorHex } from '../types/shared';
+import { PixelStyle } from '../types/shared';
 
 interface ShareData {
   name: string;

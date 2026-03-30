@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
 import { useCanvasStore } from '../stores/canvasStore';
-import { isValidHexColor } from '@pixelbead/shared-utils';
+function isValidHexColor(hex: string): boolean {
+  return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex);
+}
 import { calculateLinePoints, calculateRectanglePoints, calculateCirclePoints } from '../utils/shapeUtils';
 import * as Haptics from 'expo-haptics';
 

@@ -1,5 +1,4 @@
-// @ts-ignore - Workaround for path resolution
-import { AIProvider, AIConfig, AI_MODELS, DEFAULT_ENDPOINTS } from '../../../packages/shared-types/src';
+import { AIProvider, type AIConfig, AI_MODELS, DEFAULT_ENDPOINTS } from '../types/shared';
 
 export const generatePixelArtImage = async (
   prompt: string,

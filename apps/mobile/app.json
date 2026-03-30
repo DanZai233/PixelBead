@@ -5,13 +5,13 @@
     "version": "1.0.0",
     "scheme": "pixelbead",
     "plugins": [
-      "expo-router"
+      [
+        "expo-router",
+        {
+          "origin": "https://pindou.danzaii.cn"
+        }
+      ]
     ],
-    "experiments": {
-      "typedRoutes": true
-    },
-    "newArchEnabled": true,
-    "jsEngine": "hermes",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -53,8 +53,6 @@
       ],
       "predictiveBackGestureEnabled": false
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    }
+    "platforms": ["ios", "android"]
   }
 }

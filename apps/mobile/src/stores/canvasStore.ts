@@ -5,10 +5,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStorage } from '../storage/mmkvStorage';
-// @ts-ignore - Workaround for path resolution
-import type { ColorHex } from '@pixelbead/shared-types';
-// @ts-ignore - Workaround for path resolution
-import { PixelStyle } from '@pixelbead/shared-types';
+
+import type { ColorHex } from '../types/shared';
+import { PixelStyle } from '../types/shared';
 
 export type ToolType = 'brush' | 'eraser' | 'fill' | 'picker' | 'line' | 'rectangle' | 'circle';
 

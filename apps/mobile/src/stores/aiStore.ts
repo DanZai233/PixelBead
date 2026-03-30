@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStorage } from '../storage/mmkvStorage';
-// @ts-ignore - Workaround for path resolution
-import { AIProvider, AI_MODELS, DEFAULT_ENDPOINTS } from '../../../packages/shared-types/src';
+import { AIProvider, AI_MODELS, DEFAULT_ENDPOINTS } from '../types/shared';
 
 interface AIModelInfo {
   id: string;

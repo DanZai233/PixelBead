@@ -12,8 +12,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useGalleryStore } from '../../stores/galleryStore';
 import { useProjectStore } from '../../stores/projectStore';
-// @ts-ignore - Workaround for path resolution
-import { PixelStyle } from '../../../packages/shared-types/src';
+import { PixelStyle } from '../../types/shared';
 
 interface PublishModalProps {
   visible: boolean;

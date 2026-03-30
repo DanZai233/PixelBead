@@ -15,8 +15,7 @@ import {
   type ProjectExport,
 } from '../utils/projectStorage';
 import { useCanvasStore } from './canvasStore';
-// @ts-ignore - Workaround for path resolution
-import { PixelStyle } from '@pixelbead/shared-types';
+import { PixelStyle } from '../types/shared';
 
 /**
  * Project state interface

@@ -1,10 +1,8 @@
 // Project serialization/deserialization utilities
 // Handles conversion between canvas state and JSON format for save/load/import/export
 
-// @ts-ignore - Workaround for path resolution
-import type { ColorHex } from '@pixelbead/shared-types';
-// @ts-ignore - Workaround for path resolution
-import { PixelStyle } from '@pixelbead/shared-types';
+import { PixelStyle } from '../types/shared';
+import type { ColorHex } from '../types/shared';
 
 /**
  * Project data structure

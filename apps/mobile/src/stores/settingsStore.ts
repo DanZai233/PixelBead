@@ -5,7 +5,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStorage } from '../storage/mmkvStorage';
-import type { ColorSystem, PixelStyle } from '@pixelbead/shared-types';
+import type { PixelStyle } from '../types/shared';
+type ColorSystem = 'MARD' | 'COCO' | '漫漫' | '盼盼' | '咪小窝';
 
 interface SettingsState {
   // Theme

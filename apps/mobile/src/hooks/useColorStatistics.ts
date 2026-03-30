@@ -2,10 +2,8 @@
 
 import { useMemo } from 'react';
 import { useCanvasStore } from '../stores/canvasStore';
-// @ts-ignore - Workaround for path resolution
-import { getColorCounts, mergeSimilarColors } from '../../../packages/color-system/src';
-// @ts-ignore - Workaround for path resolution
-import type { PaletteColor } from '../../../packages/shared-types/src';
+import { getColorCounts, mergeSimilarColors } from '../types/shared';
+import type { PaletteColor } from '../types/shared';
 
 export function useColorStatistics() {
   const grid = useCanvasStore((state) => state.grid);

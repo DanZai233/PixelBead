@@ -1,5 +1,4 @@
-// @ts-ignore - Workaround for path resolution
-import type { ColorHex } from '../../../packages/shared-types/src';
+import type { ColorHex } from '../types/shared';
 
 interface Material {
   id: string;

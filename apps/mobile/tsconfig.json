@@ -1,8 +1,8 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true, // Enable strict type checking (per D-08)
-    "noImplicitAny": true, // Disallow 'any' types (per D-15)
+    "strict": true,
+    "noImplicitAny": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "strictBindCallApply": true,
@@ -18,10 +18,19 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      // Path aliases for shared packages (per D-14)
-      "@pixelbead/shared-types": ["../../packages/shared-types/src"],
-      "@pixelbead/shared-utils": ["../../packages/shared-utils/src"],
-      "@pixelbead/color-system": ["../../packages/color-system/src"]
+      "@pixelbead/shared-types": [
+        "../../packages/shared-types/src"
+      ],
+      "@pixelbead/shared-utils": [
+        "../../packages/shared-utils/src"
+      ],
+      "@pixelbead/color-system": [
+        "../../packages/color-system/src"
+      ]
     }
-  }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ]
 }

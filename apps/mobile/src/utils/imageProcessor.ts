@@ -1,8 +1,7 @@
 // Image processing utilities for pixelation, cropping, and background removal
 
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
-// @ts-ignore - Workaround for path resolution
-import type { PaletteColor } from '../../../packages/shared-types/src';
+import type { PaletteColor } from '../types/shared';
 
 /**
  * Pixelate image to target dimensions using nearest-neighbor sampling
