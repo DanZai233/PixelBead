@@ -1,6 +1,6 @@
 import React, { memo, useRef } from 'react';
 import { View } from 'react-native';
-import { Canvas, Group, Rect, Skia } from '@shopify/react-native-skia';
+import { Canvas, Group, Rect, Circle, Skia } from '@shopify/react-native-skia';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { useCanvasRenderer } from '../hooks/useCanvasRenderer';
 import { useCanvasInteraction } from '../hooks/useCanvasInteraction';
@@ -22,6 +22,7 @@ const CanvasGrid = memo<CanvasGridProps>(({ width, height }) => {
   const gridSize = useCanvasStore((state) => state.gridSize);
   const zoom = useCanvasStore((state) => state.zoom);
   const panOffset = useCanvasStore((state) => state.panOffset);
+  const pixelStyle = useCanvasStore((state) => state.pixelStyle);
 
   // Get composed gesture (tap, pinch, pan)
   const { composedGesture } = useCanvasInteraction(
@@ -86,18 +87,54 @@ const CanvasGrid = memo<CanvasGridProps>(({ width, height }) => {
       paint.setColor(Skia.Color(cell.color));
       paint.setAntiAlias(true);
 
-      return (
-        <Rect
-          key={cell.key}
-          x={cell.x * cellSize}
-          y={cell.y * cellSize}
-          width={cellSize}
-          height={cellSize}
-          paint={paint}
-        />
-      );
+      // Render pixel based on style
+      // Note: This must match canvasExport.ts rendering logic for consistent exports
+      switch (pixelStyle) {
+        case 'CIRCLE':
+          return (
+            <Circle
+              key={cell.key}
+              cx={cell.x * cellSize + cellSize / 2}
+              cy={cell.y * cellSize + cellSize / 2}
+              r={cellSize / 2}
+              paint={paint}
+            />
+          );
+        case 'SQUARE':
+          return (
+            <Rect
+              key={cell.key}
+              x={cell.x * cellSize}
+              y={cell.y * cellSize}
+              width={cellSize}
+              height={cellSize}
+              paint={paint}
+            />
+          );
+        case 'ROUNDED':
+          const radius = (cellSize - 2) / 4;
+          const rRect = Skia.RRectXY(
+            {
+              x: cell.x * cellSize + 1,
+              y: cell.y * cellSize + 1,
+              width: cellSize - 2,
+              height: cellSize - 2,
+            },
+            radius,
+            radius
+          );
+          return (
+            <Rect
+              key={cell.key}
+              rect={rRect as any}
+              paint={paint}
+            />
+          );
+        default:
+          return null;
+      }
     });
-  }, [visibleCells, cellSize]);
+  }, [visibleCells, cellSize, pixelStyle]);
 
   return (
     <View style={{ width, height }}>
