@@ -38,6 +38,12 @@ interface CanvasState {
   // Selection (Phase 4)
   selectionRegion: { x1: number; y1: number; x2: number; y2: number } | null;
 
+  // Immersive mode (Phase 4)
+  immersiveMode: boolean;
+  showRulers: boolean;
+  showColorCodes: boolean;
+  highlightedColor: ColorHex | null;
+
   // Drawing state
   isDrawing: boolean;
 
@@ -57,8 +63,12 @@ interface CanvasState {
   setShowGridLines: (show: boolean) => void;
   setPixelStyle: (style: PixelStyle) => void;
   setImportedImage: (uri: string | null) => void;
-  setCropRegion: (region) => void;
-  setSelectionRegion: (region) => void;
+  setCropRegion: (region: { x: number; y: number; width: number; height: number } | null) => void;
+  setSelectionRegion: (region: { x1: number; y1: number; x2: number; y2: number } | null) => void;
+  setImmersiveMode: (enabled: boolean) => void;
+  setShowRulers: (show: boolean) => void;
+  setShowColorCodes: (show: boolean) => void;
+  setHighlightedColor: (hex: ColorHex | null) => void;
   resetView: () => void;
   pushToUndoStack: (grid: Map<string, string>) => void;
   undo: () => void;
@@ -91,6 +101,10 @@ export const useCanvasStore = create<CanvasState>()(
       importedImage: null,
       cropRegion: null,
       selectionRegion: null,
+      immersiveMode: false,
+      showRulers: false,
+      showColorCodes: false,
+      highlightedColor: null,
       isDrawing: false,
       undoStack: [],
       redoStack: [],
@@ -153,6 +167,14 @@ export const useCanvasStore = create<CanvasState>()(
 
       setSelectionRegion: (region) => set({ selectionRegion: region }),
 
+      setImmersiveMode: (enabled) => set({ immersiveMode: enabled }),
+
+      setShowRulers: (show) => set({ showRulers: show }),
+
+      setShowColorCodes: (show) => set({ showColorCodes: show }),
+
+      setHighlightedColor: (hex) => set({ highlightedColor: hex }),
+
       resetView: () => {
         set({ zoom: 1.0, panOffset: { x: 0, y: 0 } });
       },
@@ -196,10 +218,6 @@ export const useCanvasStore = create<CanvasState>()(
         const { pushToUndoStack, grid } = get();
         pushToUndoStack(grid);
         set({ grid: new Map() });
-      },
-
-      setImportedImage: (uri) => {
-        set({ importedImage: uri });
       },
     }),
     {

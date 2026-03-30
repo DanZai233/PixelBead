@@ -1,7 +1,7 @@
 // ImageCropper component for custom crop region selection
 // Simplified version with basic crop functionality
 
-import React, { memo, useState } from 'react';
+import React, { memo } from 'react';
 import { View, StyleSheet, Modal, TouchableOpacity, Text, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useCanvasStore } from '../../stores/canvasStore';

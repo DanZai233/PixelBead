@@ -1,7 +1,7 @@
 // ImageImporter component for importing images from photo library
 
 import React, { memo } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useCanvasStore } from '../../stores/canvasStore';
@@ -24,9 +24,8 @@ const ImageImporter = memo(() => {
 
       // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: false,
-        aspect: undefined,
         quality: 1,
       });
 
@@ -51,7 +50,7 @@ const ImageImporter = memo(() => {
       accessibilityLabel="Import image from photo library"
       accessibilityHint="Opens photo picker to select an image"
     >
-      <MaterialIcons name="image-plus" size={24} color="#000000" />
+      <MaterialIcons name="add-photo-alternate" size={24} color="#000000" />
       <Text style={styles.label}>Import</Text>
     </TouchableOpacity>
   );

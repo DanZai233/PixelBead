@@ -17,7 +17,7 @@ interface ClipboardState {
   clearClipboard: () => void;
 }
 
-export const useClipboardStore = create<ClipboardState>((set, get) => ({
+export const useClipboardStore = create<ClipboardState>((set) => ({
   clipboard: null,
   clipboardOffset: null,
 

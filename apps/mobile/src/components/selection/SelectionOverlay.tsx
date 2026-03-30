@@ -32,10 +32,10 @@ const SelectionOverlay = memo(() => {
         },
       ]}
     >
-      <View style={styles.cornerHandle} style={{ left: -5, top: -5 }} />
-      <View style={styles.cornerHandle} style={{ right: -5, top: -5 }} />
-      <View style={styles.cornerHandle} style={{ left: -5, bottom: -5 }} />
-      <View style={styles.cornerHandle} style={{ right: -5, bottom: -5 }} />
+      <View style={[styles.cornerHandle, { left: -5, top: -5 }]} />
+      <View style={[styles.cornerHandle, { right: -5, top: -5 }]} />
+      <View style={[styles.cornerHandle, { left: -5, bottom: -5 }]} />
+      <View style={[styles.cornerHandle, { right: -5, bottom: -5 }]} />
     </View>
   );
 });

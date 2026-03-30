@@ -6,9 +6,8 @@ import { useClipboardStore } from '../stores/clipboardStore';
 
 export function useSelectionOperations() {
   const grid = useCanvasStore((state) => state.grid);
-  const gridSize = useCanvasStore((state) => state.gridSize);
   const setPixel = useCanvasStore((state) => state.setPixel);
-  const { copySelection, clearClipboard } = useClipboardStore();
+  const { copySelection } = useClipboardStore();
 
   const copy = useCallback(
     (region: { x1: number; y1: number; x2: number; y2: number }) => {
@@ -64,16 +63,11 @@ export function useSelectionOperations() {
 }
 
 export function useSelectionGesture() {
-  const setSelectionRegion = useCanvasStore((state) => state.setSelectionRegion);
-
-  const createGestureHandler = useCallback(
-    (cellSize: number, panOffset: { x: number; y: number }) => {
-      // In a full implementation, this would return a gesture handler
-      // using react-native-gesture-handler for drag-to-select
-      return null;
-    },
-    []
-  );
+  const createGestureHandler = useCallback(() => {
+    // In a full implementation, this would return a gesture handler
+    // using react-native-gesture-handler for drag-to-select
+    return null;
+  }, []);
 
   return { createGestureHandler };
 }

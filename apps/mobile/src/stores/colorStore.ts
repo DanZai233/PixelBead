@@ -48,7 +48,7 @@ function generatePaletteInternal(
   const groupsMap = groupColorsByLetter(palette);
   const groups: PaletteGroup[] = [];
 
-  groupsMap.forEach((colors, letter) => {
+  groupsMap.forEach((colors: PaletteColor[], letter: string) => {
     groups.push({ letter, colors });
   });
 

@@ -42,12 +42,9 @@ interface LetterGroupProps {
   onSelectColor: (hex: string) => void;
 }
 
-const LetterGroup = memo(({ letter, colors, selectedColor, onSelectColor }: LetterGroupProps) => {
+const LetterGroup = memo(({ colors, selectedColor, onSelectColor }: LetterGroupProps) => {
   return (
     <View style={styles.letterGroup}>
-      <View style={styles.letterHeader}>
-        {/* Letter header would go here */}
-      </View>
       <View style={styles.colorRow}>
         {colors.map((color) => (
           <ColorButton
@@ -62,11 +59,7 @@ const LetterGroup = memo(({ letter, colors, selectedColor, onSelectColor }: Lett
   );
 });
 
-interface PaletteGridProps {
-  numColumns?: number;
-}
-
-const PaletteGrid = memo(({ numColumns = 6 }: PaletteGridProps) => {
+const PaletteGrid = memo(() => {
   const selectedColor = useCanvasStore((state) => state.selectedColor);
   const paletteGroups = useColorStore((state) => state.paletteGroups);
 

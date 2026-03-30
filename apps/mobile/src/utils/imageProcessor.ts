@@ -1,7 +1,6 @@
 // Image processing utilities for pixelation, cropping, and background removal
 
-import { manipulateAsync, SaveFormat, ManipulateResult } from 'expo-image-manipulator';
-import { findClosestColor } from '../../../packages/color-system/src';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 // @ts-ignore - Workaround for path resolution
 import type { PaletteColor } from '../../../packages/shared-types/src';
 
@@ -11,12 +10,11 @@ import type { PaletteColor } from '../../../packages/shared-types/src';
 export async function pixelateImage(
   imageUri: string,
   targetWidth: number,
-  targetHeight: number,
-  palette?: PaletteColor[]
+  targetHeight: number
 ): Promise<Map<string, string>> {
   try {
     // Resize image to target dimensions
-    const result = await manipulateAsync(
+    await manipulateAsync(
       imageUri,
       [{ resize: { width: targetWidth, height: targetHeight } }],
       { compress: 1, format: SaveFormat.PNG }
@@ -24,7 +22,7 @@ export async function pixelateImage(
 
     // For now, return a simple implementation
     // In a full implementation, we would:
-    // 1. Load the image and extract pixel data
+    // 1. Load image and extract pixel data
     // 2. For each pixel, find closest color in palette (if provided)
     // 3. Return Map with key "x,y" and value color hex
     return new Map();
@@ -67,10 +65,9 @@ export async function cropImage(
 /**
  * Remove background from image based on corner pixel analysis
  */
-export async function removeBackground(
-  grid: Map<string, string>,
-  threshold: number = 0.1
-): Promise<Map<string, string>> {
+export function removeBackground(
+  grid: Map<string, string>
+): Map<string, string> {
   // For now, return original grid
   // In a full implementation, we would:
   // 1. Analyze corner pixels to detect background color
