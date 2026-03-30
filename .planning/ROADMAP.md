@@ -221,7 +221,11 @@
 4. User sees offline status indicator when not connected to internet
 5. User completes onboarding guide on first app launch
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+- [ ] 05-01-PLAN.md — Deliver project management system (save, load, import, export JSON, new canvas, clear canvas)
+- [ ] 05-02-PLAN.md — Deliver PNG export functionality with customizable options (grid, color codes, mirror, selection)
+- [ ] 05-03-PLAN.md — Enhance undo/redo, add offline indicator, onboarding guide, accessibility, and performance optimization
 **UI hint**: yes
 
 ---
