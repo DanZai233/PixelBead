@@ -181,8 +181,8 @@ export const useCanvasStore = create<CanvasState>()(
 
       pushToUndoStack: (grid) => {
         const { undoStack } = get();
-        // Limit undo stack to 20 items
-        const newUndoStack = [JSON.stringify(mapToJson(grid)), ...undoStack].slice(0, 20);
+        // Limit undo stack to 50 items (PROJ-05 requirement)
+        const newUndoStack = [JSON.stringify(mapToJson(grid)), ...undoStack].slice(0, 50);
         set({ undoStack: newUndoStack, redoStack: [] });
       },
 
