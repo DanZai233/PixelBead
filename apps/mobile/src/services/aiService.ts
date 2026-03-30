@@ -1,0 +1,365 @@
+// @ts-ignore - Workaround for path resolution
+import { AIProvider, AIConfig, AI_MODELS, DEFAULT_ENDPOINTS } from '../../../packages/shared-types/src';
+
+export const generatePixelArtImage = async (
+  prompt: string,
+  config: AIConfig,
+  referenceImage?: string
+): Promise<string> => {
+  const models = AI_MODELS[config.provider];
+  const model = config.model || models[0]?.id;
+  const endpoint = config.endpoint || DEFAULT_ENDPOINTS[config.provider] || '';
+
+  switch (config.provider) {
+    case AIProvider.OPENAI:
+      return await generateOpenAI(prompt, config.apiKey, endpoint, model, referenceImage);
+
+    case AIProvider.OPENROUTER:
+      return await generateOpenRouter(prompt, config.apiKey, endpoint, model, config.imageUrlModel, referenceImage);
+
+    case AIProvider.DEEPSEEK:
+      throw new Error('DeepSeek 目前不支持图像生成，请使用其他服务商');
+
+    case AIProvider.VOLCENGINE:
+      return await generateVolcEngine(prompt, config.apiKey, endpoint, model, referenceImage);
+
+    case AIProvider.GEMINI:
+      return await generateGemini(prompt, config.apiKey, model, referenceImage);
+
+    case AIProvider.CUSTOM:
+      return await generateOpenAI(prompt, config.apiKey, endpoint, model, referenceImage);
+
+    default:
+      throw new Error(`Unsupported AI provider: ${config.provider}`);
+  }
+};
+
+const generateOpenAI = async (
+  prompt: string,
+  apiKey: string,
+  baseUrl: string,
+  model: string = 'gpt-4o',
+  referenceImage?: string
+): Promise<string> => {
+  try {
+    const messages: any[] = [
+      {
+        role: 'user',
+        content: `Generate a high-quality 1:1 square pixel art image of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
+      }
+    ];
+
+    // 如果有参考图片，尝试添加到消息中（部分模型支持）
+    if (referenceImage) {
+      messages[0].content = {
+        role: 'user',
+        content: [
+          {
+            type: 'image_url',
+            image_url: {
+              url: referenceImage.startsWith('data:') ? referenceImage : `data:image/jpeg;base64,${referenceImage.split(',')[1]}`
+            }
+          },
+          {
+            type: 'text',
+            text: `Generate a high-quality 1:1 square pixel art based on this image${prompt ? ': ' + prompt : ''}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`
+          }
+        ]
+      };
+    }
+
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Failed to generate image');
+    }
+
+    const data = await response.json();
+    return await processOpenAIResponse(data, baseUrl, apiKey);
+  } catch (error) {
+    console.error('OpenAI image generation error:', error);
+    throw error;
+  }
+};
+
+const processOpenAIResponse = async (
+  data: any,
+  baseUrl: string,
+  apiKey: string
+): Promise<string> => {
+  if (data.choices?.[0]?.message?.tool_calls) {
+    for (const toolCall of data.choices[0].message.tool_calls) {
+      if (toolCall.function.name === 'dalle.text2im') {
+        const args = JSON.parse(toolCall.function.arguments);
+
+        const imageResponse = await fetch(`${baseUrl}/images/generations`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: args.model || 'dall-e-3',
+            prompt: args.prompt,
+            n: 1,
+            size: args.size || '1024x1024',
+            response_format: 'b64_json',
+          }),
+        });
+
+        if (!imageResponse.ok) {
+          const error = await imageResponse.json();
+          throw new Error(error.error?.message || 'Failed to generate image');
+        }
+
+        const imageData = await imageResponse.json();
+        if (imageData.data?.[0]?.b64_json) {
+          return `data:image/png;base64,${imageData.data[0].b64_json}`;
+        }
+
+        throw new Error('No image generated');
+      }
+    }
+
+    throw new Error('No image generation tool call found');
+  }
+
+  throw new Error('No image data in response');
+};
+
+const generateOpenRouter = async (
+  prompt: string,
+  apiKey: string,
+  baseUrl: string,
+  _model: string,
+  imageUrlModel?: string,
+  referenceImage?: string
+): Promise<string> => {
+  try {
+    const messages: any[] = [
+      {
+        role: 'user',
+        content: `Generate a high-quality 1:1 square pixel art image of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
+      }
+    ];
+
+    // 如果有参考图片，尝试添加到消息中（部分模型支持）
+    if (referenceImage) {
+      messages[0].content = {
+        role: 'user',
+        content: [
+          {
+            type: 'image_url',
+            image_url: {
+              url: referenceImage.startsWith('data:') ? referenceImage : `data:image/jpeg;base64,${referenceImage.split(',')[1]}`
+            }
+          },
+          {
+            type: 'text',
+            text: `Generate a high-quality 1:1 square pixel art based on this image${prompt ? ': ' + prompt : ''}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`
+          }
+        ]
+      };
+    }
+
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://pindou.danzaii.cn',
+      },
+      body: JSON.stringify({
+        model: imageUrlModel || 'openai/dall-e-3',
+        messages,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Failed to generate image');
+    }
+
+    const data = await response.json();
+    return await processOpenAIResponse(data, 'https://api.openai.com/v1', apiKey);
+  } catch (error) {
+    console.error('OpenRouter image generation error:', error);
+    throw error;
+  }
+};
+
+const generateVolcEngine = async (
+  prompt: string,
+  apiKey: string,
+  baseUrl: string,
+  model: string = 'doubao-seedream-4-5-251128',
+  referenceImage?: string
+): Promise<string> => {
+  try {
+    const requestBody: any = {
+      model,
+      size: '2K',
+      response_format: 'b64_json',
+      n: 1,
+      watermark: false,
+    };
+
+    if (referenceImage) {
+      requestBody.reference_images = [referenceImage];
+      requestBody.prompt = prompt || 'Convert this image to a clean 1:1 square pixel art suitable for Perler beads (hama beads). The style should be clean, vibrant, limited color palette, solid white background, clear and bold outlines, centered subject.';
+    } else {
+      requestBody.prompt = `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`;
+    }
+
+    const response = await fetch(`${baseUrl}/images/generations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(parseVolcEngineError(errorJson));
+      } catch {
+        throw new Error(errorText || 'Failed to generate image');
+      }
+    }
+
+    const data = await response.json();
+    // VolcEngine 返回格式与 OpenAI 类似：data.data[0].b64_json
+    const b64Json = data.data?.[0]?.b64_json ?? data.output?.b64_json;
+    if (b64Json) {
+      return `data:image/png;base64,${b64Json}`;
+    }
+
+    throw new Error('No image generated');
+  } catch (error) {
+    console.error('VolcEngine image generation error:', error);
+    throw error;
+  }
+};
+
+const parseVolcEngineError = (error: any): string => {
+  if (error.error?.message) {
+    const message = error.error.message.toLowerCase();
+
+    if (message.includes('size') && message.includes('least')) {
+      return '火山引擎要求图像尺寸至少为 3686400 像素（约 2048x2048），当前 API 不支持 1024x1024。请使用其他 AI 服务商。';
+    }
+
+    if (message.includes('model') || message.includes('not found')) {
+      return `模型名称错误：${error.error.message}`;
+    }
+
+    if (message.includes('api key') || message.includes('unauthorized')) {
+      return 'API Key 无效或已过期';
+    }
+
+    if (message.includes('quota') || message.includes('limit') || message.includes('rate')) {
+      return '已达到 API 使用配额或速率限制';
+    }
+
+    if (message.includes('content_filter')) {
+      return '内容被过滤，请修改提示词后重试';
+    }
+  }
+
+  return error.error?.message || error.message || '未知错误';
+};
+
+const generateGemini = async (
+  prompt: string,
+  apiKey: string,
+  model: string = 'gemini-2.0-flash-exp',
+  referenceImage?: string
+): Promise<string> => {
+  try {
+    const parts: any[] = [];
+
+    if (referenceImage) {
+      parts.push({
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: referenceImage.split(',')[1]
+        }
+      });
+      parts.push({
+        text: `Convert this image to a clean 1:1 square pixel art suitable for Perler beads (hama beads). ${prompt ? 'Additional guidance: ' + prompt : ''}. The style should be clean, vibrant, limited color palette, solid white background, clear and bold outlines, centered subject.`
+      });
+    } else {
+      parts.push({
+        text: `Generate a high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`
+      });
+    }
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: {
+          parts
+        },
+        generationConfig: {
+          responseModalities: ['text', 'image'],
+          imageGenerationConfig: {
+            aspectRatio: "1:1"
+          }
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Failed to generate image');
+    }
+
+    const data = await response.json();
+    for (const part of data.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+      }
+    }
+
+    throw new Error("No valid image part returned.");
+  } catch (error) {
+    console.error('Gemini image generation error:', error);
+    throw error;
+  }
+};
+
+export const validateApiKey = async (
+  provider: AIProvider,
+  apiKey: string,
+  endpoint?: string
+): Promise<boolean> => {
+  try {
+    const config: AIConfig = {
+      provider,
+      apiKey,
+      endpoint: endpoint || DEFAULT_ENDPOINTS[provider]
+    };
+    await generatePixelArtImage('test', config);
+    return true;
+  } catch (error) {
+    console.error('API key validation failed:', error);
+    return false;
+  }
+};

@@ -74,6 +74,7 @@ interface CanvasState {
   undo: () => void;
   redo: () => void;
   clearCanvas: () => void;
+  loadGeneratedImage: (imageData: string, width: number, height: number) => Promise<void>;
 }
 
 // Helper to convert Map to/from JSON (since Maps aren't JSON-serializable)
@@ -129,8 +130,8 @@ export const useCanvasStore = create<CanvasState>()(
         const newGrid = new Map(grid);
 
         // Remove pixels outside new grid size
-        for (const [key] of newGrid) {
-          const [x, y] = key.split(',').map(Number);
+        for (const [key] of newGrid.entries()) {
+          const [x, y] = (key as string).split(',').map(Number);
           if (x >= width || y >= height) {
             newGrid.delete(key);
           }
@@ -218,6 +219,38 @@ export const useCanvasStore = create<CanvasState>()(
         const { pushToUndoStack, grid } = get();
         pushToUndoStack(grid);
         set({ grid: new Map() });
+      },
+
+      loadGeneratedImage: async (imageData: string, width: number, height: number) => {
+        try {
+          // Decode base64 image and extract pixel data
+          // Note: This is a simplified implementation
+          // A full implementation would use expo-image-manipulator or react-native-skia
+          // For now, we'll set up the grid size and clear the grid
+          // The actual pixel extraction would require more complex image processing
+
+          // TODO: Process imageData (base64) to extract pixel colors and populate grid
+          console.log('Processing generated image data:', imageData.substring(0, 50) + '...');
+
+          // Set grid size
+          set({
+            gridSize: { width, height },
+            grid: new Map(), // Clear grid for new image
+            zoom: 1.0, // Reset zoom
+            panOffset: { x: 0, y: 0 }, // Reset pan
+          });
+
+          // In a full implementation, we would:
+          // 1. Use expo-image-manipulator to resize image to target dimensions
+          // 2. Extract pixel data from resized image
+          // 3. For each pixel, convert to hex color
+          // 4. Populate grid with pixel data: grid.set(`${x},${y}`, hex)
+
+          console.log(`Generated image loaded: ${width}x${height}`);
+        } catch (error) {
+          console.error('Error loading generated image:', error);
+          throw error;
+        }
       },
     }),
     {
