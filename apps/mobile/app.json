@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "PixelBead",
+    "slug": "pixelbead",
     "version": "1.0.0",
     "scheme": "pixelbead",
     "plugins": [
@@ -10,26 +10,47 @@
     "experiments": {
       "typedRoutes": true
     },
-    "newArchEnabled": true, // Performance: JSI bindings for MMKV and Skia
-    "jsEngine": "hermes", // Performance: Optimized JS engine enabled by default in SDK 55
+    "newArchEnabled": true,
+    "jsEngine": "hermes",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1a1a1a"
     },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.danzai.pixelbead",
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "associatedDomains": ["applinks:pindou.danzaii.cn"],
+      "infoPlist": {
+        "CFBundleDisplayName": "PixelBead",
+        "NSPhotoLibraryUsageDescription": "PixelBead needs access to your photo library to import images for pixel art conversion.",
+        "NSCameraUsageDescription": "PixelBead needs access to your camera to capture images for pixel art conversion."
+      }
     },
     "android": {
+      "package": "com.danzai.pixelbead",
+      "versionCode": 1,
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": {
+            "scheme": "https",
+            "host": "pindou.danzaii.cn",
+            "pathPrefix": "/share"
+          }
+        }
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
