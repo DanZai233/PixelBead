@@ -25,6 +25,11 @@ const ToolButton = memo<ToolButtonProps>(({ tool, icon, label, selected, onPress
     <Pressable
       onPress={handlePress}
       style={[styles.toolButton, selected && styles.selected]}
+      accessible={true}
+      accessibilityLabel={`${label} tool`}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityHint="Double tap to select tool"
     >
       <MaterialIcons
         name={icon}

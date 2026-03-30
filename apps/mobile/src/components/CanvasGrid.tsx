@@ -137,12 +137,14 @@ const CanvasGrid = memo<CanvasGridProps>(({ width, height }) => {
   }, [visibleCells, cellSize, pixelStyle]);
 
   return (
-    <View style={{ width, height }}>
-      <GestureDetector gesture={composedGesture}>
-        <Canvas
-          ref={canvasRef}
-          style={{ width, height }}
-        >
+     <View style={{ width, height }}>
+       <GestureDetector gesture={composedGesture}>
+         <Canvas
+           ref={canvasRef}
+           style={{ width, height }}
+           accessible={true}
+           accessibilityLabel={`Canvas grid, ${gridSize.width} by ${gridSize.height} pixels`}
+         >
           <Group>
             {cells}
             {gridLines}

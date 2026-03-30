@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Pressable, useWindowDimensions, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import CanvasGrid from '../../src/components/CanvasGrid';
@@ -7,12 +7,24 @@ import ThemeToggle from '../../src/components/ThemeToggle';
 import { ExportModal } from '../../src/components/export/ExportModal';
 import { exportCanvasAsPng, shareExportedImage } from '../../src/utils/canvasExport';
 import { useCanvasStore } from '../../src/stores/canvasStore';
+import { OnboardingGuide } from '../../src/components/OnboardingGuide';
+import { OfflineIndicator } from '../../src/components/OfflineIndicator';
+import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
 export default function EditorScreen() {
    const { width, height } = useWindowDimensions();
    const canvasStore = useCanvasStore();
+   const { hasSeenOnboarding } = useOnboardingStore();
    const [isToolDrawerOpen, setIsToolDrawerOpen] = useState(false);
    const [exportModalVisible, setExportModalVisible] = useState(false);
+   const [onboardingVisible, setOnboardingVisible] = useState(false);
+
+   // Show onboarding on first launch
+   useEffect(() => {
+     if (!hasSeenOnboarding) {
+       setOnboardingVisible(true);
+     }
+   }, [hasSeenOnboarding]);
 
    const handleExport = async (options: {
      showGrid: boolean;
@@ -43,9 +55,12 @@ export default function EditorScreen() {
      }
    };
 
-  return (
-    <View style={[styles.container, { width, height }]}>
-      <CanvasGrid width={width} height={height} />
+   return (
+     <View style={[styles.container, { width, height }]}>
+       {/* Offline indicator (always visible when offline) */}
+       <OfflineIndicator />
+
+       <CanvasGrid width={width} height={height} />
 
       {/* Tool drawer button */}
       <Pressable
@@ -67,6 +82,18 @@ export default function EditorScreen() {
         <MaterialIcons name="file-download" size={24} color="#666" />
       </Pressable>
 
+      {/* Tool drawer button */}
+      <Pressable
+        style={styles.toolDrawerButton}
+        onPress={() => setIsToolDrawerOpen(true)}
+        accessible={true}
+        accessibilityLabel="Open tools"
+        accessibilityRole="button"
+        accessibilityHint="Double tap to open drawing tools"
+      >
+        <MaterialIcons name="more-horiz" size={24} color="#666" />
+      </Pressable>
+
       {/* Theme toggle button */}
       <View style={styles.themeToggleContainer}>
         <ThemeToggle />
@@ -83,6 +110,12 @@ export default function EditorScreen() {
         visible={exportModalVisible}
         onClose={() => setExportModalVisible(false)}
         onExport={handleExport}
+      />
+
+      {/* Onboarding guide (full-screen overlay) */}
+      <OnboardingGuide
+        visible={onboardingVisible}
+        onDismiss={() => setOnboardingVisible(false)}
       />
     </View>
   );
