@@ -266,7 +266,13 @@
 4. Material gallery shows offline message and loading states appropriately
 5. App builds successfully for iOS and Android with proper icons, splash screens, and versioning
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+- [ ] 06-01-PLAN.md — Implement AI generation system with OpenAI, DeepSeek, Gemini support
+- [ ] 06-02-PLAN.md — Implement material gallery browsing with online/offline awareness
+- [ ] 06-03-PLAN.md — Implement gallery interactions (like, favorite, publish, load)
+- [ ] 06-04-PLAN.md — Implement share links with 7-day TTL and deep linking
+- [ ] 06-05-PLAN.md — Prepare app for App Store deployment (icons, splash screens, versioning)
 **UI hint**: yes
 
 ---
@@ -275,12 +281,12 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Infrastructure | 4/4 | Ready to execute | - |
-| 2. Canvas Core & Performance | 0/5 | Ready to execute | - |
+| 1. Foundation & Infrastructure | 4/4 | Complete   | 2026-03-28 |
+| 2. Canvas Core & Performance | 5/5 | Complete   | 2026-03-28 |
 | 3. Drawing & Tools | 5/5 | Complete   | 2026-03-28 |
 | 4. Colors & Advanced Features | 5/5 | Complete   | 2026-03-30 |
-| 5. Projects & Export | 0/0 | Not started | - |
-| 6. AI, Gallery & Deployment | 0/0 | Not started | - |
+| 5. Projects & Export | 3/3 | Complete   | 2026-03-30 |
+| 6. AI, Gallery & Deployment | 5/5 | Ready to execute | - |
 
 ---
 
