@@ -7,6 +7,7 @@ import ToolDrawer from '../../src/components/ToolDrawer';
 import ThemeToggle from '../../src/components/ThemeToggle';
 import { ExportModal } from '../../src/components/export/ExportModal';
 import PublishModal from '../../src/components/gallery/PublishModal';
+import ShareLinkModal from '../../src/components/share/ShareLinkModal';
 import { exportCanvasAsPng, shareExportedImage } from '../../src/utils/canvasExport';
 import { useCanvasStore } from '../../src/stores/canvasStore';
 import { OnboardingGuide } from '../../src/components/OnboardingGuide';
@@ -25,6 +26,7 @@ export default function EditorScreen() {
     const [showAiGenerate, setShowAiGenerate] = useState(false);
     const [showAiSettings, setShowAiSettings] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
 
    // Show onboarding on first launch
    useEffect(() => {
@@ -134,6 +136,21 @@ export default function EditorScreen() {
         <MaterialIcons name="cloud-upload" size={24} color="#666" />
       </Pressable>
 
+      {/* Share button */}
+      <Pressable
+        style={styles.shareButton}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          setShowShareModal(true);
+        }}
+        accessible={true}
+        accessibilityLabel="Share project link"
+        accessibilityRole="button"
+        accessibilityHint="Double tap to generate shareable URL"
+      >
+        <MaterialIcons name="link" size={24} color="#666" />
+      </Pressable>
+
       {/* Tool drawer button */}
       <Pressable
         style={styles.toolDrawerButton}
@@ -180,6 +197,12 @@ export default function EditorScreen() {
       <PublishModal
         visible={showPublishModal}
         onClose={() => setShowPublishModal(false)}
+      />
+
+      {/* Share modal */}
+      <ShareLinkModal
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
       />
 
       {/* Onboarding guide (full-screen overlay) */}
@@ -268,6 +291,22 @@ const styles = StyleSheet.create({
   publishButton: {
     position: 'absolute',
     top: 300,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  shareButton: {
+    position: 'absolute',
+    top: 360,
     right: 20,
     width: 44,
     height: 44,
