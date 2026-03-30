@@ -29,7 +29,7 @@ export default function TabLayout() {
         options={{
           title: 'Gallery',
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="photo-library" size={size} color={color} />
+            <MaterialIcons name="grid-view" size={size} color={color} />
           ),
         }}
       />
