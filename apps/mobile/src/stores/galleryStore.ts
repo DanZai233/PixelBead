@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { mmkvStorage } from '../storage/mmkvStorage';
 import { fetchMaterials, publishMaterial, type Material } from '../services/galleryService';
 
 interface GalleryState {
@@ -28,7 +30,9 @@ interface GalleryState {
   clearError: () => void;
 }
 
-export const useGalleryStore = create<GalleryState>()((set, get) => ({
+export const useGalleryStore = create<GalleryState>()(
+  persist(
+    (set, get) => ({
   materials: [],
   isLoading: false,
   error: null,
@@ -97,4 +101,30 @@ export const useGalleryStore = create<GalleryState>()((set, get) => ({
   clearError: () => {
     set({ error: null });
   },
-}));
+
+  likeMaterial: (id: string) => {
+    const { materials } = get();
+    const newMaterials = materials.map((m) => {
+      if (m.id === id) {
+        return { ...m, likes: m.likes + 1 };
+      }
+      return m;
+    });
+    set({ materials: newMaterials });
+  },
+
+  getFavorites: () => {
+    const { materials, favorites } = get();
+    return materials.filter((m) => favorites.includes(m.id));
+  },
+
+  clearFavorites: () => {
+    set({ favorites: [] });
+  },
+    }),
+    {
+      name: 'gallery-storage',
+      storage: createJSONStorage(() => mmkvStorage),
+    }
+  )
+);

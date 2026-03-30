@@ -7,17 +7,27 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import { useGalleryStore } from '../../stores/galleryStore';
 import { type Material } from '../../services/galleryService';
 
 interface GalleryCardProps {
   material: Material;
-  onPress: () => void;
+  onPress?: () => void;
 }
 
 export default function GalleryCard({ material, onPress }: GalleryCardProps) {
+  const router = useRouter();
+  const { isFavorite } = useGalleryStore();
+  const isFav = isFavorite(material.id);
+
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPress();
+    if (onPress) {
+      onPress();
+    } else {
+      router.push(`/gallery/${material.id}`);
+    }
   };
 
   return (
@@ -29,6 +39,13 @@ export default function GalleryCard({ material, onPress }: GalleryCardProps) {
       accessibilityHint="Double tap to load this design"
       activeOpacity={0.7}
     >
+      {/* Favorite indicator */}
+      {isFav && (
+        <View style={styles.favoriteIndicator}>
+          <MaterialIcons name="favorite" size={16} color="#EF4444" />
+        </View>
+      )}
+
       {/* Grid preview - simplified version using image placeholder */}
       <View style={styles.preview}>
         <Text style={styles.previewText}>{material.gridWidth}×{material.gridHeight}</Text>
@@ -79,6 +96,19 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
     marginBottom: 12,
+  },
+  favoriteIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   preview: {
     aspectRatio: 1,

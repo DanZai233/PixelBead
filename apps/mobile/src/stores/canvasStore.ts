@@ -75,6 +75,7 @@ interface CanvasState {
   redo: () => void;
   clearCanvas: () => void;
   loadGeneratedImage: (imageData: string, width: number, height: number) => Promise<void>;
+  loadMaterialIntoCanvas: (material: any) => void;
 }
 
 // Helper to convert Map to/from JSON (since Maps aren't JSON-serializable)
@@ -251,6 +252,43 @@ export const useCanvasStore = create<CanvasState>()(
           console.error('Error loading generated image:', error);
           throw error;
         }
+      },
+
+      loadMaterialIntoCanvas: (material: any) => {
+        const { pushToUndoStack } = get();
+
+        // Parse material.grid as 2D array (already in correct format)
+        const materialGrid = material.grid as string[][];
+
+        // Convert 2D array to Map format
+        const newGrid = new Map<string, string>();
+        for (let y = 0; y < materialGrid.length; y++) {
+          for (let x = 0; x < materialGrid[y].length; x++) {
+            const color = materialGrid[y][x];
+            if (color && color !== '') {
+              newGrid.set(`${x},${y}`, color);
+            }
+          }
+        }
+
+        // Parse pixelStyle from string to enum
+        // @ts-ignore - Workaround for enum conversion
+        const pixelStyleValue = PixelStyle[material.pixelStyle?.toUpperCase() as keyof typeof PixelStyle];
+
+        // Save current state to undo stack
+        const { grid } = get();
+        pushToUndoStack(grid);
+
+        // Set canvas state
+        set({
+          grid: newGrid,
+          gridSize: { width: material.gridWidth, height: material.gridHeight },
+          pixelStyle: pixelStyleValue || PixelStyle.CIRCLE,
+          zoom: 1.0, // Reset zoom
+          panOffset: { x: 0, y: 0 }, // Reset pan
+        });
+
+        console.log(`Material loaded: ${material.title} (${material.gridWidth}×${material.gridHeight})`);
       },
     }),
     {
