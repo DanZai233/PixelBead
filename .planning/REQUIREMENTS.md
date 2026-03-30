@@ -38,19 +38,19 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Color System
 
-- [ ] **COLR-01**: User can select colors from predefined Perler bead palettes
-- [ ] **COLR-02**: User can select from multiple palette presets (48, 96, 144, 168 colors)
-- [ ] **COLR-03**: User can use HSL color picker for custom colors
-- [ ] **COLR-04**: User can input HEX color codes directly
-- [ ] **COLR-05**: User can select pixel styles (circle, square, rounded)
-- [ ] **COLR-06**: User can view real-time color statistics showing bead count per color
-- [ ] **COLR-07**: User can merge similar colors using adjustable threshold (0-50%)
-- [ ] **COLR-08**: User can map colors to multiple brand color systems (MARD, COCO, 漫漫, 盼盼, 咪小窝)
-- [ ] **COLR-09**: User can highlight all pixels of a selected color by tapping in statistics
+- [x] **COLR-01**: User can select colors from predefined Perler bead palettes
+- [x] **COLR-02**: User can select from multiple palette presets (48, 96, 144, 168 colors)
+- [x] **COLR-03**: User can use HSL color picker for custom colors
+- [x] **COLR-04**: User can input HEX color codes directly
+- [x] **COLR-05**: User can select pixel styles (circle, square, rounded)
+- [x] **COLR-06**: User can view real-time color statistics showing bead count per color
+- [x] **COLR-07**: User can merge similar colors using adjustable threshold (0-50%)
+- [x] **COLR-08**: User can map colors to multiple brand color systems (MARD, COCO, 漫漫, 盼盼, 咪小窝)
+- [x] **COLR-09**: User can highlight all pixels of a selected color by tapping in statistics
 
 ### Image Import & Processing
 
-- [ ] **IMPT-01**: User can import images from device photo library
+- [x] **IMPT-01**: User can import images from device photo library
 - [ ] **IMPT-02**: User can convert imported images to pixel grid automatically
 - [ ] **IMPT-03**: User can select custom crop region for image conversion
 - [ ] **IMPT-04**: User can use 1:1 crop with alignment options (top-left, center, bottom-right)
@@ -60,12 +60,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Selection & Clipboard
 
-- [ ] **SELC-01**: User can select rectangular region on canvas
-- [ ] **SELC-02**: User can copy selected region to clipboard
+- [x] **SELC-01**: User can select rectangular region on canvas
+- [x] **SELC-02**: User can copy selected region to clipboard
 - [ ] **SELC-03**: User can paste clipboard content to canvas at selected position
-- [ ] **SELC-04**: User can cut selected region (copy + clear)
-- [ ] **SELC-05**: User can clear selected region
-- [ ] **SELC-06**: User can invert colors in selected region
+- [x] **SELC-04**: User can cut selected region (copy + clear)
+- [x] **SELC-05**: User can clear selected region
+- [x] **SELC-06**: User can invert colors in selected region
 
 ### Project Management
 
@@ -239,28 +239,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DRAW-06 | Phase 3 | Complete |
 | DRAW-07 | Phase 3 | Complete |
 | DRAW-08 | Phase 3 | Complete |
-| COLR-01 | Phase 4 | Pending |
-| COLR-02 | Phase 4 | Pending |
-| COLR-03 | Phase 4 | Pending |
-| COLR-04 | Phase 4 | Pending |
-| COLR-05 | Phase 4 | Pending |
-| COLR-06 | Phase 4 | Pending |
-| COLR-07 | Phase 4 | Pending |
-| COLR-08 | Phase 4 | Pending |
-| COLR-09 | Phase 4 | Pending |
-| IMPT-01 | Phase 4 | Pending |
+| COLR-01 | Phase 4 | Complete |
+| COLR-02 | Phase 4 | Complete |
+| COLR-03 | Phase 4 | Complete |
+| COLR-04 | Phase 4 | Complete |
+| COLR-05 | Phase 4 | Complete |
+| COLR-06 | Phase 4 | Complete |
+| COLR-07 | Phase 4 | Complete |
+| COLR-08 | Phase 4 | Complete |
+| COLR-09 | Phase 4 | Complete |
+| IMPT-01 | Phase 4 | Complete |
 | IMPT-02 | Phase 4 | Pending |
 | IMPT-03 | Phase 4 | Pending |
 | IMPT-04 | Phase 4 | Pending |
 | IMPT-05 | Phase 4 | Pending |
 | IMPT-06 | Phase 4 | Pending |
 | IMPT-07 | Phase 4 | Pending |
-| SELC-01 | Phase 4 | Pending |
-| SELC-02 | Phase 4 | Pending |
+| SELC-01 | Phase 4 | Complete |
+| SELC-02 | Phase 4 | Complete |
 | SELC-03 | Phase 4 | Pending |
-| SELC-04 | Phase 4 | Pending |
-| SELC-05 | Phase 4 | Pending |
-| SELC-06 | Phase 4 | Pending |
+| SELC-04 | Phase 4 | Complete |
+| SELC-05 | Phase 4 | Complete |
+| SELC-06 | Phase 4 | Complete |
 | PROJ-01 | Phase 5 | Pending |
 | PROJ-02 | Phase 5 | Pending |
 | PROJ-03 | Phase 5 | Pending |

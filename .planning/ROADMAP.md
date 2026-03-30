@@ -10,7 +10,7 @@
 - [ ] **Phase 1: Foundation & Infrastructure** - Monorepo structure, state management, and offline storage
 - [ ] **Phase 2: Canvas Core & Performance** - High-performance canvas editor with touch controls
 - [x] **Phase 3: Drawing & Tools** - Drawing tools, shapes, and haptic feedback (completed 2026-03-28)
-- [ ] **Phase 4: Colors & Advanced Features** - Color system, image import, selection tools
+- [x] **Phase 4: Colors & Advanced Features** - Color system, image import, selection tools (completed 2026-03-30)
 - [ ] **Phase 5: Projects & Export** - Project management, persistence, and export
 - [ ] **Phase 6: AI, Gallery & Deployment** - AI generation, material gallery, and app store deployment
 
@@ -174,11 +174,11 @@
 
 **Plans**: 5 plans
 
-- [ ] 04-01-PLAN.md — Deliver predefined Perler bead color palette system with multiple presets and multi-brand support
-- [ ] 04-02-PLAN.md — Deliver HSL color picker, HEX input, and pixel style selection for custom color and appearance control
-- [ ] 04-03-PLAN.md — Deliver image import with intelligent pixelation, cropping, and background removal
-- [ ] 04-04-PLAN.md — Deliver selection tools with clipboard operations and region manipulation
-- [ ] 04-05-PLAN.md — Deliver color statistics, color merging, immersive view mode, and context menus
+- [x] 04-01-PLAN.md — Deliver predefined Perler bead color palette system with multiple presets and multi-brand support
+- [x] 04-02-PLAN.md — Deliver HSL color picker, HEX input, and pixel style selection for custom color and appearance control
+- [x] 04-03-PLAN.md — Deliver image import with intelligent pixelation, cropping, and background removal
+- [x] 04-04-PLAN.md — Deliver selection tools with clipboard operations and region manipulation
+- [x] 04-05-PLAN.md — Deliver color statistics, color merging, immersive view mode, and context menus
 **UI hint**: yes
 
 ---
@@ -274,7 +274,7 @@
 | 1. Foundation & Infrastructure | 4/4 | Ready to execute | - |
 | 2. Canvas Core & Performance | 0/5 | Ready to execute | - |
 | 3. Drawing & Tools | 5/5 | Complete   | 2026-03-28 |
-| 4. Colors & Advanced Features | 0/5 | Ready to execute | - |
+| 4. Colors & Advanced Features | 5/5 | Complete   | 2026-03-30 |
 | 5. Projects & Export | 0/0 | Not started | - |
 | 6. AI, Gallery & Deployment | 0/0 | Not started | - |
 
