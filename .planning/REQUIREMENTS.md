@@ -85,26 +85,26 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **EXPR-03**: User can toggle color codes in export
 - [x] **EXPR-04**: User can mirror canvas before export
 - [x] **EXPR-05**: User can export selected region only
-- [ ] **EXPR-06**: User can generate shareable link for project (7-day TTL via Redis)
-- [ ] **EXPR-07**: User can copy share URL to clipboard
+- [x] **EXPR-06**: User can generate shareable link for project (7-day TTL via Redis)
+- [x] **EXPR-07**: User can copy share URL to clipboard
 
 ### AI Generation
 
-- [ ] **AI-01**: User can input text prompt to generate pixel art
-- [ ] **AI-02**: User can configure AI provider settings (OpenAI, DeepSeek, Gemini, etc.)
-- [ ] **AI-03**: User can upload reference image for AI generation
-- [ ] **AI-04**: User can generate pixel art in specified canvas size
-- [ ] **AI-05**: User can select AI model from configured provider
+- [x] **AI-01**: User can input text prompt to generate pixel art
+- [x] **AI-02**: User can configure AI provider settings (OpenAI, DeepSeek, Gemini, etc.)
+- [x] **AI-03**: User can upload reference image for AI generation
+- [x] **AI-04**: User can generate pixel art in specified canvas size
+- [x] **AI-05**: User can select AI model from configured provider
 
 ### Material Gallery (Online-Only)
 
-- [ ] **GALL-01**: User can browse community-created designs (online-only)
-- [ ] **GALL-02**: User can load design from gallery into canvas
-- [ ] **GALL-03**: User can like designs in gallery
-- [ ] **GALL-04**: User can favorite designs for quick access
-- [ ] **GALL-05**: User can publish own design to gallery (requires title, author, tags)
-- [ ] **GALL-06**: App displays online/offline status indicator
-- [ ] **GALL-07**: Material gallery shows loading state when fetching designs
+- [x] **GALL-01**: User can browse community-created designs (online-only)
+- [x] **GALL-02**: User can load design from gallery into canvas
+- [x] **GALL-03**: User can like designs in gallery
+- [x] **GALL-04**: User can favorite designs for quick access
+- [x] **GALL-05**: User can publish own design to gallery (requires title, author, tags)
+- [x] **GALL-06**: App displays online/offline status indicator
+- [x] **GALL-07**: Material gallery shows loading state when fetching designs
 
 ### UI/UX
 
@@ -124,13 +124,13 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **OFFL-01**: Core editing features work completely offline
 - [x] **OFFL-02**: User can save/load projects without internet connection
 - [x] **OFFL-03**: App displays offline status indicator
-- [ ] **OFFL-04**: Material gallery shows offline message when no connection
+- [x] **OFFL-04**: Material gallery shows offline message when no connection
 - [ ] **OFFL-05**: App uses synchronous local storage (MMKV) for performance
 
 ### Navigation & Routing
 
 - [x] **NAV-01**: App uses file-based routing with deep link support
-- [ ] **NAV-02**: App can handle share links from other apps (deep linking)
+- [x] **NAV-02**: App can handle share links from other apps (deep linking)
 - [x] **NAV-03**: App includes automatic back navigation
 - [x] **NAV-04**: App supports gesture-based navigation (swipe back)
 - [x] **NAV-05**: App includes onboarding guide for first-time users
@@ -161,11 +161,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Build & Deployment
 
-- [ ] **DEPL-01**: App can be built for iOS App Store distribution
-- [ ] **DEPL-02**: App can be built for Google Play Store distribution
-- [ ] **DEPL-03**: App includes proper app icons and splash screens
-- [ ] **DEPL-04**: App follows App Store and Google Play submission guidelines
-- [ ] **DEPL-05**: App includes proper versioning and update mechanism
+- [x] **DEPL-01**: App can be built for iOS App Store distribution
+- [x] **DEPL-02**: App can be built for Google Play Store distribution
+- [x] **DEPL-03**: App includes proper app icons and splash screens
+- [x] **DEPL-04**: App follows App Store and Google Play submission guidelines
+- [x] **DEPL-05**: App includes proper versioning and update mechanism
 
 ## v2 Requirements
 
@@ -274,20 +274,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPR-03 | Phase 5 | Complete |
 | EXPR-04 | Phase 5 | Complete |
 | EXPR-05 | Phase 5 | Complete |
-| EXPR-06 | Phase 6 | Pending |
-| EXPR-07 | Phase 6 | Pending |
-| AI-01 | Phase 6 | Pending |
-| AI-02 | Phase 6 | Pending |
-| AI-03 | Phase 6 | Pending |
-| AI-04 | Phase 6 | Pending |
-| AI-05 | Phase 6 | Pending |
-| GALL-01 | Phase 6 | Pending |
-| GALL-02 | Phase 6 | Pending |
-| GALL-03 | Phase 6 | Pending |
-| GALL-04 | Phase 6 | Pending |
-| GALL-05 | Phase 6 | Pending |
-| GALL-06 | Phase 6 | Pending |
-| GALL-07 | Phase 6 | Pending |
+| EXPR-06 | Phase 6 | Complete |
+| EXPR-07 | Phase 6 | Complete |
+| AI-01 | Phase 6 | Complete |
+| AI-02 | Phase 6 | Complete |
+| AI-03 | Phase 6 | Complete |
+| AI-04 | Phase 6 | Complete |
+| AI-05 | Phase 6 | Complete |
+| GALL-01 | Phase 6 | Complete |
+| GALL-02 | Phase 6 | Complete |
+| GALL-03 | Phase 6 | Complete |
+| GALL-04 | Phase 6 | Complete |
+| GALL-05 | Phase 6 | Complete |
+| GALL-06 | Phase 6 | Complete |
+| GALL-07 | Phase 6 | Complete |
 | UI-01 | Phase 2 | Complete |
 | UI-02 | Phase 2 | Complete |
 | UI-03 | Phase 2 | Complete |
@@ -301,10 +301,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OFFL-01 | Phase 5 | Complete |
 | OFFL-02 | Phase 5 | Complete |
 | OFFL-03 | Phase 5 | Complete |
-| OFFL-04 | Phase 6 | Pending |
+| OFFL-04 | Phase 6 | Complete |
 | OFFL-05 | Phase 1 | Pending |
 | NAV-01 | Phase 2 | Complete |
-| NAV-02 | Phase 6 | Pending |
+| NAV-02 | Phase 6 | Complete |
 | NAV-03 | Phase 2 | Complete |
 | NAV-04 | Phase 2 | Complete |
 | NAV-05 | Phase 5 | Complete |
@@ -323,11 +323,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PERF-04 | Phase 2 | Complete |
 | PERF-05 | Phase 2 | Complete |
 | PERF-06 | Phase 3 | Complete |
-| DEPL-01 | Phase 6 | Pending |
-| DEPL-02 | Phase 6 | Pending |
-| DEPL-03 | Phase 6 | Pending |
-| DEPL-04 | Phase 6 | Pending |
-| DEPL-05 | Phase 6 | Pending |
+| DEPL-01 | Phase 6 | Complete |
+| DEPL-02 | Phase 6 | Complete |
+| DEPL-03 | Phase 6 | Complete |
+| DEPL-04 | Phase 6 | Complete |
+| DEPL-05 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: 96 total
