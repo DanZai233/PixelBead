@@ -10,7 +10,8 @@
     "experiments": {
       "typedRoutes": true
     },
-    "newArchEnabled": true,
+    "newArchEnabled": true, // Performance: JSI bindings for MMKV and Skia
+    "jsEngine": "hermes", // Performance: Optimized JS engine enabled by default in SDK 55
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
