@@ -863,13 +863,21 @@ const AppMain: React.FC = () => {
     event.target.value = '';
   };
 
-  const handleSaveGeneratedImage = () => {
-    if (aiGeneratedImage) {
-      const a = document.createElement('a');
-      a.href = aiGeneratedImage;
-      a.download = `pixel-bead-ai-generated-${Date.now()}.png`;
-      a.click();
-    }
+  const handleSaveGeneratedImage = async () => {
+    if (!aiGeneratedImage) return;
+    const fileName = `pixel-bead-ai-generated-${Date.now()}.png`;
+    try {
+      const resp = await fetch(aiGeneratedImage);
+      const blob = await resp.blob();
+      if (navigator.share && navigator.canShare?.({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
+        await navigator.share({ files: [new File([blob], fileName, { type: 'image/png' })] });
+        return;
+      }
+    } catch { /* fallback below */ }
+    const a = document.createElement('a');
+    a.href = aiGeneratedImage;
+    a.download = fileName;
+    a.click();
   };
 
   const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1011,12 +1019,24 @@ const AppMain: React.FC = () => {
       mirror: exportMirror,
     });
 
-    const url = canvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = url;
     const fileName = exportSelectionOnly ? `pixel-bead-${exportWidth}x${exportHeight}-selection.png` : (exportMirror ? `pixel-bead-${gridWidth}x${gridHeight}-mirrored.png` : `pixel-bead-${gridWidth}x${gridHeight}.png`);
-    a.download = fileName;
-    a.click();
+
+    const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'));
+
+    if (navigator.share && navigator.canShare?.({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
+      try {
+        await navigator.share({ files: [new File([blob], fileName, { type: 'image/png' })] });
+      } catch (e: any) {
+        if (e.name !== 'AbortError') console.error('分享失败:', e);
+      }
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
     
     setExportModalOpen(false);
   }, [grid, gridWidth, gridHeight, exportPixelStyle, exportShowGuideLines, exportMirror, selectedColorSystem, exportSelectionOnly, selection]);
@@ -1026,18 +1046,32 @@ const AppMain: React.FC = () => {
       grid, gridWidth, gridHeight,
       pixelStyle: exportPixelStyle,
     });
-    const url = canvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `share-${gridWidth}x${gridHeight}.png`;
-    a.click();
-
+    const fileName = `share-${gridWidth}x${gridHeight}.png`;
+    const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'));
     const caption = generateShareCaption(gridWidth, gridHeight, getUniqueColors(grid).length);
-    try {
-      await navigator.clipboard.writeText(caption);
-      alert('分享图已下载！文案已复制到剪贴板 📋');
-    } catch {
-      alert('分享图已下载！\n\n以下文案可手动复制：\n\n' + caption);
+
+    if (navigator.share && navigator.canShare?.({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
+      try {
+        await navigator.share({
+          files: [new File([blob], fileName, { type: 'image/png' })],
+          text: caption,
+        });
+      } catch (e: any) {
+        if (e.name !== 'AbortError') console.error('分享失败:', e);
+      }
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      try {
+        await navigator.clipboard.writeText(caption);
+        alert('分享图已下载！文案已复制到剪贴板 📋');
+      } catch {
+        alert('分享图已下载！\n\n以下文案可手动复制：\n\n' + caption);
+      }
     }
   }, [grid, gridWidth, gridHeight, exportPixelStyle]);
 
@@ -1358,14 +1392,20 @@ const AppMain: React.FC = () => {
               <span className="hidden sm:inline">导入</span>
             </button>
             <button
-              onClick={() => {
+              onClick={async () => {
                 const data = JSON.stringify({ grid, gridWidth, gridHeight });
                 const blob = new Blob([data], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `pixel-bead-${gridWidth}x${gridHeight}.json`;
-                a.click();
+                const fileName = `pixel-bead-${gridWidth}x${gridHeight}.json`;
+                if (navigator.share && navigator.canShare?.({ files: [new File([blob], fileName, { type: 'application/json' })] })) {
+                  try { await navigator.share({ files: [new File([blob], fileName, { type: 'application/json' })] }); } catch {}
+                } else {
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = fileName;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }
               }}
               className="hidden md:flex bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded-xl font-bold text-xs transition-all items-center gap-2"
               title="导出项目"

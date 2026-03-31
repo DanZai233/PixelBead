@@ -17,7 +17,64 @@ export interface ShareData {
   expiresAt: number;
 }
 
-const EXPIRE_HOURS = 24 * 7; // 7天过期
+interface CompressedShareData {
+  v: 2;
+  palette: string[];
+  rle: number[];
+  gridWidth: number;
+  gridHeight: number;
+  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
+  createdAt: number;
+  expiresAt: number;
+}
+
+function compressGrid(grid: string[][]): { palette: string[]; rle: number[] } {
+  const colorToIdx = new Map<string, number>();
+  const palette: string[] = [];
+
+  const flat: number[] = [];
+  for (const row of grid) {
+    for (const color of row) {
+      let idx = colorToIdx.get(color);
+      if (idx === undefined) {
+        idx = palette.length;
+        palette.push(color);
+        colorToIdx.set(color, idx);
+      }
+      flat.push(idx);
+    }
+  }
+
+  const rle: number[] = [];
+  let i = 0;
+  while (i < flat.length) {
+    const val = flat[i];
+    let count = 1;
+    while (i + count < flat.length && flat[i + count] === val) count++;
+    rle.push(val, count);
+    i += count;
+  }
+
+  return { palette, rle };
+}
+
+function decompressGrid(palette: string[], rle: number[], width: number, height: number): string[][] {
+  const flat: string[] = [];
+  for (let i = 0; i < rle.length; i += 2) {
+    const color = palette[rle[i]];
+    const count = rle[i + 1];
+    for (let j = 0; j < count; j++) flat.push(color);
+  }
+
+  const grid: string[][] = [];
+  for (let r = 0; r < height; r++) {
+    grid.push(flat.slice(r * width, (r + 1) * width));
+  }
+  return grid;
+}
+
+const EXPIRE_HOURS = 24 * 7;
+const MAX_COMPRESSED_SIZE = 1024 * 1024;
 
 export async function saveToUpstash(
   grid: string[][],
@@ -26,29 +83,32 @@ export async function saveToUpstash(
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED'
 ): Promise<string | null> {
   try {
-    // 生成唯一 key
     const key = `bead:${Date.now()}:${Math.random().toString(36).substring(2, 9)}`;
+    const now = Date.now();
 
-    const shareData: ShareData = {
-      grid,
+    const { palette, rle } = compressGrid(grid);
+
+    const compressed: CompressedShareData = {
+      v: 2,
+      palette,
+      rle,
       gridWidth,
       gridHeight,
       pixelStyle,
-      createdAt: Date.now(),
-      expiresAt: Date.now() + EXPIRE_HOURS * 60 * 60 * 1000,
+      createdAt: now,
+      expiresAt: now + EXPIRE_HOURS * 60 * 60 * 1000,
     };
 
-    // 保存到 Redis
-    const dataStr = JSON.stringify(shareData);
+    const dataStr = JSON.stringify(compressed);
     const dataSize = new Blob([dataStr]).size;
-    
-    if (dataSize > 1024 * 1024) {
-      console.error('数据过大，超过 1MB 限制');
+
+    if (dataSize > MAX_COMPRESSED_SIZE) {
+      console.error(`压缩后仍超过 1MB 限制 (${(dataSize / 1024).toFixed(0)}KB)`);
       return null;
     }
 
     await redis.set(key, dataStr, {
-      ex: EXPIRE_HOURS * 60 * 60, // 秒
+      ex: EXPIRE_HOURS * 60 * 60,
     });
 
     return key;
@@ -60,19 +120,33 @@ export async function saveToUpstash(
 
 export async function loadFromUpstash(key: string): Promise<ShareData | null> {
   try {
-    const data = await redis.get<ShareData>(key);
+    const raw = await redis.get<any>(key);
+    if (!raw) return null;
 
-    if (!data) {
-      return null;
+    const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+    if (data.v === 2) {
+      const grid = decompressGrid(data.palette, data.rle, data.gridWidth, data.gridHeight);
+      const shareData: ShareData = {
+        grid,
+        gridWidth: data.gridWidth,
+        gridHeight: data.gridHeight,
+        pixelStyle: data.pixelStyle,
+        createdAt: data.createdAt,
+        expiresAt: data.expiresAt,
+      };
+      if (Date.now() > shareData.expiresAt) {
+        await redis.del(key);
+        return null;
+      }
+      return shareData;
     }
 
-    // 检查是否过期
     if (Date.now() > data.expiresAt) {
       await redis.del(key);
       return null;
     }
-
-    return data;
+    return data as ShareData;
   } catch (error) {
     console.error('从 Upstash 加载失败:', error);
     return null;
