@@ -108,6 +108,9 @@ const AppMain: React.FC = () => {
   const [exportShowGuideLines, setExportShowGuideLines] = useState(false);
   const [exportMirror, setExportMirror] = useState(false);
   const [exportSelectionOnly, setExportSelectionOnly] = useState(false);
+  const [exportPreviewUrl, setExportPreviewUrl] = useState<string | null>(null);
+  const [exportPreviewBlob, setExportPreviewBlob] = useState<Blob | null>(null);
+  const [exportPreviewName, setExportPreviewName] = useState('');
 
   const [materialGalleryOpen, setMaterialGalleryOpen] = useState(false);
   const [shareToGallery, setShareToGallery] = useState(false);
@@ -1022,22 +1025,11 @@ const AppMain: React.FC = () => {
     const fileName = exportSelectionOnly ? `pixel-bead-${exportWidth}x${exportHeight}-selection.png` : (exportMirror ? `pixel-bead-${gridWidth}x${gridHeight}-mirrored.png` : `pixel-bead-${gridWidth}x${gridHeight}.png`);
 
     const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'));
+    const url = URL.createObjectURL(blob);
 
-    if (navigator.share && navigator.canShare?.({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
-      try {
-        await navigator.share({ files: [new File([blob], fileName, { type: 'image/png' })] });
-      } catch (e: any) {
-        if (e.name !== 'AbortError') console.error('分享失败:', e);
-      }
-    } else {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-    
+    setExportPreviewUrl(url);
+    setExportPreviewBlob(blob);
+    setExportPreviewName(fileName);
     setExportModalOpen(false);
   }, [grid, gridWidth, gridHeight, exportPixelStyle, exportShowGuideLines, exportMirror, selectedColorSystem, exportSelectionOnly, selection]);
 
@@ -1048,31 +1040,15 @@ const AppMain: React.FC = () => {
     });
     const fileName = `share-${gridWidth}x${gridHeight}.png`;
     const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'));
-    const caption = generateShareCaption(gridWidth, gridHeight, getUniqueColors(grid).length);
+    const url = URL.createObjectURL(blob);
 
-    if (navigator.share && navigator.canShare?.({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
-      try {
-        await navigator.share({
-          files: [new File([blob], fileName, { type: 'image/png' })],
-          text: caption,
-        });
-      } catch (e: any) {
-        if (e.name !== 'AbortError') console.error('分享失败:', e);
-      }
-    } else {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(url);
-      try {
-        await navigator.clipboard.writeText(caption);
-        alert('分享图已下载！文案已复制到剪贴板 📋');
-      } catch {
-        alert('分享图已下载！\n\n以下文案可手动复制：\n\n' + caption);
-      }
-    }
+    const caption = generateShareCaption(gridWidth, gridHeight, getUniqueColors(grid).length);
+    try { await navigator.clipboard.writeText(caption); } catch {}
+
+    setExportPreviewUrl(url);
+    setExportPreviewBlob(blob);
+    setExportPreviewName(fileName);
+    setExportModalOpen(false);
   }, [grid, gridWidth, gridHeight, exportPixelStyle]);
 
   const baseBeadSize = 28;
@@ -2654,6 +2630,53 @@ const AppMain: React.FC = () => {
               生成小红书分享图
               <span className="text-[10px] font-medium opacity-80 ml-1">含水印 + 自动复制文案</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {exportPreviewUrl && (
+        <div className="fixed inset-0 bg-black/90 z-[1500] flex flex-col items-center justify-center p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg flex flex-col items-center gap-4">
+            <img
+              src={exportPreviewUrl}
+              alt="导出预览"
+              className="max-w-full max-h-[60vh] rounded-2xl shadow-2xl border-2 border-white/20 object-contain bg-white"
+            />
+            <p className="text-white/70 text-xs font-bold text-center">长按图片可保存到相册</p>
+            <div className="flex gap-3 w-full max-w-xs">
+              <button
+                onClick={async () => {
+                  if (exportPreviewBlob) {
+                    try {
+                      const file = new File([exportPreviewBlob], exportPreviewName, { type: 'image/png' });
+                      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+                        await navigator.share({ files: [file] });
+                        return;
+                      }
+                    } catch {}
+                    const a = document.createElement('a');
+                    a.href = exportPreviewUrl;
+                    a.download = exportPreviewName;
+                    a.click();
+                  }
+                }}
+                className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                分享
+              </button>
+              <button
+                onClick={() => {
+                  if (exportPreviewUrl) URL.revokeObjectURL(exportPreviewUrl);
+                  setExportPreviewUrl(null);
+                  setExportPreviewBlob(null);
+                  setExportPreviewName('');
+                }}
+                className="flex-1 py-3 bg-white/20 text-white rounded-2xl font-black text-sm active:scale-95 transition-all"
+              >
+                完成
+              </button>
+            </div>
           </div>
         </div>
       )}
