@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   ToolType, DEFAULT_COLORS, AIConfig, PixelStyle,
-  TOOLS_INFO, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES,
+  TOOLS_INFO, MOBILE_2D_DOCK_TOOLS, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES,
   ColorSystem, PaletteColor, PALETTE_PRESETS, Selection, BRUSH_SIZES, ToolInfo
 } from './types';
 import { generatePixelArtImage } from './services/aiService';
@@ -1561,12 +1561,18 @@ const AppMain: React.FC = () => {
                 查看快捷键
               </button>
             </div>
-            <div className="grid grid-cols-3 md:grid-cols-3 gap-2">
+            <p className="text-[9px] text-slate-500 leading-snug lg:hidden">
+              底部为快捷入口；侧栏含全部工具（直线、矩形、圆形等）
+            </p>
+            <div className="grid grid-cols-3 gap-2">
               {TOOLS_INFO.map(tool => (
                 <button
                   key={tool.type}
-                  onClick={() => setCurrentTool(tool.type)}
-                  className={`flex flex-col items-center gap-1 p-2 md:p-3 rounded-xl border-2 transition-all ${currentTool === tool.type ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-100'}`}
+                  onClick={() => {
+                    setCurrentTool(tool.type);
+                    setIsMobileLeftOpen(false);
+                  }}
+                  className={`flex flex-col items-center gap-1 p-2 md:p-3 rounded-xl border-2 transition-all touch-manipulation ${currentTool === tool.type ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-100'}`}
                   title={`${tool.name} (${tool.shortcut})`}
                 >
                   <span className="text-lg md:text-xl">{tool.icon}</span>
@@ -2064,7 +2070,7 @@ const AppMain: React.FC = () => {
             <div className="w-full h-full overflow-auto no-scrollbar bg-dots">
             {viewType === ViewType.TWO_D ? (
               <>
-                <div className="min-w-full min-h-full flex items-center justify-center p-2 md:p-40 pt-14 md:pt-8 pb-24 md:pb-8">
+                <div className="min-w-full min-h-full flex items-center justify-center p-2 md:p-40 pt-14 md:pt-8 max-lg:pb-[calc(var(--app-mobile-2d-bottom-chrome-height)+5.5rem)] md:pb-8">
                   <div
                     className={`relative ${joystickMove.x === 0 && joystickMove.y === 0 ? 'transition-transform duration-75' : ''}`}
                     style={{
@@ -2099,7 +2105,7 @@ const AppMain: React.FC = () => {
                      </div>
                   </div>
                 </div>
-                <div className="lg:hidden fixed bottom-[calc(var(--app-mobile-tab-bar-height)+0.75rem)] left-6 z-[50]">
+                <div className="lg:hidden fixed bottom-[calc(var(--app-mobile-2d-bottom-chrome-height)+0.75rem)] left-6 z-[50]">
                   <VirtualJoystick
                     type="move"
                     onMove={(x, y) => setJoystickMove({ x: -x, y: -y })}
@@ -2107,7 +2113,7 @@ const AppMain: React.FC = () => {
                     knobSize={36}
                   />
                 </div>
-                <div className="lg:hidden fixed bottom-[calc(var(--app-mobile-tab-bar-height)+0.75rem)] right-6 z-[50]">
+                <div className="lg:hidden fixed bottom-[calc(var(--app-mobile-2d-bottom-chrome-height)+0.75rem)] right-6 z-[50]">
                   <VirtualJoystick
                     type="zoom"
                     onZoom={(delta) => setJoystickZoom(delta)}
@@ -2149,7 +2155,13 @@ const AppMain: React.FC = () => {
                <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
            </div>
 
-           <div className="absolute bottom-[calc(11rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-3 z-[45] md:z-50 group">
+           <div
+             className={`absolute right-3 z-[45] md:z-50 group md:bottom-6 ${
+               viewType === ViewType.TWO_D
+                 ? 'max-lg:bottom-[calc(var(--app-mobile-2d-bottom-chrome-height)+4.5rem)]'
+                 : 'max-lg:bottom-[calc(11rem+env(safe-area-inset-bottom,0px))]'
+             }`}
+           >
              <button
                className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-95 peer"
              >
@@ -2169,8 +2181,42 @@ const AppMain: React.FC = () => {
 
         </main>
 
-        {/* Mobile bottom toolbar */}
+        {/* Mobile bottom: 2D 绘图快捷栏 + 全局操作栏 */}
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[70] bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          {viewType === ViewType.TWO_D && (
+            <div className="border-b border-slate-100 bg-gradient-to-b from-amber-50/40 to-slate-50/90 px-0.5 py-1">
+              <div className="flex items-stretch justify-between gap-0.5">
+                {MOBILE_2D_DOCK_TOOLS.map((tool) => {
+                  const isSmart = tool.type === ToolType.SMART_PENCIL;
+                  const active = currentTool === tool.type;
+                  return (
+                    <button
+                      key={tool.type}
+                      type="button"
+                      onClick={() => setCurrentTool(tool.type)}
+                      title={`${tool.name} (${tool.shortcut})`}
+                      className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg py-1 touch-manipulation transition-all active:scale-[0.97] ${
+                        isSmart ? 'flex-[1.2] min-w-[2.75rem]' : 'flex-1'
+                      } ${
+                        isSmart
+                          ? active
+                            ? 'bg-gradient-to-b from-amber-200 to-amber-100 text-amber-950 ring-2 ring-amber-400 shadow-sm'
+                            : 'bg-amber-100/90 text-amber-900 ring-1 ring-amber-300/70 shadow-[0_0_0_1px_rgba(251,191,36,0.35)]'
+                          : active
+                            ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-300/80'
+                            : 'text-slate-500 active:bg-slate-100'
+                      }`}
+                    >
+                      <span className={`leading-none ${isSmart ? 'text-lg' : 'text-base'}`}>{tool.icon}</span>
+                      <span className="text-[8px] font-black leading-tight truncate max-w-full px-0.5">
+                        {isSmart ? '智能画笔' : tool.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-around px-2 py-1.5">
             <button onClick={handleExportImage} className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
               <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>

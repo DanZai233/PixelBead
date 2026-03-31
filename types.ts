@@ -145,6 +145,23 @@ export const TOOLS_INFO: ToolInfo[] = [
   { type: ToolType.SELECT, name: '框选', icon: '⬚', shortcut: 'S', description: '框选区域进行复制、粘贴等操作' },
 ];
 
+/** 移动端 2D 画布底部快捷栏（与侧栏全量工具重复，便于快速切换；智能画笔优先展示） */
+export const MOBILE_2D_DOCK_TOOL_TYPES: ToolType[] = [
+  ToolType.SMART_PENCIL,
+  ToolType.PENCIL,
+  ToolType.ERASER,
+  ToolType.FILL,
+  ToolType.PICKER,
+  ToolType.HAND,
+  ToolType.SELECT,
+];
+
+export const MOBILE_2D_DOCK_TOOLS: ToolInfo[] = MOBILE_2D_DOCK_TOOL_TYPES.map((type) => {
+  const info = TOOLS_INFO.find((t) => t.type === type);
+  if (!info) throw new Error(`Missing tool ${type}`);
+  return info;
+});
+
 export const PIXEL_STYLES = [
   { value: PixelStyle.CIRCLE, name: '圆形', icon: '⚪' },
   { value: PixelStyle.SQUARE, name: '方形', icon: '⬜' },
