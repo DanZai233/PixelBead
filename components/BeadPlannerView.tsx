@@ -168,45 +168,49 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
       const fontSize = Math.max(8, Math.min(11, cellSize * 0.28));
       const showEvery = cellSize < 8 ? 10 : 5;
 
-      ctx.fillStyle = '#1e293b';
+      ctx.fillStyle = '#f1f5f9';
       ctx.fillRect(0, 0, rs, canvas.height);
       ctx.fillRect(0, 0, canvas.width, rs);
-      ctx.fillStyle = '#0f172a';
+      ctx.fillStyle = '#e2e8f0';
       ctx.fillRect(0, 0, rs, rs);
 
-      ctx.strokeStyle = '#334155';
+      ctx.strokeStyle = '#cbd5e1';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(rs, 0); ctx.lineTo(rs, canvas.height);
       ctx.moveTo(0, rs); ctx.lineTo(canvas.width, rs);
       ctx.stroke();
 
-      ctx.font = `600 ${fontSize}px system-ui, -apple-system, sans-serif`;
+      ctx.font = `700 ${fontSize}px system-ui, -apple-system, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
       for (let col = 0; col < gridWidth; col++) {
         const x = rs + col * cellSize;
-        const tickH = col % showEvery === 0 ? rs * 0.5 : col % 5 === 0 ? rs * 0.35 : rs * 0.18;
-        ctx.strokeStyle = col % showEvery === 0 ? '#64748b' : '#334155';
-        ctx.lineWidth = col % showEvery === 0 ? 1 : 0.5;
+        const isMajor = col % showEvery === 0;
+        const isMid = col % 5 === 0;
+        const tickH = isMajor ? rs * 0.55 : isMid ? rs * 0.38 : rs * 0.22;
+        ctx.strokeStyle = isMajor ? '#64748b' : isMid ? '#94a3b8' : '#cbd5e1';
+        ctx.lineWidth = isMajor ? 1.5 : 1;
         ctx.beginPath(); ctx.moveTo(x, rs); ctx.lineTo(x, rs - tickH); ctx.stroke();
-        if (col % showEvery === 0 && col > 0) {
-          ctx.fillStyle = '#94a3b8';
-          ctx.fillText(col.toString(), x, rs * 0.28);
+        if (isMajor && col > 0) {
+          ctx.fillStyle = '#475569';
+          ctx.fillText(col.toString(), x, rs * 0.25);
         }
       }
 
       for (let row = 0; row < gridHeight; row++) {
         const y = rs + row * cellSize;
-        const tickW = row % showEvery === 0 ? rs * 0.5 : row % 5 === 0 ? rs * 0.35 : rs * 0.18;
-        ctx.strokeStyle = row % showEvery === 0 ? '#64748b' : '#334155';
-        ctx.lineWidth = row % showEvery === 0 ? 1 : 0.5;
+        const isMajor = row % showEvery === 0;
+        const isMid = row % 5 === 0;
+        const tickW = isMajor ? rs * 0.55 : isMid ? rs * 0.38 : rs * 0.22;
+        ctx.strokeStyle = isMajor ? '#64748b' : isMid ? '#94a3b8' : '#cbd5e1';
+        ctx.lineWidth = isMajor ? 1.5 : 1;
         ctx.beginPath(); ctx.moveTo(rs, y); ctx.lineTo(rs - tickW, y); ctx.stroke();
-        if (row % showEvery === 0 && row > 0) {
+        if (isMajor && row > 0) {
           ctx.save();
-          ctx.fillStyle = '#94a3b8';
-          ctx.translate(rs * 0.28, y);
+          ctx.fillStyle = '#475569';
+          ctx.translate(rs * 0.25, y);
           ctx.rotate(-Math.PI / 2);
           ctx.fillText(row.toString(), 0, 0);
           ctx.restore();
