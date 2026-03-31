@@ -252,7 +252,7 @@ export const Bead3DViewer: React.FC<Bead3DViewerProps> = ({
   }, []);
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col relative">
       <div className="flex-1 overflow-hidden flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
         <div
           ref={containerRef}
@@ -277,76 +277,33 @@ export const Bead3DViewer: React.FC<Bead3DViewerProps> = ({
         </div>
       </div>
 
-      <div className="bg-white border-t border-slate-200 p-3 space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase text-slate-400">缩放</span>
-          <div className="flex items-center gap-2 flex-1 max-w-[200px]">
-            <button
-              onClick={() => setZoom3D(prev => Math.max(0.3, prev - 0.1))}
-              className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-black transition-all"
-            >
-              -
-            </button>
-            <input
-              type="range"
-              min="0.3"
-              max="3"
-              step="0.1"
-              value={zoom3D}
-              onChange={(e) => setZoom3D(parseFloat(e.target.value))}
-              className="flex-1 h-2 accent-indigo-600"
-            />
-            <button
-              onClick={() => setZoom3D(prev => Math.min(3, prev + 0.1))}
-              className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-black transition-all"
-            >
-              +
-            </button>
+      <div className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+4.5rem)] md:bottom-0 left-0 right-0 md:relative bg-white/95 md:bg-white backdrop-blur-md md:backdrop-blur-none border-t border-slate-200 px-3 py-2 md:p-3 z-10">
+        <div className="flex items-center gap-3 md:gap-0 md:flex-col md:space-y-3">
+          <div className="flex items-center gap-1.5 flex-1 md:w-full md:justify-between">
+            <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 hidden md:block">缩放</span>
+            <button onClick={() => setZoom3D(prev => Math.max(0.3, prev - 0.1))} className="w-7 h-7 md:w-8 md:h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-black transition-all text-xs touch-manipulation">-</button>
+            <input type="range" min="0.3" max="3" step="0.1" value={zoom3D} onChange={(e) => setZoom3D(parseFloat(e.target.value))} className="flex-1 md:max-w-[140px] h-2 accent-indigo-600 touch-manipulation" />
+            <button onClick={() => setZoom3D(prev => Math.min(3, prev + 0.1))} className="w-7 h-7 md:w-8 md:h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-black transition-all text-xs touch-manipulation">+</button>
+            <span className="w-10 text-center font-black text-indigo-600 text-[10px]">{Math.round(zoom3D * 100)}%</span>
           </div>
-          <span className="w-12 text-center font-black text-indigo-600">{Math.round(zoom3D * 100)}%</span>
-        </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase text-slate-400">层数控制</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onLayerCountChange(Math.max(1, layers - 1))}
-              className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-black transition-all"
-            >
-              -
-            </button>
-            <span className="w-12 text-center font-black text-slate-800">{layers}</span>
-            <button
-              onClick={() => onLayerCountChange(Math.min(20, layers + 1))}
-              className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-black transition-all"
-            >
-              +
-            </button>
+          <div className="h-5 w-px bg-slate-200 md:hidden"></div>
+
+          <div className="flex items-center gap-1.5 md:w-full md:justify-between">
+            <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 hidden md:block">层数</span>
+            <button onClick={() => onLayerCountChange(Math.max(1, layers - 1))} className="w-7 h-7 md:w-8 md:h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-black transition-all text-xs touch-manipulation">-</button>
+            <span className="w-6 text-center font-black text-slate-800 text-xs">{layers}</span>
+            <button onClick={() => onLayerCountChange(Math.min(20, layers + 1))} className="w-7 h-7 md:w-8 md:h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-black transition-all text-xs touch-manipulation">+</button>
+          </div>
+
+          <div className="h-5 w-px bg-slate-200 md:hidden"></div>
+
+          <div className="flex items-center gap-1 md:grid md:grid-cols-3 md:gap-2 md:w-full">
+            <button onClick={() => {targetRotationRef.current = { x: -25, y: -35 };}} className="px-2 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] md:text-[10px] font-black hover:bg-indigo-100 transition-all touch-manipulation">默认</button>
+            <button onClick={() => {targetRotationRef.current = { x: 0, y: 0 };}} className="px-2 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-[9px] md:text-[10px] font-black hover:bg-slate-100 transition-all touch-manipulation">俯视</button>
+            <button onClick={() => {targetRotationRef.current = { x: 90, y: 0 };}} className="px-2 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-[9px] md:text-[10px] font-black hover:bg-slate-100 transition-all touch-manipulation">侧视</button>
           </div>
         </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            onClick={() => {targetRotationRef.current = { x: -25, y: -35 };}}
-            className="px-2 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black hover:bg-indigo-100 transition-all"
-          >
-            默认视角
-          </button>
-          <button
-            onClick={() => {targetRotationRef.current = { x: 0, y: 0 };}}
-            className="px-2 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-[10px] font-black hover:bg-slate-100 transition-all"
-          >
-            俯视
-          </button>
-          <button
-            onClick={() => {targetRotationRef.current = { x: 90, y: 0 };}}
-            className="px-2 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-[10px] font-black hover:bg-slate-100 transition-all"
-          >
-            侧视
-          </button>
-        </div>
-
-        <p className="text-[9px] text-slate-400 text-center">拖拽旋转 | 滚轮/双指缩放</p>
       </div>
     </div>
   );

@@ -190,7 +190,7 @@ export const BeadSliceViewer: React.FC<BeadSliceViewerProps> = ({
   }, []);
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-50">
+    <div className="w-full h-full flex flex-col bg-slate-50 relative">
       <div className="flex-1 overflow-auto p-4 space-y-4">
         <div className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm">
           <span className="text-[10px] font-black uppercase text-slate-400">当前查看层级</span>
@@ -250,23 +250,13 @@ export const BeadSliceViewer: React.FC<BeadSliceViewerProps> = ({
         </div>
       </div>
 
-      <div className="bg-white border-t border-slate-200 p-3">
+      <div className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+4.5rem)] md:bottom-0 left-0 right-0 md:relative bg-white/95 md:bg-white backdrop-blur-md md:backdrop-blur-none border-t border-slate-200 px-3 py-2 md:p-3 z-10">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-black uppercase text-slate-400">总层数</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onLayerCountChange(Math.max(1, layers - 1))}
-              className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-black transition-all"
-            >
-              -
-            </button>
-            <span className="w-12 text-center font-black text-slate-800">{layers}</span>
-            <button
-              onClick={() => onLayerCountChange(Math.min(20, layers + 1))}
-              className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-black transition-all"
-            >
-              +
-            </button>
+          <div className="flex items-center gap-1.5 md:gap-2">
+            <button onClick={() => onLayerCountChange(Math.max(1, layers - 1))} className="w-7 h-7 md:w-8 md:h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-black transition-all text-xs touch-manipulation">-</button>
+            <span className="w-8 md:w-12 text-center font-black text-slate-800 text-xs">{layers}</span>
+            <button onClick={() => onLayerCountChange(Math.min(20, layers + 1))} className="w-7 h-7 md:w-8 md:h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-black transition-all text-xs touch-manipulation">+</button>
           </div>
         </div>
       </div>
