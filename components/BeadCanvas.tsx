@@ -67,6 +67,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   const baseBeadSize = 28;
   const lastTouchDrawRowRef = useRef<number | null>(null);
   const lastTouchDrawColRef = useRef<number | null>(null);
+  const pendingTouchDrawRef = useRef<{ row: number; col: number; bg: string | null } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [selectionStart, setSelectionStart] = useState<{ row: number; col: number } | null>(null);
@@ -406,7 +407,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         lastTouchDrawRowRef.current = row;
         lastTouchDrawColRef.current = col;
         const backgroundColor = getBackgroundColorAtPosition(row, col);
-        onPointerDown(row, col, backgroundColor);
+        pendingTouchDrawRef.current = { row, col, bg: backgroundColor };
       }
       return;
     }
@@ -459,6 +460,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       if (timeDiff > 200 || distance > 10) {
         if (!isTouchPanningRef.current) {
           isTouchPanningRef.current = true;
+          pendingTouchDrawRef.current = null;
         }
         e.preventDefault();
         onMiddleButtonDrag(deltaX, deltaY);
@@ -501,6 +503,11 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
 
     if (isDrawingRef.current && !isTouchPanningRef.current) {
       e.preventDefault();
+      if (pendingTouchDrawRef.current) {
+        const p = pendingTouchDrawRef.current;
+        onPointerDown(p.row, p.col, p.bg);
+        pendingTouchDrawRef.current = null;
+      }
       const { row, col } = getCellFromEvent(e);
       if (row >= 0 && col >= 0) {
         const backgroundColor = getBackgroundColorAtPosition(row, col);
@@ -511,6 +518,11 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (e.pointerType === 'touch') {
+      if (pendingTouchDrawRef.current && !isTouchPanningRef.current) {
+        const p = pendingTouchDrawRef.current;
+        onPointerDown(p.row, p.col, p.bg);
+      }
+      pendingTouchDrawRef.current = null;
       isTouchPanningRef.current = false;
       lastTouchDrawRowRef.current = null;
       lastTouchDrawColRef.current = null;
@@ -531,7 +543,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     lastTouchDrawRowRef.current = null;
     lastTouchDrawColRef.current = null;
     onPointerUp();
-  }, [onPointerUp, currentTool, selection, onSelectionChange]);
+  }, [onPointerDown, onPointerUp, currentTool, selection, onSelectionChange]);
 
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     if (e.ctrlKey) {
@@ -593,6 +605,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       isDrawingRef.current = false;
       isMiddleButtonDraggingRef.current = false;
       isTouchPanningRef.current = false;
+      pendingTouchDrawRef.current = null;
       lastTouchDrawRowRef.current = null;
       lastTouchDrawColRef.current = null;
     }

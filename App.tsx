@@ -1234,24 +1234,25 @@ const AppMain: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F1F5F9] text-slate-900 select-none overflow-hidden h-screen">
-      <header className="bg-white border-b border-slate-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between gap-2 z-[100] shadow-sm shrink-0 overflow-x-auto overflow-y-hidden no-scrollbar safe-area-top">
-        <div className="flex items-center gap-3">
+      <header className="bg-white border-b border-slate-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between gap-2 z-[100] shadow-sm shrink-0 overflow-x-auto overflow-y-hidden no-scrollbar">
+        <div className="flex items-center gap-2 md:gap-3">
           <button 
             onClick={() => setIsMobileLeftOpen(!isMobileLeftOpen)}
             className="lg:hidden p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg overflow-hidden">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg overflow-hidden shrink-0">
             <img src="/logo.jpg" alt="拼豆糕手 Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="font-black text-lg md:text-xl text-slate-800 italic hidden sm:block">拼豆糕手</h1>
+          <span className="text-[10px] font-bold text-slate-400 lg:hidden">{gridWidth}x{gridHeight}</span>
         </div>
         
         <div className="flex items-center gap-2 md:gap-4">
-          <div className="flex bg-slate-100 p-1 rounded-xl">
+          <div className="hidden lg:flex bg-slate-100 p-1 rounded-xl">
             {presetSizes.slice(0, 4).map(size => (
               <button
                 key={size}
@@ -1270,7 +1271,7 @@ const AppMain: React.FC = () => {
           </div>
 
           {showCustomInput && (
-            <div className="flex items-center gap-2 bg-white p-1 rounded-xl shadow-sm">
+            <div className="hidden lg:flex items-center gap-2 bg-white p-1 rounded-xl shadow-sm">
               <input
                 type="number"
                 min="4"
@@ -1278,7 +1279,7 @@ const AppMain: React.FC = () => {
                 value={customWidth}
                 onChange={(e) => setCustomWidth(e.target.value)}
                 placeholder="宽"
-                className="w-10 md:w-14 px-2 py-1.5 text-[10px] md:text-xs font-black text-center border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
+                className="w-14 px-2 py-1.5 text-xs font-black text-center border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
               />
               <span className="text-slate-400">x</span>
               <input
@@ -1288,11 +1289,11 @@ const AppMain: React.FC = () => {
                 value={customHeight}
                 onChange={(e) => setCustomHeight(e.target.value)}
                 placeholder="高"
-                className="w-10 md:w-14 px-2 py-1.5 text-[10px] md:text-xs font-black text-center border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
+                className="w-14 px-2 py-1.5 text-xs font-black text-center border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
               />
               <button
                 onClick={handleCustomSize}
-                className="px-2 md:px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] md:text-xs font-black hover:bg-indigo-700 transition-all"
+                className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-black hover:bg-indigo-700 transition-all"
               >
                 确定
               </button>
@@ -1330,7 +1331,7 @@ const AppMain: React.FC = () => {
             <button
               onClick={undo}
               disabled={!canUndo}
-              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
+              className="p-1.5 md:p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
               title="撤销 (Ctrl+Z)"
             >
               <svg className="w-4 h-4 md:w-5 md:h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1340,7 +1341,7 @@ const AppMain: React.FC = () => {
             <button
               onClick={redo}
               disabled={!canRedo}
-              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
+              className="p-1.5 md:p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
               title="重做 (Ctrl+Shift+Z)"
             >
               <svg className="w-4 h-4 md:w-5 md:h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1350,10 +1351,10 @@ const AppMain: React.FC = () => {
             <input type="file" accept=".json" className="hidden" ref={importFileRef} onChange={onImportFile} />
             <button 
               onClick={() => importFileRef.current?.click()}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2"
+              className="hidden md:flex bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-bold text-xs transition-all items-center gap-2"
               title="导入项目"
             >
-              <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
               <span className="hidden sm:inline">导入</span>
             </button>
             <button
@@ -1366,59 +1367,59 @@ const AppMain: React.FC = () => {
                 a.download = `pixel-bead-${gridWidth}x${gridHeight}.json`;
                 a.click();
               }}
-              className="bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2"
+              className="hidden md:flex bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded-xl font-bold text-xs transition-all items-center gap-2"
               title="导出项目"
             >
-              <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
               <span className="hidden sm:inline">导出</span>
             </button>
             <button
               onClick={handleExportImage}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 md:px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 flex items-center gap-2"
+              className="hidden md:flex bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 items-center gap-2"
               title="导出图片"
             >
-              <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               <span className="hidden sm:inline">导出图片</span>
             </button>
             <button
               onClick={handleShare}
               disabled={isSharing}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 md:px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="hidden md:flex bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               title="分享链接"
             >
-              <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
               <span className="hidden sm:inline">{isSharing ? '生成中...' : '分享'}</span>
             </button>
             <button
               onClick={() => setMaterialGalleryOpen(true)}
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-3 md:px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 flex items-center gap-2"
+              className="hidden md:flex bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 items-center gap-2"
               title="素材广场"
             >
-              <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
               <span className="hidden sm:inline">广场</span>
              </button>
              <button
                onClick={() => setIsPlannerViewOpen(true)}
-               className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-3 md:px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 flex items-center gap-2"
+               className="hidden md:flex bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 items-center gap-2"
                title="沉浸拼豆"
              >
-               <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                </svg>
                <span className="hidden sm:inline">拼豆</span>
              </button>
 
-             <div className="flex gap-1 md:gap-2">
+             <div className="hidden md:flex gap-2">
               <button
                 onClick={() => setIsShortcutsOpen(true)}
                 className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
                 title="快捷键说明"
               >
-                <svg className="w-4 h-4 md:w-5 md:h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </button>
@@ -1427,18 +1428,26 @@ const AppMain: React.FC = () => {
                 className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
                 title="AI 设置"
               >
-                <svg className="w-4 h-4 md:w-5 md:h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </button>
             </div>
+            <button
+              onClick={() => setIsMobileRightOpen(!isMobileRightOpen)}
+              className="lg:hidden p-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+            >
+              <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </button>
           </div>
         </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className={`fixed inset-y-0 left-0 z-[60] w-80 max-w-[85vw] bg-white border-r border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 space-y-4 md:space-y-6 flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out safe-area-top ${isMobileLeftOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
+        <aside className={`fixed bottom-0 left-0 z-[60] w-80 max-w-[85vw] bg-white border-r border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 space-y-4 md:space-y-6 flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out fixed-safe-top ${isMobileLeftOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
           <div className="flex justify-between items-center mb-2 lg:hidden">
             <h2 className="text-sm font-black text-slate-900">工具栏</h2>
             <button onClick={() => setIsMobileLeftOpen(false)} className="p-2 text-slate-400 hover:text-slate-600">
@@ -1448,16 +1457,35 @@ const AppMain: React.FC = () => {
             </button>
           </div>
 
-          <div className="space-y-3 md:hidden">
-            <div className="flex justify-between items-center">
-              <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">像素样式</h2>
+          <div className="space-y-3 lg:hidden">
+            <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">画布尺寸</h2>
+            <div className="flex flex-wrap gap-1.5">
+              {presetSizes.slice(0, 4).map(size => (
+                <button
+                  key={size}
+                  onClick={() => { handleResize(size); setIsMobileLeftOpen(false); }}
+                  className={`px-3 py-2 rounded-lg text-xs font-black transition-all touch-manipulation ${gridWidth === size && gridHeight === size ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500'}`}
+                >
+                  {size}²
+                </button>
+              ))}
             </div>
+            <div className="flex items-center gap-2">
+              <input type="number" min="4" max="200" value={customWidth} onChange={(e) => setCustomWidth(e.target.value)} placeholder="宽" className="flex-1 px-2 py-2 text-xs font-black text-center border border-slate-200 rounded-lg outline-none focus:border-indigo-500" />
+              <span className="text-slate-400 text-xs">x</span>
+              <input type="number" min="4" max="200" value={customHeight} onChange={(e) => setCustomHeight(e.target.value)} placeholder="高" className="flex-1 px-2 py-2 text-xs font-black text-center border border-slate-200 rounded-lg outline-none focus:border-indigo-500" />
+              <button onClick={() => { handleCustomSize(); setIsMobileLeftOpen(false); }} className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-black">确定</button>
+            </div>
+          </div>
+
+          <div className="space-y-3 md:hidden">
+            <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">像素样式</h2>
             <div className="flex bg-slate-100 p-1 rounded-xl">
               {PIXEL_STYLES.map(style => (
                 <button
                   key={style.value}
                   onClick={() => setPixelStyle(style.value)}
-                  className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 touch-manipulation ${pixelStyle === style.value ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                  className={`flex-1 px-2 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 touch-manipulation ${pixelStyle === style.value ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
                   title={style.name}
                 >
                   <span>{style.icon}</span>
@@ -1467,15 +1495,13 @@ const AppMain: React.FC = () => {
           </div>
 
           <div className="space-y-3 md:hidden">
-            <div className="flex justify-between items-center">
-              <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">视图模式</h2>
-            </div>
+            <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">视图模式</h2>
             <div className="flex bg-slate-100 p-1 rounded-xl">
               {VIEW_TYPES.map(view => (
                 <button
                   key={view.value}
                   onClick={() => setViewType(view.value)}
-                  className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 touch-manipulation ${viewType === view.value ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                  className={`flex-1 px-2 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 touch-manipulation ${viewType === view.value ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
                   title={view.name}
                 >
                   <span>{view.icon}</span>
@@ -1951,12 +1977,12 @@ const AppMain: React.FC = () => {
         </aside>
 
          <main className="flex-1 bg-[#EBEDF0] relative overflow-hidden">
-           <div className="absolute top-2 left-2 right-2 md:top-6 md:left-1/2 md:right-auto md:-translate-x-1/2 flex items-center justify-center gap-2 md:gap-4 bg-white/95 backdrop-blur-sm px-3 md:px-6 py-2 rounded-2xl md:rounded-full shadow-xl border border-white/50 z-[55] md:z-50 md:max-w-fit">
-            <button onClick={() => setZoom(z => Math.max(10, z - 5))} className="p-1.5 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-lg min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation">－</button>
-            <input type="range" min="10" max="300" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} className="w-16 md:w-40 h-3 accent-indigo-600 touch-manipulation flex-1 md:flex-initial" />
-            <button onClick={() => setZoom(z => Math.min(400, z + 5))} className="p-1.5 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-lg min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation">＋</button>
-            <span className="text-[10px] font-black w-10 md:w-12 text-slate-500 text-center shrink-0">{zoom}%</span>
-            <div className="h-4 w-px bg-slate-200 hidden md:block"></div>
+           <div className="absolute top-2 left-2 right-2 md:top-6 md:left-1/2 md:right-auto md:-translate-x-1/2 flex items-center justify-center gap-1 md:gap-4 bg-white/95 backdrop-blur-sm px-2 md:px-6 py-1.5 md:py-2 rounded-2xl md:rounded-full shadow-xl border border-white/50 z-[55] md:z-50 md:max-w-fit">
+            <button onClick={() => setZoom(z => Math.max(10, z - 5))} className="p-1 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-base md:text-lg min-w-[28px] min-h-[28px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center touch-manipulation">－</button>
+            <input type="range" min="10" max="300" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} className="w-12 md:w-40 h-3 accent-indigo-600 touch-manipulation flex-1 md:flex-initial" />
+            <button onClick={() => setZoom(z => Math.min(400, z + 5))} className="p-1 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-base md:text-lg min-w-[28px] min-h-[28px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center touch-manipulation">＋</button>
+            <span className="text-[9px] md:text-[10px] font-black w-8 md:w-12 text-slate-500 text-center shrink-0">{zoom}%</span>
+            <div className="h-4 w-px bg-slate-200"></div>
             <button 
               onClick={resetGrid}
               className="text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg text-slate-400 hover:text-red-500 touch-manipulation hidden md:block"
@@ -1965,22 +1991,21 @@ const AppMain: React.FC = () => {
               清空
             </button>
             <div className="h-4 w-px bg-slate-200 hidden md:block"></div>
-            <button onClick={() => setShowGridLines(!showGridLines)} className={`text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg touch-manipulation ${showGridLines ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
+            <button onClick={() => setShowGridLines(!showGridLines)} className={`text-[9px] md:text-[10px] font-black uppercase px-1.5 md:px-3 py-1 md:py-1.5 rounded-lg touch-manipulation ${showGridLines ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
               网格
             </button>
-            <button onClick={() => setShowRuler(!showRuler)} className={`text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg touch-manipulation ${showRuler ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
+            <button onClick={() => setShowRuler(!showRuler)} className={`text-[9px] md:text-[10px] font-black uppercase px-1.5 md:px-3 py-1 md:py-1.5 rounded-lg touch-manipulation hidden md:block ${showRuler ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
               标尺
             </button>
-            <button onClick={() => setShowGuideLines(!showGuideLines)} className={`text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg touch-manipulation ${showGuideLines ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
+            <button onClick={() => setShowGuideLines(!showGuideLines)} className={`text-[9px] md:text-[10px] font-black uppercase px-1.5 md:px-3 py-1 md:py-1.5 rounded-lg touch-manipulation ${showGuideLines ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400'}`}>
               参考
             </button>
-            <span className="md:hidden text-[9px] text-slate-400 ml-1">双指缩放/拖动</span>
           </div>
 
             <div className="w-full h-full overflow-auto no-scrollbar bg-dots">
             {viewType === ViewType.TWO_D ? (
               <>
-                <div className="min-w-full min-h-full flex items-center justify-center p-4 md:p-40 pt-16 md:pt-8">
+                <div className="min-w-full min-h-full flex items-center justify-center p-2 md:p-40 pt-14 md:pt-8 pb-24 md:pb-8">
                   <div
                     className={`relative ${joystickMove.x === 0 && joystickMove.y === 0 ? 'transition-transform duration-75' : ''}`}
                     style={{
@@ -2015,20 +2040,20 @@ const AppMain: React.FC = () => {
                      </div>
                   </div>
                 </div>
-                <div className="lg:hidden fixed bottom-[8.5rem] left-20 z-[50] safe-area-bottom">
+                <div className="lg:hidden fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-6 z-[50]">
                   <VirtualJoystick
                     type="move"
                     onMove={(x, y) => setJoystickMove({ x: -x, y: -y })}
-                    size={80}
-                    knobSize={40}
+                    size={72}
+                    knobSize={36}
                   />
                 </div>
-                <div className="lg:hidden fixed bottom-[8.5rem] right-20 z-[50] safe-area-bottom">
+                <div className="lg:hidden fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] right-6 z-[50]">
                   <VirtualJoystick
                     type="zoom"
                     onZoom={(delta) => setJoystickZoom(delta)}
-                    size={80}
-                    knobSize={40}
+                    size={72}
+                    knobSize={36}
                   />
                 </div>
               </>
@@ -2059,17 +2084,17 @@ const AppMain: React.FC = () => {
             ) : null}
           </div>
 
-           <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-4 right-20 md:left-1/2 md:right-auto md:-translate-x-1/2 md:transform bg-slate-900/90 backdrop-blur text-white px-4 md:px-8 py-2 md:py-3 rounded-2xl shadow-2xl flex gap-4 md:gap-10 text-[9px] md:text-[10px] font-black tracking-widest z-[45] md:z-50 max-w-fit md:max-w-none">
+           <div className="hidden md:flex absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur text-white px-8 py-3 rounded-2xl shadow-2xl gap-10 text-[10px] font-black tracking-widest z-50">
                <div className="flex flex-col"><span className="text-slate-500 mb-0.5">尺寸</span>{gridWidth}x{gridHeight}</div>
                <div className="flex flex-col"><span className="text-slate-500 mb-0.5">总数</span>{gridWidth * gridHeight}</div>
                <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
-             </div>
+           </div>
 
-           <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-4 z-[45] md:z-50 group">
+           <div className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-4 z-[45] md:z-50 group">
              <button
-               className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-95 peer"
+               className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-95 peer"
              >
-               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                </svg>
              </button>
@@ -2083,17 +2108,35 @@ const AppMain: React.FC = () => {
              </div>
            </div>
 
-           <button
-             onClick={() => setIsMobileRightOpen(!isMobileRightOpen)}
-             className="lg:hidden fixed right-20 z-40 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center touch-manipulation safe-area-bottom"
-           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
         </main>
 
-         <aside className={`fixed inset-y-0 right-0 z-[60] w-80 max-w-[85vw] bg-white border-l border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 shrink-0 transform transition-transform duration-300 ease-in-out safe-area-top ${isMobileRightOpen ? 'translate-x-0' : 'translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
+        {/* Mobile bottom toolbar */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[70] bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <div className="flex items-center justify-around px-2 py-1.5">
+            <button onClick={handleExportImage} className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+              <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span className="text-[9px] font-bold text-slate-600">导出</span>
+            </button>
+            <button onClick={handleShare} disabled={isSharing} className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation disabled:opacity-50">
+              <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+              <span className="text-[9px] font-bold text-slate-600">{isSharing ? '生成中' : '分享'}</span>
+            </button>
+            <button onClick={() => setMaterialGalleryOpen(true)} className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+              <span className="text-[9px] font-bold text-slate-600">广场</span>
+            </button>
+            <button onClick={() => setIsPlannerViewOpen(true)} className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+              <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span className="text-[9px] font-bold text-slate-600">拼豆</span>
+            </button>
+            <button onClick={() => setIsSettingsOpen(true)} className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+              <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              <span className="text-[9px] font-bold text-slate-600">设置</span>
+            </button>
+          </div>
+        </div>
+
+         <aside className={`fixed bottom-0 right-0 z-[60] w-80 max-w-[85vw] bg-white border-l border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 shrink-0 transform transition-transform duration-300 ease-in-out fixed-safe-top ${isMobileRightOpen ? 'translate-x-0' : 'translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
           <div className="flex justify-between items-center mb-2 lg:hidden">
             <h2 className="text-sm font-black text-slate-900">颜色统计</h2>
             <button onClick={() => setIsMobileRightOpen(false)} className="p-2 text-slate-400 hover:text-slate-600">
