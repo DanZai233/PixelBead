@@ -48,27 +48,43 @@ const App: React.FC = () => {
   return <AppMain />;
 };
 
+const SAVE_KEY = 'pixelbead_autosave';
+
+function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: number; pixelStyle: PixelStyle; selectedColor: string; zoom: number } | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (data.grid && data.gridWidth && data.gridHeight && data.grid.length === data.gridHeight && data.grid[0]?.length === data.gridWidth) {
+      return data;
+    }
+  } catch {}
+  return null;
+}
+
 const AppMain: React.FC = () => {
-  const [gridWidth, setGridWidth] = useState(32);
-  const [gridHeight, setGridHeight] = useState(32);
+  const saved = useMemo(() => loadSavedCanvas(), []);
+
+  const [gridWidth, setGridWidth] = useState(saved?.gridWidth ?? 32);
+  const [gridHeight, setGridHeight] = useState(saved?.gridHeight ?? 32);
   const [customWidth, setCustomWidth] = useState('');
   const [customHeight, setCustomHeight] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [grid, setGrid] = useState<string[][]>(() => 
-    Array(32).fill(null).map(() => Array(32).fill('#FFFFFF'))
+    saved?.grid ?? Array(32).fill(null).map(() => Array(32).fill('#FFFFFF'))
   );
   const [backgroundImage, setBackgroundImage] = useState<{ src: string; x: number; y: number; scale: number; opacity: number } | null>(null);
   const [selectedLayer, setSelectedLayer] = useState<'bead' | 'background'>('bead');
-  const [selectedColor, setSelectedColor] = useState(DEFAULT_COLORS[0]);
+  const [selectedColor, setSelectedColor] = useState(saved?.selectedColor ?? DEFAULT_COLORS[0]);
   const [currentTool, setCurrentTool] = useState<ToolType>(ToolType.PENCIL);
-  const [pixelStyle, setPixelStyle] = useState<PixelStyle>(PixelStyle.SQUARE);
+  const [pixelStyle, setPixelStyle] = useState<PixelStyle>(saved?.pixelStyle ?? PixelStyle.SQUARE);
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [aiReferenceImage, setAiReferenceImage] = useState<string | null>(null);
   const [aiGeneratedImage, setAiGeneratedImage] = useState<string | null>(null);
   const [showGridLines, setShowGridLines] = useState(true);
-  const [zoom, setZoom] = useState(80);
+  const [zoom, setZoom] = useState(saved?.zoom ?? 80);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -147,6 +163,17 @@ const AppMain: React.FC = () => {
   useEffect(() => {
     gridRef.current = grid;
   }, [grid]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify({
+          grid, gridWidth, gridHeight, pixelStyle, selectedColor, zoom,
+        }));
+      } catch {}
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [grid, gridWidth, gridHeight, pixelStyle, selectedColor, zoom]);
 
   const canUndo = undoStackRef.current.length > 0;
   const canRedo = redoStackRef.current.length > 0;
@@ -1981,10 +2008,17 @@ const AppMain: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-auto pt-4 space-y-0">
+          <div className="mt-auto pt-4 space-y-2">
+            <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">自动保存</span>
+                <span className="text-[9px] font-bold text-emerald-500">已启用</span>
+              </div>
+              <p className="text-[9px] text-slate-400">画布会自动保存，下次打开自动恢复</p>
+            </div>
             <button
               onClick={resetGrid}
-              className="w-full py-3 md:py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-all"
+              className="w-full py-3 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-all"
             >
               清空当前画布
             </button>
