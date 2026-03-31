@@ -31,7 +31,6 @@ npx vercel
 
 在 Vercel 项目设置中，你可以配置以下环境变量（可选）：
 
-- `OPENAI_API_KEY` - OpenAI API 密钥
 - `OPENROUTER_API_KEY` - OpenRouter API 密钥
 - `OPENROUTER_BASE_URL` - OpenRouter 基础 URL（默认: https://openrouter.ai/api/v1）
 - `DEEPSEEK_API_KEY` - DeepSeek API 密钥
@@ -44,8 +43,7 @@ npx vercel
 
 ### AI 模型支持
 
-- ✅ **OpenAI** - GPT-4o, GPT-4o Mini, GPT-4 Turbo
-- ✅ **OpenRouter** - 支持多个模型（GPT-4o, Claude 3.5, Gemini 等）
+- ✅ **OpenRouter** - 支持图像输出模型（如 FLUX、Gemini 图像等）
 - ✅ **DeepSeek** - DeepSeek Chat, DeepSeek Coder
 - ✅ **火山引擎** - Doubao Pro, Doubao Lite
 - ✅ **Google Gemini** - Gemini 2.0 Flash, Gemini 1.5 Pro
@@ -87,13 +85,10 @@ npm run preview
 
 - **框架**: React 19 + TypeScript
 - **构建工具**: Vite 6
-- **AI SDK**: OpenAI, Google GenAI
+- **AI 接入**: Gemini、OpenRouter、火山引擎等（用户自配 Key）
 - **部署平台**: Vercel
 
 ## 获取 API Key
-
-### OpenAI
-访问 https://platform.openai.com/api-keys
 
 ### OpenRouter
 访问 https://openrouter.ai/keys

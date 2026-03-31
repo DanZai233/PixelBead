@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
-  ToolType, DEFAULT_COLORS, AIConfig, PixelStyle,
+  ToolType, DEFAULT_COLORS, AIConfig, AIProvider, AI_MODELS, DEFAULT_ENDPOINTS, PixelStyle,
   TOOLS_INFO, MOBILE_2D_DOCK_TOOLS, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES,
   ColorSystem, PaletteColor, PALETTE_PRESETS, Selection, BRUSH_SIZES, ToolInfo
 } from './types';
@@ -281,7 +281,21 @@ const AppMain: React.FC = () => {
     const savedConfig = localStorage.getItem('aiConfig');
     if (savedConfig) {
       try {
-        setAiConfig(JSON.parse(savedConfig));
+        const parsed = JSON.parse(savedConfig) as Record<string, unknown>;
+        if (parsed.provider === 'OPENAI') {
+          const migrated: AIConfig = {
+            provider: AIProvider.OPENROUTER,
+            apiKey: String(parsed.apiKey ?? ''),
+            model: AI_MODELS[AIProvider.OPENROUTER][0]?.id,
+            baseUrl: parsed.baseUrl as string | undefined,
+            endpoint: DEFAULT_ENDPOINTS[AIProvider.OPENROUTER],
+            imageUrlModel: undefined,
+          };
+          localStorage.setItem('aiConfig', JSON.stringify(migrated));
+          setAiConfig(migrated);
+        } else {
+          setAiConfig(parsed as unknown as AIConfig);
+        }
       } catch (e) {
         console.error('Failed to parse saved AI config');
       }

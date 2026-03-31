@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="拼豆糕手 — 用户支持与帮助">
+  <title>拼豆糕手 · 用户支持</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #4f46e5;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 2rem 1.25rem 3rem;
+    }
+    .wrap { max-width: 42rem; margin: 0 auto; }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.5rem;
+    }
+    .lead { color: var(--muted); margin: 0 0 2rem; font-size: 1rem; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    h2 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin: 0 0 0.75rem;
+      font-weight: 700;
+    }
+    ul { margin: 0; padding-left: 1.25rem; }
+    li { margin-bottom: 0.35rem; }
+    a {
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    .btn {
+      display: inline-block;
+      margin-top: 0.75rem;
+      padding: 0.65rem 1.1rem;
+      background: var(--accent);
+      color: #fff !important;
+      border-radius: 0.75rem;
+      font-size: 0.9rem;
+      text-decoration: none !important;
+    }
+    .btn:hover { filter: brightness(1.05); }
+    footer {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>拼豆糕手 · 用户支持</h1>
+    <p class="lead">感谢您使用拼豆糕手。若遇到问题或有功能建议，可通过以下方式联系我们，我们会尽快查看并回复。</p>
+
+    <section>
+      <h2>在线使用</h2>
+      <p style="margin:0 0 0.75rem">网页版编辑器：</p>
+      <a class="btn" href="https://pindou.danzaii.cn/">打开拼豆糕手</a>
+    </section>
+
+    <section>
+      <h2>提交问题与反馈</h2>
+      <p style="margin:0 0 0.75rem">请在 GitHub 仓库的 Issues 中描述问题（含设备型号、系统版本、复现步骤），便于我们跟进。</p>
+      <a class="btn" href="https://github.com/DanZai233/PixelBead/issues">前往 GitHub Issues</a>
+    </section>
+
+    <section>
+      <h2>常见问题</h2>
+      <ul>
+        <li><strong>AI 生成失败</strong>：请在应用内「AI 设置」中检查 API Key 与所选服务商是否支持图像生成，并确认网络可访问对应 API。</li>
+        <li><strong>分享链接打不开</strong>：分享数据为短期云端缓存，若已过期需重新生成分享链接。</li>
+        <li><strong>素材广场无内容</strong>：素材功能依赖线上服务，请确认已连接互联网；若仍异常，欢迎通过 Issues 反馈。</li>
+      </ul>
+    </section>
+
+    <footer>
+      本页面用于 App Store「支持 URL」要求。应用名称：拼豆糕手（PixelBead Studio）。
+    </footer>
+  </div>
+</body>
+</html>

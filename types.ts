@@ -67,7 +67,6 @@ export interface ToolInfo {
 }
 
 export enum AIProvider {
-  OPENAI = 'OPENAI',
   OPENROUTER = 'OPENROUTER',
   DEEPSEEK = 'DEEPSEEK',
   VOLCENGINE = 'VOLCENGINE',
@@ -93,17 +92,10 @@ export const DEFAULT_COLORS: ColorHex[] = [
 ];
 
 export const AI_MODELS = {
-  [AIProvider.OPENAI]: [
-    { id: 'gpt-4o', name: 'GPT-4o' },
-    { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
-    { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
-    { id: 'dall-e-3', name: 'DALL-E 3', isImageModel: true },
-  ],
   [AIProvider.OPENROUTER]: [
-    { id: 'openai/gpt-4o', name: 'GPT-4o (via OpenRouter)' },
-    { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
-    { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5' },
-    { id: 'openai/dall-e-3', name: 'DALL-E 3 (via OpenRouter)', isImageModel: true },
+    { id: 'black-forest-labs/flux.2-pro', name: 'FLUX 2 Pro', isImageModel: true },
+    { id: 'google/gemini-2.5-flash-image', name: 'Gemini 2.5 Flash 图像', isImageModel: true },
+    { id: 'sourceful/riverflow-v2-standard-preview', name: 'Riverflow 标准预览', isImageModel: true },
   ],
   [AIProvider.DEEPSEEK]: [
     { id: 'deepseek-chat', name: 'DeepSeek Chat' },
@@ -124,7 +116,6 @@ export const AI_MODELS = {
 };
 
 export const DEFAULT_ENDPOINTS = {
-  [AIProvider.OPENAI]: 'https://api.openai.com/v1',
   [AIProvider.OPENROUTER]: 'https://openrouter.ai/api/v1',
   [AIProvider.DEEPSEEK]: 'https://api.deepseek.com/v1',
   [AIProvider.VOLCENGINE]: 'https://ark.cn-beijing.volces.com/api/v3',

@@ -26,7 +26,7 @@
 【AI 智能生成】
 - 输入文字描述，AI 一键生成像素画图纸
 - 上传参考图片，AI 理解画面内容并生成
-- 支持 OpenAI、Google Gemini、DeepSeek 等多家 AI 模型
+- 支持 Google Gemini、OpenRouter（如 FLUX 等图像模型）、火山引擎等多种 AI 接入
 
 【图片转拼豆】
 - 上传照片自动转换为拼豆像素画
@@ -74,7 +74,7 @@
 v1.0.0
 - 全新上线！
 - 支持 4x4 到 200x200 任意尺寸画布
-- AI 像素画生成（支持 OpenAI、Gemini、DeepSeek 等）
+- AI 像素画生成（支持 Gemini、OpenRouter、火山引擎等）
 - 照片转拼豆图纸，智能颜色映射
 - 五大品牌拼豆色号系统
 - 沉浸拼豆模式，专注创作
@@ -171,9 +171,17 @@ https://github.com/DanZai233/PixelBead/issues
 
 ---
 
+## 支持 URL（Support URL）
+
+- 在 App Store Connect 中填写：**https://pindou.danzaii.cn/support**
+- 部署后该地址会展示用户支持说明、常见问题与 GitHub Issues 反馈入口（见仓库内 `public/support.html` 与 `vercel.json` 的 `/support` 重写）
+
+---
+
 ## 审核注意事项
 
 1. **Guideline 4.2 (Minimum Functionality)**: 本应用是功能丰富的设计工具（画布编辑、AI 生成、颜色系统、导出等），不是简单的网页包装
 2. **AI 功能**: 需要用户自行配置 API Key，审核时可以跳过 AI 功能测试，或准备一个测试用 API Key 在审核备注中提供
 3. **登录**: 本应用无需登录即可使用所有核心功能
-4. **审核备注（Review Notes）**: 建议填写 "本应用是一款拼豆（Perler Beads）像素画设计工具。所有核心功能无需登录即可使用。AI 生成功能需要用户自行配置 API Key（可选功能）。"
+4. **中国区合规（Guideline 5）**: 应用与上架文案中已移除未获许可的深度合成相关品牌接入；AI 为可选，由用户自行配置合规服务商
+5. **审核备注（Review Notes）**: 建议说明「Support URL 已指向 https://pindou.danzaii.cn/support；中国区不提供未许可的境外生成式 AI 品牌接入；AI 为可选且由用户自配 Key」

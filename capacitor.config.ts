@@ -13,7 +13,8 @@ const config: CapacitorConfig = {
     allowNavigation: [
       '*.upstash.io',
       'generativelanguage.googleapis.com',
-      'api.openai.com',
+      'openrouter.ai',
+      '*.openrouter.ai',
       '*.vercel.app',
       'pindou.danzaii.cn',
     ],

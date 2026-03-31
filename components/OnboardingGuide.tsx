@@ -141,7 +141,7 @@ const steps: Step[] = [
             <span className="text-lg">🤖</span>
             <div>
               <p className="text-sm font-bold text-slate-800">AI 一键生成</p>
-              <p className="text-xs text-slate-500">输入文字描述（如「一只可爱的小猫」），AI 自动生成拼豆像素画。支持 OpenAI、Gemini、DeepSeek 等多个模型。</p>
+              <p className="text-xs text-slate-500">输入文字描述（如「一只可爱的小猫」），AI 自动生成拼豆像素画。支持 Gemini、OpenRouter、火山引擎等多种接入方式。</p>
             </div>
           </div>
           <div className="flex gap-3 items-start">

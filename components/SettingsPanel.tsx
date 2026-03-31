@@ -14,10 +14,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onSave,
   currentConfig,
 }) => {
-  const [provider, setProvider] = useState<AIProvider>(currentConfig?.provider || AIProvider.OPENAI);
+  const [provider, setProvider] = useState<AIProvider>(currentConfig?.provider || AIProvider.GEMINI);
   const [apiKey, setApiKey] = useState(currentConfig?.apiKey || '');
-  const [model, setModel] = useState(currentConfig?.model || AI_MODELS[AIProvider.OPENAI][0]?.id);
-  const [endpoint, setEndpoint] = useState(currentConfig?.endpoint || DEFAULT_ENDPOINTS[AIProvider.OPENAI]);
+  const [model, setModel] = useState(currentConfig?.model || AI_MODELS[AIProvider.GEMINI][0]?.id);
+  const [endpoint, setEndpoint] = useState(currentConfig?.endpoint || DEFAULT_ENDPOINTS[AIProvider.GEMINI]);
   const [imageUrlModel, setImageUrlModel] = useState(currentConfig?.imageUrlModel || '');
   const [showApiKey, setShowApiKey] = useState(false);
 
@@ -141,9 +141,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <p className="text-[10px] text-slate-400">
                 {provider === AIProvider.VOLCENGINE && '火山引擎接入点：https://ark.cn-beijing.volces.com/api/v3'}
                 {provider === AIProvider.DEEPSEEK && 'DeepSeek 不支持图像生成，推荐使用火山引擎 Seedream 模型'}
-                {provider === AIProvider.OPENAI && 'OpenAI 接入点：https://api.openai.com/v1'}
                 {provider === AIProvider.OPENROUTER && 'OpenRouter 接入点：https://openrouter.ai/api/v1'}
-                {provider === AIProvider.CUSTOM && '自定义服务接入点（需兼容 OpenAI API 格式）'}
+                {provider === AIProvider.CUSTOM && '自定义服务接入点（需兼容聊天补全 + 图像生成接口）'}
               </p>
             </div>
           )}
@@ -180,14 +179,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <p className="text-[10px] text-slate-400">
                 {provider === AIProvider.VOLCENGINE && '火山引擎图像模型：doubao-seedream-4-5-251128（推荐）'}
                 {provider === AIProvider.DEEPSEEK && 'DeepSeek 不支持图像生成'}
-                {provider === AIProvider.OPENAI && 'OpenAI 文本模型（用于触发图像生成）：gpt-4o'}
-                {provider === AIProvider.OPENROUTER && 'OpenRouter 图像生成模型：openai/dall-e-3'}
+                {provider === AIProvider.OPENROUTER &&
+                  'OpenRouter 预设为支持图像输出的模型（如 FLUX、Gemini 图像）；也可在下方覆盖模型 ID'}
                 {provider === AIProvider.CUSTOM && '请根据服务商文档填写模型名称'}
               </p>
             </div>
           </div>
 
-          {provider !== AIProvider.GEMINI && (
+          {provider !== AIProvider.GEMINI && provider !== AIProvider.OPENROUTER && (
             <div>
               <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
                 图像生成模型 (可选，如不填则使用聊天模型)
@@ -196,7 +195,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 type="text"
                 value={imageUrlModel}
                 onChange={(e) => setImageUrlModel(e.target.value)}
-                placeholder="例如: dall-e-3, stable-diffusion-xl"
+                placeholder="例如: 服务商文档中的图像模型 ID"
                 className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium focus:border-indigo-500 outline-none"
               />
               <p className="text-[10px] text-slate-400 mt-1">
@@ -210,7 +209,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <h3 className="font-bold text-amber-800 text-sm mb-2">火山引擎注意事项</h3>
               <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
                 <li>火山引擎图像生成需要至少 2048x2048 像素（2K）</li>
-                <li>推荐使用 OpenAI、OpenRouter 或 Gemini 服务商</li>
+                <li>推荐使用 OpenRouter、Gemini 或国内合规图像 API</li>
                 <li>如果必须使用火山引擎，请耐心等待较长时间</li>
                 <li>API Key 格式：Bearer Token</li>
               </ul>
@@ -222,7 +221,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <h3 className="font-bold text-amber-800 text-sm mb-2">DeepSeek 注意事项</h3>
               <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
                 <li>DeepSeek 仅支持文本模型，不支持图像生成</li>
-                <li>请使用 OpenAI、OpenRouter 或 Gemini</li>
+                <li>请使用 OpenRouter、Gemini 或火山引擎 Seedream</li>
                 <li>或使用火山引擎的 doubao-seedream 模型</li>
               </ul>
             </div>
@@ -232,7 +231,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
               <h3 className="font-bold text-amber-800 text-sm mb-2">自定义接入说明</h3>
               <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
-                <li>确保你的服务商兼容 OpenAI API 格式</li>
+                <li>确保你的服务商提供兼容的聊天补全与图像生成接口</li>
                 <li>API 接入点需要包含完整路径，如：https://api.example.com/v1</li>
                 <li>图像生成模型请填写对应的模型 ID</li>
               </ul>
@@ -261,7 +260,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
 function getProviderName(provider: AIProvider): string {
   const names: Record<AIProvider, string> = {
-    [AIProvider.OPENAI]: 'OpenAI',
     [AIProvider.OPENROUTER]: 'OpenRouter',
     [AIProvider.DEEPSEEK]: 'DeepSeek',
     [AIProvider.VOLCENGINE]: '火山引擎',

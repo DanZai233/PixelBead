@@ -90,13 +90,11 @@
 ### 🤖 AI 模型支持
 
 #### 当前支持的模型提供商
-- ✅ **OpenAI** - GPT-4o, GPT-4o Mini, GPT-4 Turbo
-- ✅ **OpenRouter** - 支持多个模型（GPT-4o, Claude 3.5, Gemini 等）
-- ✅ **DeepSeek** - DeepSeek Chat, DeepSeek Coder
-- ✅ **火山引擎** - Doubao Pro, Doubao Lite
-- ✅ **Google Gemini** - Gemini 2.0 Flash, Gemini 1.5 Pro
-- ✅ **Anthropic Claude** - Claude 3.5 Sonnet, Claude 3.5 Haiku（通过 OpenRouter）
-- ✅ **xAI Grok** - Grok-2（通过 OpenRouter）
+- ✅ **OpenRouter** - 支持图像输出模型（如 FLUX、Gemini 图像等，见应用内预设）
+- ✅ **DeepSeek** - DeepSeek Chat, DeepSeek Coder（文本，应用内图像生成需换其他服务商）
+- ✅ **火山引擎** - Doubao Seedream 等图像模型
+- ✅ **Google Gemini** - Gemini 2.0 Flash、Gemini 1.5 Pro 等（图像生成）
+- ✅ **自定义接入** - 兼容「聊天补全触发工具调用 + /images/generations」的 API
 
 #### 如何使用 AI 功能
 1. 点击右上角 ⚙️ 设置按钮
@@ -209,7 +207,6 @@ npm run cap:sync    # 等价于 npm run build && npx cap sync ios
 
 在 Vercel 项目设置中，你可以配置以下环境变量：
 
-- `OPENAI_API_KEY` - OpenAI API 密钥
 - `OPENROUTER_API_KEY` - OpenRouter API 密钥
 - `OPENROUTER_BASE_URL` - OpenRouter 基础 URL（默认: https://openrouter.ai/api/v1）
 - `DEEPSEEK_API_KEY` - DeepSeek API 密钥
@@ -219,9 +216,6 @@ npm run cap:sync    # 等价于 npm run build && npx cap sync ios
 > **注意**：当前版本支持用户在应用内配置自己的 API Key，无需配置环境变量。
 
 ## 📚 获取 API Key
-
-### OpenAI
-访问 https://platform.openai.com/api-keys
 
 ### OpenRouter
 访问 https://openrouter.ai/keys
@@ -239,7 +233,7 @@ npm run cap:sync    # 等价于 npm run build && npx cap sync ios
 
 - **框架**: React 19 + TypeScript
 - **构建工具**: Vite 6
-- **AI SDK**: OpenAI, Google GenAI
+- **AI 接入**: 用户自选服务商（Gemini、OpenRouter、火山引擎等）
 - **部署平台**: Vercel
 - **存储服务**: Upstash Redis（分享链接）、MongoDB Atlas（素材广场）
 - **样式**: Tailwind CSS（CDN 加载）

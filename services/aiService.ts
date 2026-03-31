@@ -1,18 +1,18 @@
 import { AIProvider, AIConfig, AI_MODELS, DEFAULT_ENDPOINTS } from '../types';
 
+const PIXEL_ART_PROMPT =
+  'The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.';
+
 export const generatePixelArtImage = async (
-   prompt: string,
-   config: AIConfig,
-   referenceImage?: string
- ): Promise<string> => {
+  prompt: string,
+  config: AIConfig,
+  referenceImage?: string
+): Promise<string> => {
   const models = AI_MODELS[config.provider];
   const model = config.model || models[0]?.id;
   const endpoint = config.endpoint || DEFAULT_ENDPOINTS[config.provider] || '';
 
   switch (config.provider) {
-    case AIProvider.OPENAI:
-      return await generateOpenAI(prompt, config.apiKey, endpoint, model, referenceImage);
-
     case AIProvider.OPENROUTER:
       return await generateOpenRouter(prompt, config.apiKey, endpoint, model, config.imageUrlModel, referenceImage);
 
@@ -26,44 +26,49 @@ export const generatePixelArtImage = async (
       return await generateGemini(prompt, config.apiKey, model, referenceImage);
 
     case AIProvider.CUSTOM:
-      return await generateOpenAI(prompt, config.apiKey, endpoint, model, referenceImage);
+      return await generateCompatibleChatImageFlow(prompt, config.apiKey, endpoint, model, referenceImage);
 
     default:
       throw new Error(`Unsupported AI provider: ${config.provider}`);
   }
 };
 
-const generateOpenAI = async (
+/** 自定义接入：兼容「聊天补全触发工具调用 → /images/generations」一类接口 */
+const generateCompatibleChatImageFlow = async (
   prompt: string,
   apiKey: string,
   baseUrl: string,
-  model: string = 'gpt-4o',
+  model: string | undefined,
   referenceImage?: string
 ): Promise<string> => {
+  const chatModel = model?.trim();
+  if (!chatModel) {
+    throw new Error('请在 AI 设置中填写自定义聊天模型名称');
+  }
   try {
     const messages: any[] = [
       {
         role: 'user',
-        content: `Generate a high-quality 1:1 square pixel art image of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-      }
+        content: `Generate a high-quality 1:1 square pixel art image of ${prompt}. ${PIXEL_ART_PROMPT}`,
+      },
     ];
 
-    // 如果有参考图片，尝试添加到消息中（部分模型支持）
     if (referenceImage) {
-      messages[0].content = {
+      const imageUrl = referenceImage.startsWith('data:')
+        ? referenceImage
+        : `data:image/jpeg;base64,${referenceImage.split(',')[1]}`;
+      messages[0] = {
         role: 'user',
         content: [
           {
             type: 'image_url',
-            image_url: {
-              url: referenceImage.startsWith('data:') ? referenceImage : `data:image/jpeg;base64,${referenceImage.split(',')[1]}`
-            }
+            image_url: { url: imageUrl },
           },
           {
             type: 'text',
-            text: `Generate a high-quality 1:1 square pixel art based on this image${prompt ? ': ' + prompt : ''}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`
-          }
-        ]
+            text: `Generate a high-quality 1:1 square pixel art based on this image${prompt ? ': ' + prompt : ''}. ${PIXEL_ART_PROMPT}`,
+          },
+        ],
       };
     }
 
@@ -71,10 +76,10 @@ const generateOpenAI = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model,
+        model: chatModel,
         messages,
       }),
     });
@@ -85,14 +90,14 @@ const generateOpenAI = async (
     }
 
     const data = await response.json();
-    return await processOpenAIResponse(data, baseUrl, apiKey);
+    return await processToolCallImageResponse(data, baseUrl, apiKey);
   } catch (error) {
-    console.error('OpenAI image generation error:', error);
+    console.error('Custom API image generation error:', error);
     throw error;
   }
 };
 
-const processOpenAIResponse = async (
+const processToolCallImageResponse = async (
   data: any,
   baseUrl: string,
   apiKey: string
@@ -101,15 +106,18 @@ const processOpenAIResponse = async (
     for (const toolCall of data.choices[0].message.tool_calls) {
       if (toolCall.function.name === 'dalle.text2im') {
         const args = JSON.parse(toolCall.function.arguments);
-        
+        if (!args.model) {
+          throw new Error('工具调用响应缺少图像模型 ID');
+        }
+
         const imageResponse = await fetch(`${baseUrl}/images/generations`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
+            Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
-            model: args.model || 'dall-e-3',
+            model: args.model,
             prompt: args.prompt,
             n: 1,
             size: args.size || '1024x1024',
@@ -126,15 +134,50 @@ const processOpenAIResponse = async (
         if (imageData.data?.[0]?.b64_json) {
           return `data:image/png;base64,${imageData.data[0].b64_json}`;
         }
-        
+
         throw new Error('No image generated');
       }
     }
-    
+
     throw new Error('No image generation tool call found');
   }
-  
+
   throw new Error('No image data in response');
+};
+
+const buildOpenRouterUserMessage = (prompt: string, referenceImage?: string) => {
+  const text = referenceImage
+    ? `Generate a high-quality 1:1 square pixel art based on this image${prompt ? ': ' + prompt : ''}. ${PIXEL_ART_PROMPT}`
+    : `Generate a high-quality 1:1 square pixel art image of ${prompt}. ${PIXEL_ART_PROMPT}`;
+
+  if (!referenceImage) {
+    return { role: 'user' as const, content: text };
+  }
+
+  const imageUrl = referenceImage.startsWith('data:')
+    ? referenceImage
+    : `data:image/jpeg;base64,${referenceImage.split(',')[1]}`;
+
+  return {
+    role: 'user' as const,
+    content: [
+      { type: 'image_url' as const, image_url: { url: imageUrl } },
+      { type: 'text' as const, text },
+    ],
+  };
+};
+
+const parseOpenRouterImageMessage = (data: any): string | null => {
+  const message = data.choices?.[0]?.message;
+  const images = message?.images;
+  if (!Array.isArray(images) || images.length === 0) return null;
+  const url =
+    images[0]?.image_url?.url ??
+    images[0]?.imageUrl?.url;
+  if (typeof url === 'string' && url.startsWith('data:')) {
+    return url;
+  }
+  return null;
 };
 
 const generateOpenRouter = async (
@@ -146,43 +189,29 @@ const generateOpenRouter = async (
   referenceImage?: string
 ): Promise<string> => {
   try {
-    const messages: any[] = [
-      {
-        role: 'user',
-        content: `Generate a high-quality 1:1 square pixel art image of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`,
-      }
-    ];
+    const imageModel = imageUrlModel?.trim() || model || 'black-forest-labs/flux.2-pro';
+    const messages = [buildOpenRouterUserMessage(prompt, referenceImage)];
 
-    // 如果有参考图片，尝试添加到消息中（部分模型支持）
-    if (referenceImage) {
-      messages[0].content = {
-        role: 'user',
-        content: [
-          {
-            type: 'image_url',
-            image_url: {
-              url: referenceImage.startsWith('data:') ? referenceImage : `data:image/jpeg;base64,${referenceImage.split(',')[1]}`
-            }
-          },
-          {
-            type: 'text',
-            text: `Generate a high-quality 1:1 square pixel art based on this image${prompt ? ': ' + prompt : ''}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`
-          }
-        ]
-      };
-    }
+    const imageOnlyModel =
+      imageModel.includes('black-forest-labs/') || imageModel.includes('sourceful/');
+
+    const body: Record<string, unknown> = {
+      model: imageModel,
+      messages,
+      modalities: imageOnlyModel ? ['image'] : ['image', 'text'],
+      image_config: {
+        aspect_ratio: '1:1',
+      },
+    };
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'HTTP-Referer': 'https://pindou.danzaii.cn',
       },
-      body: JSON.stringify({
-        model: imageUrlModel || 'openai/dall-e-3',
-        messages,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -191,7 +220,10 @@ const generateOpenRouter = async (
     }
 
     const data = await response.json();
-    return await processOpenAIResponse(data, 'https://api.openai.com/v1', apiKey);
+    const fromMessage = parseOpenRouterImageMessage(data);
+    if (fromMessage) return fromMessage;
+
+    throw new Error('未从 OpenRouter 返回中解析到图像，请确认所选模型支持图像输出');
   } catch (error) {
     console.error('OpenRouter image generation error:', error);
     throw error;
@@ -216,16 +248,18 @@ const generateVolcEngine = async (
 
     if (referenceImage) {
       requestBody.reference_images = [referenceImage];
-      requestBody.prompt = prompt || 'Convert this image to a clean 1:1 square pixel art suitable for Perler beads (hama beads). The style should be clean, vibrant, limited color palette, solid white background, clear and bold outlines, centered subject.';
+      requestBody.prompt =
+        prompt ||
+        'Convert this image to a clean 1:1 square pixel art suitable for Perler beads (hama beads). The style should be clean, vibrant, limited color palette, solid white background, clear and bold outlines, centered subject.';
     } else {
-      requestBody.prompt = `A high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`;
+      requestBody.prompt = `A high-quality 1:1 square pixel art of ${prompt}. ${PIXEL_ART_PROMPT}`;
     }
 
     const response = await fetch(`${baseUrl}/images/generations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(requestBody),
     });
@@ -241,7 +275,6 @@ const generateVolcEngine = async (
     }
 
     const data = await response.json();
-    // VolcEngine 返回格式与 OpenAI 类似：data.data[0].b64_json
     const b64Json = data.data?.[0]?.b64_json ?? data.output?.b64_json;
     if (b64Json) {
       return `data:image/png;base64,${b64Json}`;
@@ -257,91 +290,94 @@ const generateVolcEngine = async (
 const parseVolcEngineError = (error: any): string => {
   if (error.error?.message) {
     const message = error.error.message.toLowerCase();
-    
+
     if (message.includes('size') && message.includes('least')) {
       return '火山引擎要求图像尺寸至少为 3686400 像素（约 2048x2048），当前 API 不支持 1024x1024。请使用其他 AI 服务商。';
     }
-    
+
     if (message.includes('model') || message.includes('not found')) {
       return `模型名称错误：${error.error.message}`;
     }
-    
+
     if (message.includes('api key') || message.includes('unauthorized')) {
       return 'API Key 无效或已过期';
     }
-    
+
     if (message.includes('quota') || message.includes('limit') || message.includes('rate')) {
       return '已达到 API 使用配额或速率限制';
     }
-    
+
     if (message.includes('content_filter')) {
       return '内容被过滤，请修改提示词后重试';
     }
   }
-  
+
   return error.error?.message || error.message || '未知错误';
 };
 
 const generateGemini = async (
-   prompt: string,
-   apiKey: string,
-   model: string = 'gemini-2.0-flash-exp',
-   referenceImage?: string
- ): Promise<string> => {
-   try {
-     const parts: any[] = [];
+  prompt: string,
+  apiKey: string,
+  model: string = 'gemini-2.0-flash-exp',
+  referenceImage?: string
+): Promise<string> => {
+  try {
+    const parts: any[] = [];
 
-     if (referenceImage) {
-       parts.push({
-         inlineData: {
-           mimeType: "image/jpeg",
-           data: referenceImage.split(',')[1]
-         }
-       });
-       parts.push({
-         text: `Convert this image to a clean 1:1 square pixel art suitable for Perler beads (hama beads). ${prompt ? 'Additional guidance: ' + prompt : ''}. The style should be clean, vibrant, limited color palette, solid white background, clear and bold outlines, centered subject.`
-       });
-     } else {
-       parts.push({
-         text: `Generate a high-quality 1:1 square pixel art of ${prompt}. The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.`
-       });
-     }
+    if (referenceImage) {
+      parts.push({
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: referenceImage.split(',')[1],
+        },
+      });
+      parts.push({
+        text: `Convert this image to a clean 1:1 square pixel art suitable for Perler beads (hama beads). ${prompt ? 'Additional guidance: ' + prompt : ''}. The style should be clean, vibrant, limited color palette, solid white background, clear and bold outlines, centered subject.`,
+      });
+    } else {
+      parts.push({
+        text: `Generate a high-quality 1:1 square pixel art of ${prompt}. ${PIXEL_ART_PROMPT}`,
+      });
+    }
 
-     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-       method: 'POST',
-       headers: {
-         'Content-Type': 'application/json',
-       },
-       body: JSON.stringify({
-         contents: {
-           parts
-         },
-         generationConfig: {
-           responseModalities: ['text', 'image'],
-           imageGenerationConfig: {
-             aspectRatio: "1:1"
-           }
-         }
-       }),
-     });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: {
+            parts,
+          },
+          generationConfig: {
+            responseModalities: ['text', 'image'],
+            imageGenerationConfig: {
+              aspectRatio: '1:1',
+            },
+          },
+        }),
+      }
+    );
 
-     if (!response.ok) {
-       const error = await response.json();
-       throw new Error(error.error?.message || 'Failed to generate image');
-     }
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Failed to generate image');
+    }
 
-     const data = await response.json();
-     for (const part of data.candidates?.[0]?.content?.parts || []) {
-       if (part.inlineData) {
-         return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-       }
-     }
+    const data = await response.json();
+    for (const part of data.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+      }
+    }
 
-     throw new Error("No valid image part returned.");
-   } catch (error) {
-     console.error('Gemini image generation error:', error);
-     throw error;
-   }
+    throw new Error('No valid image part returned.');
+  } catch (error) {
+    console.error('Gemini image generation error:', error);
+    throw error;
+  }
 };
 
 export const validateApiKey = async (
@@ -350,10 +386,10 @@ export const validateApiKey = async (
   endpoint?: string
 ): Promise<boolean> => {
   try {
-    const config: AIConfig = { 
-      provider, 
-      apiKey, 
-      endpoint: endpoint || DEFAULT_ENDPOINTS[provider]
+    const config: AIConfig = {
+      provider,
+      apiKey,
+      endpoint: endpoint || DEFAULT_ENDPOINTS[provider],
     };
     await generatePixelArtImage('test', config);
     return true;
