@@ -15,6 +15,7 @@ const config: CapacitorConfig = {
       'generativelanguage.googleapis.com',
       'api.openai.com',
       '*.vercel.app',
+      'pindou.danzaii.cn',
     ],
   },
 };

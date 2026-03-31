@@ -2090,7 +2090,7 @@ const AppMain: React.FC = () => {
                <div className="flex flex-col"><span className="text-indigo-400 mb-0.5">已用</span>{stats.reduce((acc, curr) => acc + curr.count, 0)}</div>
            </div>
 
-           <div className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-4 z-[45] md:z-50 group">
+           <div className="absolute bottom-[calc(11rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-3 z-[45] md:z-50 group">
              <button
                className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-95 peer"
              >
