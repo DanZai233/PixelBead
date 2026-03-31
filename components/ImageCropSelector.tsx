@@ -113,7 +113,7 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
       ctx.font = 'bold 18px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('在图片上拖动鼠标创建选区', canvasWidth / 2, canvasHeight / 2);
+      ctx.fillText('在图片上拖动创建选区', canvasWidth / 2, canvasHeight / 2);
       return;
     }
 
@@ -183,7 +183,7 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
     drawCanvas();
   }, [drawCanvas]);
 
-   const handleMouseDown = (e: React.MouseEvent) => {
+   const handleMouseDown = (e: React.PointerEvent) => {
     const canvas = canvasRef.current;
     if (!canvas || !imageInfo) return;
 
@@ -286,7 +286,7 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
     }
   };
 
-   const handleMouseMove = (e: React.MouseEvent) => {
+   const handleMouseMove = (e: React.PointerEvent) => {
      if (!imageInfo) return;
 
     // 处理创建选区
@@ -489,20 +489,20 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
         <div
           ref={containerRef}
           className="relative bg-slate-100 rounded-2xl overflow-hidden"
-          style={{ height: '500px' }}
+          style={{ height: 'min(500px, 60vh)' }}
         >
           <canvas
             ref={canvasRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onPointerDown={handleMouseDown}
+            onPointerMove={handleMouseMove}
+            onPointerUp={handleMouseUp}
+            onPointerLeave={handleMouseUp}
             onWheel={handleWheel}
-            className="w-full h-full cursor-crosshair"
+            className="w-full h-full cursor-crosshair touch-none"
           />
 
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur text-white px-4 py-2 rounded-full text-xs font-bold">
-            {crop ? '拖动裁切框 • 拖动角标调整大小 • 滚轮缩放图片' : '在图片上拖动鼠标创建选区'}
+            {crop ? '拖动裁切框 • 拖动角标调整大小' : '在图片上拖动创建选区'}
           </div>
         </div>
 

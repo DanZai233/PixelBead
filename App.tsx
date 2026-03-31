@@ -456,28 +456,26 @@ const AppMain: React.FC = () => {
       let sourceDrawHeight = img.height;
 
       if (customCrop) {
-        // 使用自定义裁切区域
         sourceX = customCrop.x;
         sourceY = customCrop.y;
         sourceDrawWidth = customCrop.width;
         sourceDrawHeight = customCrop.height;
       } else {
-        // 使用传统的对齐方式
-        const sourceWidth = img.width;
-        const sourceHeight = img.height;
+        const targetRatio = width / height;
+        const sourceRatio = img.width / img.height;
 
-        if (xAlign === -1) {
-          sourceDrawWidth = Math.min(sourceWidth, sourceHeight * width / height);
-        } else if (xAlign === 1) {
-          sourceX = sourceWidth - Math.min(sourceWidth, sourceHeight * width / height);
-          sourceDrawWidth = Math.min(sourceWidth, sourceHeight * width / height);
-        }
-
-        if (yAlign === -1) {
-          sourceDrawHeight = Math.min(sourceHeight, sourceWidth * height / width);
-        } else if (yAlign === 1) {
-          sourceY = sourceHeight - Math.min(sourceHeight, sourceWidth * height / width);
-          sourceDrawHeight = Math.min(sourceHeight, sourceWidth * height / width);
+        if (sourceRatio > targetRatio) {
+          sourceDrawWidth = img.height * targetRatio;
+          sourceDrawHeight = img.height;
+          if (xAlign === -1) sourceX = 0;
+          else if (xAlign === 1) sourceX = img.width - sourceDrawWidth;
+          else sourceX = (img.width - sourceDrawWidth) / 2;
+        } else {
+          sourceDrawWidth = img.width;
+          sourceDrawHeight = img.width / targetRatio;
+          if (yAlign === -1) sourceY = 0;
+          else if (yAlign === 1) sourceY = img.height - sourceDrawHeight;
+          else sourceY = (img.height - sourceDrawHeight) / 2;
         }
       }
 
@@ -2033,6 +2031,13 @@ const AppMain: React.FC = () => {
             <button onClick={() => setZoom(z => Math.min(400, z + 5))} className="p-1 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-base md:text-lg min-w-[28px] min-h-[28px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center touch-manipulation">＋</button>
             <span className="text-[9px] md:text-[10px] font-black w-8 md:w-12 text-slate-500 text-center shrink-0">{zoom}%</span>
             <div className="h-4 w-px bg-slate-200"></div>
+            <button
+              onClick={() => setPanOffset({ x: 0, y: 0 })}
+              className="text-[9px] md:text-[10px] font-black uppercase px-1.5 md:px-3 py-1 md:py-1.5 rounded-lg text-slate-400 hover:text-indigo-600 touch-manipulation"
+              title="回到中央"
+            >
+              居中
+            </button>
             <button 
               onClick={resetGrid}
               className="text-[9px] md:text-[10px] font-black uppercase px-2 md:px-3 py-1.5 rounded-lg text-slate-400 hover:text-red-500 touch-manipulation hidden md:block"
