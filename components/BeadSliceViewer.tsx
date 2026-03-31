@@ -190,8 +190,8 @@ export const BeadSliceViewer: React.FC<BeadSliceViewerProps> = ({
   }, []);
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-50 relative">
-      <div className="flex-1 overflow-auto p-4 space-y-4">
+    <div className="w-full h-full min-h-0 flex flex-col bg-slate-50 relative">
+      <div className="flex-1 min-h-0 overflow-auto p-4 space-y-4">
         <div className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm">
           <span className="text-[10px] font-black uppercase text-slate-400">当前查看层级</span>
           <div className="flex items-center gap-2">
@@ -250,7 +250,7 @@ export const BeadSliceViewer: React.FC<BeadSliceViewerProps> = ({
         </div>
       </div>
 
-      <div className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+4.5rem)] md:bottom-0 left-0 right-0 md:relative bg-white/95 md:bg-white backdrop-blur-md md:backdrop-blur-none border-t border-slate-200 px-3 py-2 md:p-3 z-10">
+      <div className="shrink-0 bg-white/95 md:bg-white backdrop-blur-md md:backdrop-blur-none border-t border-slate-200 px-3 py-2 md:p-3 z-10">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-black uppercase text-slate-400">总层数</span>
           <div className="flex items-center gap-1.5 md:gap-2">

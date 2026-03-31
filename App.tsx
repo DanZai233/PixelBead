@@ -2024,7 +2024,11 @@ const AppMain: React.FC = () => {
           </div>
         </aside>
 
-         <main className="flex-1 bg-[#EBEDF0] relative overflow-hidden">
+         <main
+          className={`flex-1 bg-[#EBEDF0] relative overflow-hidden ${
+            viewType === ViewType.THREE_D || viewType === ViewType.SLICES ? 'max-lg:pb-[var(--app-mobile-tab-bar-height)]' : ''
+          }`}
+        >
            <div className="absolute top-2 left-2 right-2 md:top-6 md:left-1/2 md:right-auto md:-translate-x-1/2 flex items-center justify-center gap-1 md:gap-4 bg-white/95 backdrop-blur-sm px-2 md:px-6 py-1.5 md:py-2 rounded-2xl md:rounded-full shadow-xl border border-white/50 z-[55] md:z-50 md:max-w-fit">
             <button onClick={() => setZoom(z => Math.max(10, z - 5))} className="p-1 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-base md:text-lg min-w-[28px] min-h-[28px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center touch-manipulation">－</button>
             <input type="range" min="10" max="300" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} className="w-12 md:w-40 h-3 accent-indigo-600 touch-manipulation flex-1 md:flex-initial" />
@@ -2095,7 +2099,7 @@ const AppMain: React.FC = () => {
                      </div>
                   </div>
                 </div>
-                <div className="lg:hidden fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-6 z-[50]">
+                <div className="lg:hidden fixed bottom-[calc(var(--app-mobile-tab-bar-height)+0.75rem)] left-6 z-[50]">
                   <VirtualJoystick
                     type="move"
                     onMove={(x, y) => setJoystickMove({ x: -x, y: -y })}
@@ -2103,7 +2107,7 @@ const AppMain: React.FC = () => {
                     knobSize={36}
                   />
                 </div>
-                <div className="lg:hidden fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] right-6 z-[50]">
+                <div className="lg:hidden fixed bottom-[calc(var(--app-mobile-tab-bar-height)+0.75rem)] right-6 z-[50]">
                   <VirtualJoystick
                     type="zoom"
                     onZoom={(delta) => setJoystickZoom(delta)}
@@ -2113,7 +2117,7 @@ const AppMain: React.FC = () => {
                 </div>
               </>
             ) : viewType === ViewType.THREE_D ? (
-              <div className="min-w-full min-h-full">
+              <div className="min-w-full h-full min-h-0 flex flex-col">
                 <Bead3DViewer
                   grid={grid}
                   gridSize={Math.max(gridWidth, gridHeight)}
@@ -2125,7 +2129,7 @@ const AppMain: React.FC = () => {
                 />
               </div>
             ) : viewType === ViewType.SLICES ? (
-              <div className="min-w-full min-h-full">
+              <div className="min-w-full h-full min-h-0 flex flex-col">
                 <BeadSliceViewer
                   grid={grid}
                   gridSize={Math.max(gridWidth, gridHeight)}

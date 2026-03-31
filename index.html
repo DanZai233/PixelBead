@@ -34,6 +34,10 @@
     #root {
       padding-top: env(safe-area-inset-top, 0px);
     }
+    /* 与 App.tsx 移动端底部固定工具栏总高度一致（内边距 + 图标行 + Home Indicator） */
+    :root {
+      --app-mobile-tab-bar-height: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+    }
     .bead-shadow {
       box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06), 0 2px 4px 0 rgba(0, 0, 0, 0.15);
     }
