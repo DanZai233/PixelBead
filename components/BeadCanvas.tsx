@@ -184,47 +184,63 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (showRuler) {
-      const rulerSize = Math.max(20, cellSize * 0.5);
-      const fontSize = Math.max(10, cellSize * 0.3);
+      const rs = Math.max(20, cellSize * 0.5);
+      const fontSize = Math.max(8, Math.min(11, cellSize * 0.28));
+      const showEvery = cellSize < 8 ? 10 : 5;
 
-      ctx.font = `${fontSize}px monospace`;
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(0, 0, rs, canvas.height);
+      ctx.fillRect(0, 0, canvas.width, rs);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, rs, rs);
+
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(rs, 0);
+      ctx.lineTo(rs, canvas.height);
+      ctx.moveTo(0, rs);
+      ctx.lineTo(canvas.width, rs);
+      ctx.stroke();
+
+      ctx.font = `600 ${fontSize}px system-ui, -apple-system, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(0, 0, rulerSize, rulerSize);
-      ctx.fillStyle = '#94a3b8';
-      ctx.fillText('0', rulerSize / 2, rulerSize / 2);
-
       for (let col = 0; col < gridWidth; col++) {
-        if (col % 5 === 0) {
-          const x = rulerSize + col * cellSize + cellSize / 2;
-          ctx.fillStyle = '#f8fafc';
-          ctx.fillRect(rulerSize + col * cellSize, 0, cellSize, rulerSize);
-          ctx.fillStyle = '#94a3b8';
-          ctx.fillText(col.toString(), x, rulerSize / 2);
+        const x = rs + col * cellSize;
+        const tickH = col % showEvery === 0 ? rs * 0.5 : col % 5 === 0 ? rs * 0.35 : rs * 0.18;
+        ctx.strokeStyle = col % showEvery === 0 ? '#64748b' : '#334155';
+        ctx.lineWidth = col % showEvery === 0 ? 1 : 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x, rs);
+        ctx.lineTo(x, rs - tickH);
+        ctx.stroke();
 
-          ctx.strokeStyle = '#e2e8f0';
-          ctx.beginPath();
-          ctx.moveTo(x, rulerSize);
-          ctx.lineTo(x, rulerSize + 3);
-          ctx.stroke();
+        if (col % showEvery === 0 && col > 0) {
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText(col.toString(), x, rs * 0.28);
         }
       }
 
       for (let row = 0; row < gridHeight; row++) {
-        if (row % 5 === 0) {
-          const y = rulerSize + row * cellSize + cellSize / 2;
-          ctx.fillStyle = '#f8fafc';
-          ctx.fillRect(0, rulerSize + row * cellSize, rulerSize, cellSize);
-          ctx.fillStyle = '#94a3b8';
-          ctx.fillText(row.toString(), rulerSize / 2, y);
+        const y = rs + row * cellSize;
+        const tickW = row % showEvery === 0 ? rs * 0.5 : row % 5 === 0 ? rs * 0.35 : rs * 0.18;
+        ctx.strokeStyle = row % showEvery === 0 ? '#64748b' : '#334155';
+        ctx.lineWidth = row % showEvery === 0 ? 1 : 0.5;
+        ctx.beginPath();
+        ctx.moveTo(rs, y);
+        ctx.lineTo(rs - tickW, y);
+        ctx.stroke();
 
-          ctx.strokeStyle = '#e2e8f0';
-          ctx.beginPath();
-          ctx.moveTo(rulerSize, y);
-          ctx.lineTo(rulerSize + 3, y);
-          ctx.stroke();
+        if (row % showEvery === 0 && row > 0) {
+          ctx.save();
+          ctx.fillStyle = '#94a3b8';
+          ctx.translate(rs * 0.28, y);
+          ctx.rotate(-Math.PI / 2);
+          ctx.fillText(row.toString(), 0, 0);
+          ctx.restore();
         }
       }
     }
