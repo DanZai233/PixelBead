@@ -1234,7 +1234,7 @@ const AppMain: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F1F5F9] text-slate-900 select-none overflow-hidden h-screen">
-      <header className="bg-white border-b border-slate-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between gap-2 z-[100] shadow-sm shrink-0 overflow-x-auto overflow-y-hidden no-scrollbar">
+      <header className="bg-white border-b border-slate-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between gap-2 z-[100] shadow-sm shrink-0 overflow-x-auto overflow-y-hidden no-scrollbar safe-area-top">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsMobileLeftOpen(!isMobileLeftOpen)}
@@ -1438,7 +1438,7 @@ const AppMain: React.FC = () => {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className={`fixed inset-y-0 left-0 z-[60] w-80 max-w-[85vw] bg-white border-r border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 space-y-4 md:space-y-6 flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out ${isMobileLeftOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
+        <aside className={`fixed inset-y-0 left-0 z-[60] w-80 max-w-[85vw] bg-white border-r border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 space-y-4 md:space-y-6 flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out safe-area-top ${isMobileLeftOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
           <div className="flex justify-between items-center mb-2 lg:hidden">
             <h2 className="text-sm font-black text-slate-900">工具栏</h2>
             <button onClick={() => setIsMobileLeftOpen(false)} className="p-2 text-slate-400 hover:text-slate-600">
@@ -2093,7 +2093,7 @@ const AppMain: React.FC = () => {
           </button>
         </main>
 
-         <aside className={`fixed inset-y-0 right-0 z-[60] w-80 max-w-[85vw] bg-white border-l border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 shrink-0 transform transition-transform duration-300 ease-in-out ${isMobileRightOpen ? 'translate-x-0' : 'translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
+         <aside className={`fixed inset-y-0 right-0 z-[60] w-80 max-w-[85vw] bg-white border-l border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 shrink-0 transform transition-transform duration-300 ease-in-out safe-area-top ${isMobileRightOpen ? 'translate-x-0' : 'translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
           <div className="flex justify-between items-center mb-2 lg:hidden">
             <h2 className="text-sm font-black text-slate-900">颜色统计</h2>
             <button onClick={() => setIsMobileRightOpen(false)} className="p-2 text-slate-400 hover:text-slate-600">
