@@ -18,7 +18,7 @@ interface AdminPanelProps {
   onBack: () => void;
 }
 
-const API_BASE = '/api';
+const API_BASE = ((import.meta as any).env.VITE_API_BASE_URL || '') + '/api';
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
   const [token, setToken] = useState<string | null>(() => sessionStorage.getItem('admin_token'));

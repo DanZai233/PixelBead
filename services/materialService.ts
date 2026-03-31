@@ -7,7 +7,7 @@ import {
   incrementMaterialLikes as redisIncrementLikes,
 } from './upstashService';
 
-const API_BASE = '/api';
+const API_BASE = ((import.meta as any).env.VITE_API_BASE_URL || '') + '/api';
 
 export type { MaterialData };
 

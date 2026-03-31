@@ -67,6 +67,7 @@
 
 ### 📦 多平台支持
 - **Web 应用** - 支持所有现代浏览器，无需安装
+- **iOS App** - 基于 Capacitor 封装，原生壳 + WKWebView，可上架 App Store
 - **微信小程序** - 使用 WebView 内嵌 H5，开发量最少，体验流畅
 - **一键部署** - 支持 Vercel 一键部署
 
@@ -136,6 +137,57 @@ npm run build
 npm run preview
 ```
 
+## 📱 iOS App 构建
+
+项目使用 [Capacitor](https://capacitorjs.com/) 将 Web 应用打包为原生 iOS App（WKWebView），无需重构代码。
+
+### 前置要求
+- macOS + Xcode（最新稳定版）
+- Apple Developer 账号（上架 App Store 需要）
+- Node.js 18+
+
+### 构建步骤
+
+```bash
+# 1. 安装依赖（首次）
+npm install
+
+# 2. 配置 iOS 构建环境变量
+#    编辑 .env.capacitor，设置 VITE_API_BASE_URL 为你的 Vercel 部署域名
+#    例如：VITE_API_BASE_URL=https://pindou.danzaii.cn
+cp .env.capacitor .env.local
+
+# 3. 构建 Web 产物并同步到 iOS 项目
+npm run cap:sync
+
+# 4. 在 Xcode 中打开项目
+npm run cap:open
+```
+
+### 日常开发流程
+
+每次修改 Web 代码后，运行以下命令将最新构建同步到 iOS 项目：
+
+```bash
+npm run cap:sync    # 等价于 npm run build && npx cap sync ios
+```
+
+然后在 Xcode 中重新 Run (Cmd+R) 即可看到更新。
+
+### 关键配置
+
+| 配置项 | 值 |
+|--------|-----|
+| Bundle ID | `com.pixelbead.studio` |
+| App Name | 拼豆糕手 |
+| Web Dir | `dist` |
+| 配置文件 | `capacitor.config.ts` |
+
+### 注意事项
+- `/api/` 路由在 App 中通过 `VITE_API_BASE_URL` 环境变量指向 Vercel 域名，确保素材广场等功能正常工作
+- App 图标和启动画面源文件在 `assets/` 目录，修改后运行 `npx capacitor-assets generate --ios` 重新生成
+- `ios/App/App/public/` 目录由 `cap sync` 自动生成，不要手动修改
+
 ## 📱 微信小程序部署
 
 ### 快速开始
@@ -192,6 +244,7 @@ npm run preview
 - **存储服务**: Upstash Redis（分享链接）、MongoDB Atlas（素材广场）
 - **样式**: Tailwind CSS（CDN 加载）
 - **3D 渲染**: Three.js（3D 视图）
+- **iOS 封装**: Capacitor（WKWebView 原生壳）
 - **小程序**: 微信小程序 WebView（内嵌 H5）
 
 ## 🙏 致谢
@@ -247,6 +300,10 @@ npm run preview
 - [ ] 支持导入/导出调色板
 - [ ] 添加模板库
 - [ ] 支持多人协作编辑
+- [x] iOS App（Capacitor）
+- [ ] Android App（Capacitor）
+- [ ] iOS 原生 Haptic 反馈
+- [ ] iOS 本地相册保存
 
 ---
 
