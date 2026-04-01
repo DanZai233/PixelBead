@@ -31,7 +31,9 @@ import {
 } from './utils/colorSystemUtils';
 import colorSystemMapping from './colorSystemMapping.json';
 import { Capacitor } from '@capacitor/core';
-import { pickImageDataUrlFromLibrary } from './utils/pickImageFromLibrary';
+import { pickSingleImageNative } from './utils/pickImageNative';
+
+const IMAGE_FILE_ACCEPT = 'image/png,image/jpeg,image/jpg,image/heic,image/webp,image/gif';
 
 const App: React.FC = () => {
   const [isAdminRoute, setIsAdminRoute] = useState(() => window.location.hash === '#admin');
@@ -896,10 +898,11 @@ const AppMain: React.FC = () => {
   const openPendingImagePicker = useCallback(async () => {
     if (Capacitor.isNativePlatform()) {
       try {
-        const url = await pickImageDataUrlFromLibrary();
+        const url = await pickSingleImageNative();
         if (url) setPendingImage(url);
-      } catch {
-        alert('选择图片失败，请重试');
+      } catch (err) {
+        console.error(err);
+        alert(`选择图片失败：${err instanceof Error ? err.message : '未知错误'}`);
       }
       return;
     }
@@ -909,10 +912,11 @@ const AppMain: React.FC = () => {
   const openAiReferenceImagePicker = useCallback(async () => {
     if (Capacitor.isNativePlatform()) {
       try {
-        const url = await pickImageDataUrlFromLibrary();
+        const url = await pickSingleImageNative();
         if (url) setAiReferenceImage(url);
-      } catch {
-        alert('选择图片失败，请重试');
+      } catch (err) {
+        console.error(err);
+        alert(`选择图片失败：${err instanceof Error ? err.message : '未知错误'}`);
       }
       return;
     }
@@ -922,10 +926,11 @@ const AppMain: React.FC = () => {
   const openBackgroundImagePicker = useCallback(async () => {
     if (Capacitor.isNativePlatform()) {
       try {
-        const url = await pickImageDataUrlFromLibrary();
+        const url = await pickSingleImageNative();
         if (url) applyBackgroundFromDataUrl(url);
-      } catch {
-        alert('选择图片失败，请重试');
+      } catch (err) {
+        console.error(err);
+        alert(`选择图片失败：${err instanceof Error ? err.message : '未知错误'}`);
       }
       return;
     }
@@ -1769,7 +1774,7 @@ const AppMain: React.FC = () => {
             <div className="flex gap-2">
               <input
                 type="file"
-                accept="image/*"
+                accept={IMAGE_FILE_ACCEPT}
                 className="hidden"
                 ref={aiReferenceImageRef}
                 onChange={handleAiReferenceImageUpload}
@@ -1779,7 +1784,7 @@ const AppMain: React.FC = () => {
                 onClick={() => void openAiReferenceImagePicker()}
                 className="flex-1 py-2 md:py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-black text-xs transition-all active:scale-95 flex items-center justify-center gap-1"
               >
-                🖼️ {aiReferenceImage ? '更换图片' : '选择参考图'}
+                📷 {aiReferenceImage ? '更换图片' : '选择参考图'}
               </button>
               <button
                 onClick={handleAiGenerate}
@@ -1810,7 +1815,7 @@ const AppMain: React.FC = () => {
 
           <div className="bg-emerald-600 rounded-3xl p-4 md:p-5 text-white shadow-xl space-y-2 md:space-y-3">
             <h2 className="text-[10px] font-black uppercase tracking-widest text-emerald-100">本地图片转换</h2>
-            <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={onFileChange} />
+            <input type="file" accept={IMAGE_FILE_ACCEPT} className="hidden" ref={fileInputRef} onChange={onFileChange} />
             <button
               type="button"
               onClick={() => void openPendingImagePicker()}
@@ -1920,7 +1925,7 @@ const AppMain: React.FC = () => {
               <h2 className="text-[10px] font-black uppercase tracking-widest text-white">底图参考</h2>
             </div>
 
-            <input type="file" accept="image/*" className="hidden" ref={backgroundImageRef} onChange={handleBackgroundImageUpload} />
+            <input type="file" accept={IMAGE_FILE_ACCEPT} className="hidden" ref={backgroundImageRef} onChange={handleBackgroundImageUpload} />
             <button
               type="button"
               onClick={() => void openBackgroundImagePicker()}

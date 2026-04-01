@@ -49,5 +49,9 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>用于从相册选择图片，转换为拼豆图纸、智能生成参考图或背景底图。</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>用于将作品保存到系统相册，以及从相册选取、导入图片。</string>
+	<key>NSCameraUsageDescription</key>
+	<string>仅在您于系统选图界面中选择「拍照」时使用摄像头；您也可以仅从相册选取照片，无需使用相机。</string>
 </dict>
 </plist>
