@@ -21,12 +21,12 @@ const steps: Step[] = [
     content: (
       <div className="space-y-4">
         <p className="text-slate-600 text-sm leading-relaxed">
-          拼豆糕手是一款专业的拼豆像素画在线设计工具，支持 <strong>图片转拼豆、AI 生成、多品牌色号</strong>等功能。
+          拼豆糕手是一款专业的拼豆像素画在线设计工具，支持 <strong>图片转拼豆、智能生成拼豆图、多品牌色号</strong>等功能。
         </p>
         <div className="grid grid-cols-2 gap-3">
           {[
             { icon: '🖼️', label: '图片转拼豆' },
-            { icon: '🤖', label: 'AI 智能生成' },
+            { icon: '🤖', label: '智能生成' },
             { icon: '🎨', label: '多品牌色号' },
             { icon: '📤', label: '导出分享' },
             { icon: '🧊', label: '3D 预览' },
@@ -126,8 +126,8 @@ const steps: Step[] = [
   },
   {
     icon: '✨',
-    title: '智能画笔 & AI 生成',
-    subtitle: '让 AI 帮你设计拼豆图案',
+    title: '智能画笔 & 智能生成',
+    subtitle: '用文字或参考图快速得到拼豆风格图稿',
     accent: 'from-violet-500 to-purple-500',
     content: (
       <div className="space-y-4">
@@ -140,22 +140,22 @@ const steps: Step[] = [
           <div className="flex gap-3 items-start">
             <span className="text-lg">🤖</span>
             <div>
-              <p className="text-sm font-bold text-slate-800">AI 一键生成</p>
-              <p className="text-xs text-slate-500">输入文字描述（如「一只可爱的小猫」），AI 自动生成拼豆像素画。支持 Gemini、OpenRouter、火山引擎等多种接入方式。</p>
+              <p className="text-sm font-bold text-slate-800">一键智能生成</p>
+              <p className="text-xs text-slate-500">输入文字描述（如「一只可爱的小猫」）或上传参考图，使用拼豆糕手自研的智能生成服务免费生成拼豆风格示意图，再导入画布继续编辑。</p>
             </div>
           </div>
           <div className="flex gap-3 items-start">
             <span className="text-lg">🖼️</span>
             <div>
               <p className="text-sm font-bold text-slate-800">图片智能转换</p>
-              <p className="text-xs text-slate-500">上传任意图片，AI 智能识别并转换为最优的拼豆配色方案。</p>
+              <p className="text-xs text-slate-500">上传任意图片，自动匹配最接近的拼豆色号并转为图纸（本地处理，不上传原图至生成服务）。</p>
             </div>
           </div>
           <div className="flex gap-3 items-start">
-            <span className="text-lg">⚙️</span>
+            <span className="text-lg">🎁</span>
             <div>
-              <p className="text-sm font-bold text-slate-800">配置 API Key</p>
-              <p className="text-xs text-slate-500">点击右上角 <strong>⚙️ 设置</strong>，选择 AI 服务商并输入 API Key 即可使用。密钥仅保存在你的浏览器中。</p>
+              <p className="text-sm font-bold text-slate-800">免费使用</p>
+              <p className="text-xs text-slate-500">智能生成由服务端统一提供，无需在应用内配置任何密钥。遇到问题可点击底部 <strong>帮助</strong> 查看说明。</p>
             </div>
           </div>
         </div>

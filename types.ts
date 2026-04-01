@@ -66,23 +66,6 @@ export interface ToolInfo {
   description: string;
 }
 
-export enum AIProvider {
-  OPENROUTER = 'OPENROUTER',
-  DEEPSEEK = 'DEEPSEEK',
-  VOLCENGINE = 'VOLCENGINE',
-  GEMINI = 'GEMINI',
-  CUSTOM = 'CUSTOM',
-}
-
-export interface AIConfig {
-  provider: AIProvider;
-  apiKey: string;
-  model?: string;
-  baseUrl?: string;
-  endpoint?: string;
-  imageUrlModel?: string;
-}
-
 export const DEFAULT_COLORS: ColorHex[] = [
   '#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', 
   '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080',
@@ -90,38 +73,6 @@ export const DEFAULT_COLORS: ColorHex[] = [
   '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#6366F1',
   '#8B5CF6', '#EC4899', '#F43F5E', '#14B8A6', '#F97316'
 ];
-
-export const AI_MODELS = {
-  [AIProvider.OPENROUTER]: [
-    { id: 'black-forest-labs/flux.2-pro', name: 'FLUX 2 Pro', isImageModel: true },
-    { id: 'google/gemini-2.5-flash-image', name: 'Gemini 2.5 Flash 图像', isImageModel: true },
-    { id: 'sourceful/riverflow-v2-standard-preview', name: 'Riverflow 标准预览', isImageModel: true },
-  ],
-  [AIProvider.DEEPSEEK]: [
-    { id: 'deepseek-chat', name: 'DeepSeek Chat' },
-    { id: 'deepseek-coder', name: 'DeepSeek Coder' },
-    { id: 'deepseek-aider', name: 'DeepSeek Aider' },
-  ],
-  [AIProvider.VOLCENGINE]: [
-    { id: 'doubao-seedream-4-5-251128', name: 'Doubao Seedream 4K', isImageModel: true },
-    { id: 'doubao-seedream-4-5-241024', name: 'Doubao Seedream 2K', isImageModel: true },
-    { id: 'doubao-pro-32k', name: 'Doubao Pro 32K', isImageModel: false },
-    { id: 'doubao-lite-32k', name: 'Doubao Lite 32K', isImageModel: false },
-  ],
-  [AIProvider.GEMINI]: [
-    { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', isImageModel: true },
-    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', isImageModel: true },
-  ],
-  [AIProvider.CUSTOM]: [],
-};
-
-export const DEFAULT_ENDPOINTS = {
-  [AIProvider.OPENROUTER]: 'https://openrouter.ai/api/v1',
-  [AIProvider.DEEPSEEK]: 'https://api.deepseek.com/v1',
-  [AIProvider.VOLCENGINE]: 'https://ark.cn-beijing.volces.com/api/v3',
-  [AIProvider.GEMINI]: '',
-  [AIProvider.CUSTOM]: '',
-};
 
 export const TOOLS_INFO: ToolInfo[] = [
   { type: ToolType.PENCIL, name: '画笔', icon: '✏️', shortcut: 'B', description: '单击或拖动绘制单个像素' },

@@ -62,12 +62,11 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
           <section>
             <h3 className="text-lg font-black text-slate-900 mb-3 flex items-center gap-2">
               <span className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-sm">3</span>
-              AI 功能
+              智能生成与转图
             </h3>
             <div className="space-y-2 text-sm text-slate-600">
-              <p><strong className="text-slate-900">✨ AI 生成</strong>：输入提示词，AI 自动生成像素画</p>
-              <p><strong className="text-slate-900">🖼️ 图片转拼豆</strong>：上传图片，转换为拼豆图案</p>
-              <p><strong className="text-slate-900">🤖 AI 优化图片</strong>：智能优化图片转换效果</p>
+              <p><strong className="text-slate-900">✨ 智能生成拼豆图</strong>：输入描述或上传参考图，使用应用内建的智能生成服务（免费）生成拼豆风格示意图，再导入画布编辑</p>
+              <p><strong className="text-slate-900">🖼️ 图片转拼豆</strong>：上传图片，在本地转换为拼豆图案并匹配色号</p>
             </div>
           </section>
 

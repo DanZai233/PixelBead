@@ -1,6 +1,6 @@
 # 拼豆糕手
 
-一个功能强大的拼豆（Perler Beads/Hama Beads）像素画设计工具，支持 AI 生成、图片转换等功能。
+一个功能强大的拼豆（Perler Beads/Hama Beads）像素画设计工具，支持智能生成拼豆示意图、本地图片转图纸等功能。
 
 ![首页](./屏幕截图%202026-03-04%20112130.png)
 
@@ -17,7 +17,7 @@
 - **多种绘图工具** - 画笔、橡皮擦、填充工具、吸色器、直线、矩形、圆形
 - **多种像素样式** - 圆形、方形、圆角三种样式切换
 - **专业调色板** - 支持 HSL 颜色选择器、HEX 直接输入
-- **AI 像素画生成** - 支持多个主流 AI 模型
+- **智能生成拼豆图** - 由服务端提供的免费生成能力（需在 Vercel 配置服务端密钥）
 - **本地图片转换** - 上传图片自动转换为像素画
 - **高级裁切功能** - 支持自由选择图片任意区域转换为像素画
 - **1:1 裁切** - 支持左上、居中、右下三种对齐方式
@@ -87,23 +87,11 @@
 - **快捷键面板**
   - 点击工具栏上方的"查看快捷键"按钮，查看完整的快捷键和工具说明
 
-### 🤖 AI 模型支持
+### 🤖 智能生成拼豆图
 
-#### 当前支持的模型提供商
-- ✅ **OpenRouter** - 支持图像输出模型（如 FLUX、Gemini 图像等，见应用内预设）
-- ✅ **DeepSeek** - DeepSeek Chat, DeepSeek Coder（文本，应用内图像生成需换其他服务商）
-- ✅ **火山引擎** - Doubao Seedream 等图像模型
-- ✅ **Google Gemini** - Gemini 2.0 Flash、Gemini 1.5 Pro 等（图像生成）
-- ✅ **自定义接入** - 兼容「聊天补全触发工具调用 + /images/generations」的 API
-
-#### 如何使用 AI 功能
-1. 点击右上角 ⚙️ 设置按钮
-2. 选择你偏好的 AI 服务商
-3. 输入对应的 API Key
-4. 选择模型（可选）
-5. 在左侧输入描述，点击"一键生成拼豆图"
-
-> 💡 API Key 仅保存在你的浏览器本地存储中，不会上传到服务器
+- 用户在应用内输入描述或上传参考图，请求发往 **Vercel 无服务器接口** `/api/ai/generate-image`，由服务端调用已配置的图像生成能力并返回结果。
+- **客户端不包含任何第三方 AI 密钥或服务商配置**，符合 App Store 对「非 IAP 解锁」的要求。
+- 部署时在 Vercel 环境变量中配置 `PIXELBEAD_AI_API_KEY`（必填），以及可选的 `PIXELBEAD_AI_API_BASE`、`PIXELBEAD_AI_IMAGE_MODEL`（见 `.env.example`）。
 
 ### ⚡ 性能优化
 - **Canvas 渲染引擎** - 支持大网格（200x200）流畅操作
@@ -203,37 +191,23 @@ npm run cap:sync    # 等价于 npm run build && npx cap sync ios
 
 ### 方式一：通过 Vercel 部署按钮（推荐）
 
-### 环境变量配置（可选）
+### 环境变量配置（Vercel）
 
-在 Vercel 项目设置中，你可以配置以下环境变量：
+智能生成（服务端）：
 
-- `OPENROUTER_API_KEY` - OpenRouter API 密钥
-- `OPENROUTER_BASE_URL` - OpenRouter 基础 URL（默认: https://openrouter.ai/api/v1）
-- `DEEPSEEK_API_KEY` - DeepSeek API 密钥
-- `VOLCENGINE_API_KEY` - 火山引擎 API 密钥
-- `GEMINI_API_KEY` - Google Gemini API 密钥
+- `PIXELBEAD_AI_API_KEY`（必填）
+- `PIXELBEAD_AI_API_BASE`（可选，服务端内置默认值）
+- `PIXELBEAD_AI_IMAGE_MODEL`（可选，服务端内置默认值）
 
-> **注意**：当前版本支持用户在应用内配置自己的 API Key，无需配置环境变量。
+其他：Upstash、MongoDB 等同原说明。详见 `.env.example`。
 
-## 📚 获取 API Key
-
-### OpenRouter
-访问 https://openrouter.ai/keys
-
-### DeepSeek
-访问 https://platform.deepseek.com/
-
-### 火山引擎
-访问 https://console.volcengine.com/
-
-### Google Gemini
-访问 https://makersuite.google.com/app/apikey
+本地开发若需调用线上接口，可设置 `VITE_AI_GENERATE_URL=https://你的已部署域名`（勿提交密钥）。
 
 ## 🛠️ 技术栈
 
 - **框架**: React 19 + TypeScript
 - **构建工具**: Vite 6
-- **AI 接入**: 用户自选服务商（Gemini、OpenRouter、火山引擎等）
+- **智能生成**: 服务端代理，密钥仅 Vercel 环境变量
 - **部署平台**: Vercel
 - **存储服务**: Upstash Redis（分享链接）、MongoDB Atlas（素材广场）
 - **样式**: Tailwind CSS（CDN 加载）

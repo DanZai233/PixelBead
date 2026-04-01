@@ -1,7 +1,7 @@
 {
   "name": "拼豆糕手",
   "short_name": "拼豆糕手",
-  "description": "智能拼豆设计工具，支持AI生成、多色板、云端分享",
+  "description": "拼豆像素画设计工具，支持智能生成示意图、多色板、云端分享",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f1f5f9",

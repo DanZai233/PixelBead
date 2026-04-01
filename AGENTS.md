@@ -22,6 +22,7 @@ See `package.json` scripts. Summary:
 
 - **Redis (Upstash):** Used for share links only — ephemeral data with 7-day TTL. Called directly from the browser via REST API. Env vars: `VITE_UPSTASH_REDIS_REST_URL`, `VITE_UPSTASH_REDIS_REST_TOKEN`.
 - **MongoDB (Atlas):** Used for material gallery (素材广场) — persistent storage, supports larger grids (100x100+). Accessed via Vercel serverless API routes in `/api/`. Env var: `MONGODB_URI` (set in Vercel project settings, not exposed to browser).
+- **Smart generate (拼豆智能生成):** `POST /api/ai/generate-image` — server-only env: `PIXELBEAD_AI_API_KEY` (required), optional `PIXELBEAD_AI_API_BASE`, `PIXELBEAD_AI_IMAGE_MODEL`. Client calls same-origin API; no user API keys in the app.
 - The `/api/` directory is excluded from `tsconfig.json` and Vite build; it is compiled separately by Vercel's `@vercel/node` builder.
 
 ### Caveats

@@ -4,104 +4,59 @@
 
 ### 方式一：通过 Vercel 部署按钮（推荐）
 
-1. 点击下方的 "Deploy" 按钮
+1. 点击仓库 README 中的 "Deploy with Vercel" 按钮
 2. 授权 Vercel 访问你的 GitHub 账户
-3. 导入此项目
-4. 点击 "Deploy" 即可
+3. 导入此项目并配置环境变量（见下文）
+4. 点击 "Deploy"
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
-
-### 方式二：通过 Vercel CLI 部署
+### 方式二：通过 Vercel CLI
 
 ```bash
-# 1. 安装依赖
 npm install
-
-# 2. 构建项目
 npm run build
-
-# 3. 登录 Vercel
 npx vercel login
-
-# 4. 部署
 npx vercel
 ```
 
 ## 环境变量配置
 
-在 Vercel 项目设置中，你可以配置以下环境变量（可选）：
+在 **Vercel 项目 → Settings → Environment Variables** 中配置：
 
-- `OPENROUTER_API_KEY` - OpenRouter API 密钥
-- `OPENROUTER_BASE_URL` - OpenRouter 基础 URL（默认: https://openrouter.ai/api/v1）
-- `DEEPSEEK_API_KEY` - DeepSeek API 密钥
-- `VOLCENGINE_API_KEY` - 火山引擎 API 密钥
-- `GEMINI_API_KEY` - Google Gemini API 密钥
+### 智能生成拼豆图（服务端 `/api/ai/generate-image`）
 
-> **注意**：当前版本支持用户在应用内配置自己的 API Key，无需配置环境变量。
+| 变量名 | 必填 | 说明 |
+|--------|------|------|
+| `PIXELBEAD_AI_API_KEY` | 是 | 图像生成接口 Bearer Token |
+| `PIXELBEAD_AI_API_BASE` | 否 | 图像生成 API 根路径（可选，有服务端默认值） |
+| `PIXELBEAD_AI_IMAGE_MODEL` | 否 | 模型 ID（可选，有服务端默认值） |
 
-## 功能特性
+### 其他已有功能
 
-### AI 模型支持
+- `MONGODB_URI` — 素材广场
+- `VITE_UPSTASH_REDIS_REST_URL` / `VITE_UPSTASH_REDIS_REST_TOKEN` — 分享链接（构建时注入前端）
 
-- ✅ **OpenRouter** - 支持图像输出模型（如 FLUX、Gemini 图像等）
-- ✅ **DeepSeek** - DeepSeek Chat, DeepSeek Coder
-- ✅ **火山引擎** - Doubao Pro, Doubao Lite
-- ✅ **Google Gemini** - Gemini 2.0 Flash, Gemini 1.5 Pro
+> 请勿使用 `VITE_` 前缀暴露图像生成密钥到浏览器。
 
-### 核心功能
+## 功能特性摘要
 
-- 🎨 自定义画布大小（4x4 到 200x200）
-- 🖌️ 多种绘图工具（画笔、橡皮、填充、吸色）
-- 🤖 AI 像素画生成
-- 📷 本地图片转像素画
-- 🎯 1:1 图片裁切
-- 📊 拼豆数量统计
-- 💾 JSON 格式导出
-
-### 性能优化
-
-- ⚡ React.memo 优化组件渲染
-- 🚀 useMemo 和 useCallback 减少重绘
-- 🎯 虚拟滚动支持（大网格）
-- 📦 本地存储配置
+- 画布编辑、色号系统、导出、分享、素材广场
+- **智能生成**：用户免费使用，由上述服务端环境变量启用
+- 本地「图片转拼豆」在浏览器内处理，不依赖智能生成接口
 
 ## 本地开发
 
 ```bash
-# 安装依赖
 npm install
-
-# 启动开发服务器
 npm run dev
-
-# 构建生产版本
-npm run build
-
-# 预览生产构建
-npm run preview
 ```
+
+纯前端开发时，`/api/ai/generate-image` 在本地不存在；可运行 `npx vercel dev` 联调，或设置 `VITE_AI_GENERATE_URL` 指向已部署站点。
 
 ## 技术栈
 
-- **框架**: React 19 + TypeScript
-- **构建工具**: Vite 6
-- **AI 接入**: Gemini、OpenRouter、火山引擎等（用户自配 Key）
-- **部署平台**: Vercel
-
-## 获取 API Key
-
-### OpenRouter
-访问 https://openrouter.ai/keys
-
-### DeepSeek
-访问 https://platform.deepseek.com/
-
-### 火山引擎
-访问 https://console.volcengine.com/
-
-### Google Gemini
-访问 https://makersuite.google.com/app/apikey
+- React 19 + TypeScript + Vite 6
+- Vercel Serverless（`api/` 目录）
 
 ## 许可证
 
-MIT License
+见仓库 LICENSE

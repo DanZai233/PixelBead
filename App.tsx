@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
-  ToolType, DEFAULT_COLORS, AIConfig, AIProvider, AI_MODELS, DEFAULT_ENDPOINTS, PixelStyle,
+  ToolType, DEFAULT_COLORS, PixelStyle,
   TOOLS_INFO, MOBILE_2D_DOCK_TOOLS, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES,
   ColorSystem, PaletteColor, PALETTE_PRESETS, Selection, BRUSH_SIZES, ToolInfo
 } from './types';
@@ -12,7 +12,6 @@ import { Bead3DViewer } from './components/Bead3DViewer';
 import { BeadSliceViewer } from './components/BeadSliceViewer';
 import { BeadPlannerView } from './components/BeadPlannerView';
 import { ImageCropSelector } from './components/ImageCropSelector';
-import { SettingsPanel } from './components/SettingsPanel';
 import { ColorPicker } from './components/ColorPicker';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { PromoSection } from './components/PromoSection';
@@ -87,12 +86,10 @@ const AppMain: React.FC = () => {
   const [zoom, setZoom] = useState(saved?.zoom ?? 80);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isMobileLeftOpen, setIsMobileLeftOpen] = useState(false);
   const [isMobileRightOpen, setIsMobileRightOpen] = useState(false);
-  const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
   const [viewType, setViewType] = useState<ViewType>(ViewType.TWO_D);
   const [layers, setLayers] = useState(3);
 
@@ -278,31 +275,6 @@ const AppMain: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const savedConfig = localStorage.getItem('aiConfig');
-    if (savedConfig) {
-      try {
-        const parsed = JSON.parse(savedConfig) as Record<string, unknown>;
-        if (parsed.provider === 'OPENAI') {
-          const migrated: AIConfig = {
-            provider: AIProvider.OPENROUTER,
-            apiKey: String(parsed.apiKey ?? ''),
-            model: AI_MODELS[AIProvider.OPENROUTER][0]?.id,
-            baseUrl: parsed.baseUrl as string | undefined,
-            endpoint: DEFAULT_ENDPOINTS[AIProvider.OPENROUTER],
-            imageUrlModel: undefined,
-          };
-          localStorage.setItem('aiConfig', JSON.stringify(migrated));
-          setAiConfig(migrated);
-        } else {
-          setAiConfig(parsed as unknown as AIConfig);
-        }
-      } catch (e) {
-        console.error('Failed to parse saved AI config');
-      }
-    }
-  }, []);
-
-  useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       if (e.ctrlKey) {
         e.preventDefault();
@@ -355,11 +327,6 @@ const AppMain: React.FC = () => {
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, []);
-
-  const handleSaveSettings = useCallback((config: AIConfig) => {
-    setAiConfig(config);
-    localStorage.setItem('aiConfig', JSON.stringify(config));
   }, []);
 
   const pushUndo = useCallback((prev: string[][]) => {
@@ -666,7 +633,7 @@ const AppMain: React.FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isSettingsOpen || isColorPickerOpen || isShortcutsOpen) return;
+      if (isColorPickerOpen || isShortcutsOpen || helpModalOpen) return;
       const activeElement = document.activeElement;
       const isInputFocused = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA' || activeElement?.tagName === 'SELECT' || (activeElement as HTMLElement)?.isContentEditable;
       if (isInputFocused) return;
@@ -717,7 +684,7 @@ const AppMain: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSettingsOpen, isColorPickerOpen, isShortcutsOpen, undo, redo, handleCopySelection, handlePasteSelection, handleCutSelection, handleClearSelection, selection, gridHeight, gridWidth]);
+  }, [isColorPickerOpen, isShortcutsOpen, helpModalOpen, undo, redo, handleCopySelection, handlePasteSelection, handleCutSelection, handleClearSelection, selection, gridHeight, gridWidth]);
 
   const handleCanvasAction = useCallback((row: number, col: number, backgroundColor?: string | null) => {
     if (currentTool === ToolType.PICKER) {
@@ -872,22 +839,17 @@ const AppMain: React.FC = () => {
       alert('请输入描述或上传参考图片');
       return;
     }
-    if (!aiConfig?.apiKey) {
-      alert('请先在设置中配置 AI API Key');
-      setIsSettingsOpen(true);
-      return;
-    }
 
     setIsGenerating(true);
     try {
-      const base64 = await generatePixelArtImage(aiPrompt, aiConfig, aiReferenceImage || undefined);
+      const base64 = await generatePixelArtImage(aiPrompt, aiReferenceImage || undefined);
       processImageToGrid(base64, gridWidth, gridHeight, 0, 0);
       setAiGeneratedImage(base64);
       setAiPrompt('');
       setAiReferenceImage(null);
     } catch (error) {
       console.error('AI generation error:', error);
-      alert(`AI 生成失败：${error instanceof Error ? error.message : '未知错误'}`);
+      alert(`生成失败：${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
       setIsGenerating(false);
     }
@@ -1478,16 +1440,6 @@ const AppMain: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </button>
-              <button
-                onClick={() => setIsSettingsOpen(true)}
-                className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
-                title="AI 设置"
-              >
-                <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
             </div>
             <button
               onClick={() => setIsMobileRightOpen(!isMobileRightOpen)}
@@ -1746,8 +1698,11 @@ const AppMain: React.FC = () => {
 
           <div className="bg-slate-900 rounded-3xl p-4 md:p-5 text-white shadow-xl space-y-2 md:space-y-3">
             <h2 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-2">
-              <span className="animate-pulse">✨</span> AI 像素画生成
+              <span className="animate-pulse">✨</span> 智能生成拼豆图
             </h2>
+            <p className="text-[9px] text-white/50 leading-relaxed">
+              由拼豆糕手自研的智能生成服务免费提供，输入描述或参考图即可生成拼豆风格示意图，生成结果可再导入画布微调。
+            </p>
             {aiReferenceImage && (
               <div className="relative">
                 <img
@@ -1799,20 +1754,13 @@ const AppMain: React.FC = () => {
                 💾 保存生成原图
               </button>
             )}
-            {!aiConfig?.apiKey && (
-              <p className="text-[10px] text-yellow-400/80 text-center">请先配置 AI API Key</p>
-            )}
-            {aiConfig?.provider === 'DEEPSEEK' ? (
-              <p className="text-[10px] text-red-400/80 text-center">
-                DeepSeek 暂不支持图像生成
-              </p>
-            ) : aiReferenceImage ? (
+            {aiReferenceImage ? (
               <p className="text-[9px] text-emerald-400/80 text-center">
-                ✓ 已上传参考图片，AI 将尝试根据图片生成
+                ✓ 已上传参考图，将结合描述生成拼豆风格图稿
               </p>
             ) : (
               <p className="text-[9px] text-white/50 text-center">
-                提示: 上传参考图片可让 AI 更好地理解你的需求
+                提示：上传参考图时，可再写一句希望如何调整画面（可选）
               </p>
             )}
           </div>
@@ -2248,9 +2196,9 @@ const AppMain: React.FC = () => {
               <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               <span className="text-[9px] font-bold text-slate-600">拼豆</span>
             </button>
-            <button onClick={() => setIsSettingsOpen(true)} className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
-              <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-              <span className="text-[9px] font-bold text-slate-600">设置</span>
+            <button onClick={() => setHelpModalOpen(true)} className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+              <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span className="text-[9px] font-bold text-slate-600">帮助</span>
             </button>
           </div>
         </div>
@@ -2436,13 +2384,6 @@ const AppMain: React.FC = () => {
           onClick={() => setIsMobileRightOpen(false)}
         />
       )}
-
-      <SettingsPanel
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onSave={handleSaveSettings}
-        currentConfig={aiConfig || undefined}
-      />
 
       <ColorPicker
         isOpen={isColorPickerOpen}
