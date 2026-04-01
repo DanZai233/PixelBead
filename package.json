@@ -7,9 +7,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:capacitor": "tsc && vite build --mode capacitor",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "cap:sync": "npm run build && npx cap sync ios",
+    "cap:sync": "npm run build:capacitor && npx cap sync ios",
     "cap:open": "npx cap open ios"
   },
   "dependencies": {

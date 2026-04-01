@@ -139,11 +139,11 @@ npm run preview
 npm install
 
 # 2. 配置 iOS 构建环境变量
-#    编辑 .env.capacitor，设置 VITE_API_BASE_URL 为你的 Vercel 部署域名
+#    编辑 .env.capacitor，设置 VITE_API_BASE_URL 为你的线上域名（无尾斜杠）
 #    例如：VITE_API_BASE_URL=https://pindou.danzaii.cn
-cp .env.capacitor .env.local
+#    cap:sync 会使用 vite build --mode capacitor 自动加载该文件
 
-# 3. 构建 Web 产物并同步到 iOS 项目
+# 3. 构建 Web 产物并同步到 iOS 项目（含正确注入的 API 基地址）
 npm run cap:sync
 
 # 4. 在 Xcode 中打开项目
@@ -155,7 +155,7 @@ npm run cap:open
 每次修改 Web 代码后，运行以下命令将最新构建同步到 iOS 项目：
 
 ```bash
-npm run cap:sync    # 等价于 npm run build && npx cap sync ios
+npm run cap:sync    # 等价于 vite build --mode capacitor + cap sync ios
 ```
 
 然后在 Xcode 中重新 Run (Cmd+R) 即可看到更新。
@@ -170,7 +170,7 @@ npm run cap:sync    # 等价于 npm run build && npx cap sync ios
 | 配置文件 | `capacitor.config.ts` |
 
 ### 注意事项
-- `/api/` 路由在 App 中通过 `VITE_API_BASE_URL` 环境变量指向 Vercel 域名，确保素材广场等功能正常工作
+- App 内请求线上 `/api`（素材广场、**智能生成**等）依赖 `VITE_API_BASE_URL`，须写在 `.env.capacitor` 并用 `npm run cap:sync` 构建；勿只用默认 `npm run build` 再同步，否则变量不会打进包
 - App 图标和启动画面源文件在 `assets/` 目录，修改后运行 `npx capacitor-assets generate --ios` 重新生成
 - `ios/App/App/public/` 目录由 `cap sync` 自动生成，不要手动修改
 

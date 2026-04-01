@@ -29,4 +29,5 @@ See `package.json` scripts. Summary:
 
 - **No ESLint config:** The `npm run lint` script exists in `package.json` but there is no `.eslintrc*` or `eslint.config.*` file, and `eslint` is not in `devDependencies`. The lint command will fail. Use `npx tsc --noEmit` for static analysis instead.
 - **Material gallery API routes only work on Vercel:** The `/api/materials` endpoints require Vercel serverless functions and MongoDB. Locally, only the core editor and Redis share features are functional.
+- **Capacitor iOS:** Use `npm run cap:sync` (runs `vite build --mode capacitor`) so `.env.capacitor` injects `VITE_API_BASE_URL`; native WebView otherwise requests relative `/api` against bundled assets and APIs fail.
 - **Tailwind CSS is loaded via CDN** in `index.html`, not installed as a dependency.
