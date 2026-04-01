@@ -47,5 +47,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>用于从相册选择图片，转换为拼豆图纸、智能生成参考图或背景底图。</string>
 </dict>
 </plist>

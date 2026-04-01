@@ -30,6 +30,8 @@ import {
   findClosestColor,
 } from './utils/colorSystemUtils';
 import colorSystemMapping from './colorSystemMapping.json';
+import { Capacitor } from '@capacitor/core';
+import { pickImageDataUrlFromLibrary } from './utils/pickImageFromLibrary';
 
 const App: React.FC = () => {
   const [isAdminRoute, setIsAdminRoute] = useState(() => window.location.hash === '#admin');
@@ -867,6 +869,69 @@ const AppMain: React.FC = () => {
     event.target.value = '';
   };
 
+  const applyBackgroundFromDataUrl = useCallback((src: string) => {
+    const img = new Image();
+    img.onload = () => {
+      const baseBeadSize = 28;
+      const cellSize = baseBeadSize * (zoom / 100);
+
+      const canvasWidth = gridWidth * cellSize;
+      const canvasHeight = gridHeight * cellSize;
+
+      const scaleX = canvasWidth / img.width;
+      const scaleY = canvasHeight / img.height;
+      const autoScale = Math.min(scaleX, scaleY);
+
+      setBackgroundImage({
+        src,
+        x: 0,
+        y: 0,
+        scale: autoScale,
+        opacity: 0.5,
+      });
+    };
+    img.src = src;
+  }, [zoom, gridWidth, gridHeight]);
+
+  const openPendingImagePicker = useCallback(async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const url = await pickImageDataUrlFromLibrary();
+        if (url) setPendingImage(url);
+      } catch {
+        alert('选择图片失败，请重试');
+      }
+      return;
+    }
+    fileInputRef.current?.click();
+  }, []);
+
+  const openAiReferenceImagePicker = useCallback(async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const url = await pickImageDataUrlFromLibrary();
+        if (url) setAiReferenceImage(url);
+      } catch {
+        alert('选择图片失败，请重试');
+      }
+      return;
+    }
+    aiReferenceImageRef.current?.click();
+  }, []);
+
+  const openBackgroundImagePicker = useCallback(async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const url = await pickImageDataUrlFromLibrary();
+        if (url) applyBackgroundFromDataUrl(url);
+      } catch {
+        alert('选择图片失败，请重试');
+      }
+      return;
+    }
+    backgroundImageRef.current?.click();
+  }, [applyBackgroundFromDataUrl]);
+
   const handleSaveGeneratedImage = async () => {
     if (!aiGeneratedImage) return;
     const fileName = `pixel-bead-ai-generated-${Date.now()}.png`;
@@ -935,30 +1000,7 @@ const AppMain: React.FC = () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const src = e.target?.result as string;
-
-      // 加载图片以获取原始宽高
-      const img = new Image();
-      img.onload = () => {
-        const baseBeadSize = 28;
-        const cellSize = baseBeadSize * (zoom / 100);
-
-        const canvasWidth = gridWidth * cellSize;
-        const canvasHeight = gridHeight * cellSize;
-
-        // 计算合适的缩放比例，使图片适配画板（不拉伸）
-        const scaleX = canvasWidth / img.width;
-        const scaleY = canvasHeight / img.height;
-        const autoScale = Math.min(scaleX, scaleY);
-
-        setBackgroundImage({
-          src,
-          x: 0,
-          y: 0,
-          scale: autoScale,
-          opacity: 0.5,
-        });
-      };
-      img.src = src;
+      if (src) applyBackgroundFromDataUrl(src);
     };
     reader.readAsDataURL(file);
     event.target.value = '';
@@ -1733,10 +1775,11 @@ const AppMain: React.FC = () => {
                 onChange={handleAiReferenceImageUpload}
               />
               <button
-                onClick={() => aiReferenceImageRef.current?.click()}
+                type="button"
+                onClick={() => void openAiReferenceImagePicker()}
                 className="flex-1 py-2 md:py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-black text-xs transition-all active:scale-95 flex items-center justify-center gap-1"
               >
-                📷 {aiReferenceImage ? '更换图片' : '上传参考图'}
+                🖼️ {aiReferenceImage ? '更换图片' : '选择参考图'}
               </button>
               <button
                 onClick={handleAiGenerate}
@@ -1769,10 +1812,11 @@ const AppMain: React.FC = () => {
             <h2 className="text-[10px] font-black uppercase tracking-widest text-emerald-100">本地图片转换</h2>
             <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={onFileChange} />
             <button
-              onClick={() => fileInputRef.current?.click()}
+              type="button"
+              onClick={() => void openPendingImagePicker()}
               className="w-full py-2 md:py-2.5 bg-white text-emerald-600 rounded-xl font-black text-xs transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
             >
-              上传照片
+              选择图片
             </button>
           </div>
 
@@ -1878,7 +1922,8 @@ const AppMain: React.FC = () => {
 
             <input type="file" accept="image/*" className="hidden" ref={backgroundImageRef} onChange={handleBackgroundImageUpload} />
             <button
-              onClick={() => backgroundImageRef.current?.click()}
+              type="button"
+              onClick={() => void openBackgroundImagePicker()}
               className="w-full py-2 md:py-2.5 bg-white text-blue-600 rounded-xl font-black text-xs transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
             >
               <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
