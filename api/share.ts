@@ -1,13 +1,77 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { Redis } from '@upstash/redis';
-import {
-  compressShareGrid,
-  decompressShareGrid,
-  SHARE_EXPIRE_HOURS,
-  SHARE_MAX_JSON_BYTES,
-  type CompressedSharePayload,
-  type ShareData,
-} from './lib/shareCodec';
+
+/**
+ * 以下类型与压缩逻辑须与 lib/shareCodec.ts 保持一致（此处单文件内联，避免 Vercel ESM 子路径解析问题）。
+ */
+interface ShareData {
+  grid: string[][];
+  gridSize?: number;
+  gridWidth?: number;
+  gridHeight?: number;
+  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
+  createdAt: number;
+  expiresAt: number;
+}
+
+interface CompressedSharePayload {
+  v: 2;
+  palette: string[];
+  rle: number[];
+  gridWidth: number;
+  gridHeight: number;
+  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
+  createdAt: number;
+  expiresAt: number;
+}
+
+const SHARE_EXPIRE_HOURS = 24 * 7;
+const SHARE_MAX_JSON_BYTES = 1024 * 1024;
+
+function compressShareGrid(grid: string[][]): { palette: string[]; rle: number[] } {
+  const colorToIdx = new Map<string, number>();
+  const palette: string[] = [];
+
+  const flat: number[] = [];
+  for (const row of grid) {
+    for (const color of row) {
+      let idx = colorToIdx.get(color);
+      if (idx === undefined) {
+        idx = palette.length;
+        palette.push(color);
+        colorToIdx.set(color, idx);
+      }
+      flat.push(idx);
+    }
+  }
+
+  const rle: number[] = [];
+  let i = 0;
+  while (i < flat.length) {
+    const val = flat[i];
+    let count = 1;
+    while (i + count < flat.length && flat[i + count] === val) count++;
+    rle.push(val, count);
+    i += count;
+  }
+
+  return { palette, rle };
+}
+
+function decompressShareGrid(palette: string[], rle: number[], width: number, height: number): string[][] {
+  const flat: string[] = [];
+  for (let j = 0; j < rle.length; j += 2) {
+    const color = palette[rle[j]];
+    const count = rle[j + 1];
+    for (let k = 0; k < count; k++) flat.push(color);
+  }
+
+  const out: string[][] = [];
+  for (let r = 0; r < height; r++) {
+    out.push(flat.slice(r * width, (r + 1) * width));
+  }
+  return out;
+}
 
 const PIXEL_STYLES = new Set(['CIRCLE', 'SQUARE', 'ROUNDED']);
 const MAX_GRID_SIDE = 200;

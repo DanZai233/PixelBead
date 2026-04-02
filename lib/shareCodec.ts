@@ -1,6 +1,6 @@
 /**
  * 分享数据压缩/解压（浏览器端）。
- * 服务端副本：api/lib/shareCodec.ts（须与这里逻辑一致）。
+ * 服务端：逻辑内联在 api/share.ts（须与这里保持一致）。
  */
 
 export interface ShareData {
