@@ -1,6 +1,6 @@
 /**
- * 分享数据压缩/解压（浏览器端）。
- * 服务端副本：api/lib/shareCodec.ts（须与这里逻辑一致）。
+ * 与项目根目录 lib/shareCodec.ts 保持一致（Vercel 仅可靠打包 api/ 内文件）。
+ * 若修改压缩格式，请同步更新两处。
  */
 
 export interface ShareData {
@@ -70,11 +70,4 @@ export function decompressShareGrid(palette: string[], rle: number[], width: num
     grid.push(flat.slice(r * width, (r + 1) * width));
   }
   return grid;
-}
-
-export function jsonByteLength(s: string): number {
-  if (typeof Blob !== 'undefined') {
-    return new Blob([s]).size;
-  }
-  return new TextEncoder().encode(s).length;
 }

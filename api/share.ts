@@ -7,7 +7,7 @@ import {
   SHARE_MAX_JSON_BYTES,
   type CompressedSharePayload,
   type ShareData,
-} from '../lib/shareCodec';
+} from './lib/shareCodec';
 
 const PIXEL_STYLES = new Set(['CIRCLE', 'SQUARE', 'ROUNDED']);
 const MAX_GRID_SIDE = 200;
@@ -37,7 +37,12 @@ function isValidGrid(grid: unknown, w: number, h: number): grid is string[][] {
 }
 
 function rawToShareData(raw: unknown, key: string, redis: Redis): Promise<ShareData | null> {
-  const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  let data: unknown;
+  try {
+    data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch {
+    return Promise.resolve(null);
+  }
   if (!data || typeof data !== 'object') return Promise.resolve(null);
 
   if ((data as CompressedSharePayload).v === 2) {
