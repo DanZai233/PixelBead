@@ -5,7 +5,14 @@ import {
   ColorSystem, PaletteColor, PALETTE_PRESETS, Selection, BRUSH_SIZES, ToolInfo
 } from './types';
 import { generatePixelArtImage } from './services/aiService';
-import { saveToUpstash, generateShareUrl, getShareKeyFromUrl, loadFromUpstash } from './services/upstashService';
+import {
+  saveToUpstash,
+  generateShareUrl,
+  getShareKeyFromUrl,
+  loadFromUpstash,
+  parseShareKeyFromInput,
+  type ShareData,
+} from './services/upstashService';
 import { saveMaterial } from './services/materialService';
 import { BeadCanvas } from './components/BeadCanvas';
 import { Bead3DViewer } from './components/Bead3DViewer';
@@ -115,6 +122,9 @@ const AppMain: React.FC = () => {
   const [isSharing, setIsSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareLinkImportOpen, setShareLinkImportOpen] = useState(false);
+  const [shareLinkDraft, setShareLinkDraft] = useState('');
+  const [shareLinkImportLoading, setShareLinkImportLoading] = useState(false);
 
   const [showRuler, setShowRuler] = useState(true);
 
@@ -249,35 +259,6 @@ const AppMain: React.FC = () => {
     if (!shapeTools.includes(currentTool)) setShapeStart(null);
   }, [currentTool]);
 
-  // 加载分享的拼豆数据
-  useEffect(() => {
-    const loadSharedData = async () => {
-      const shareKey = getShareKeyFromUrl();
-      if (shareKey) {
-        try {
-          const shareData = await loadFromUpstash(shareKey);
-          if (shareData) {
-            const size = shareData.gridSize || shareData.gridWidth || 32;
-            setGridWidth(size);
-            setGridHeight(shareData.gridHeight || size);
-            setGrid(shareData.grid);
-            setPixelStyle(shareData.pixelStyle as PixelStyle);
-            setShareModalOpen(true);
-
-            // 清除 URL 中的分享参数
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            alert('已加载分享的拼豆图纸！');
-          }
-        } catch (error) {
-          console.error('加载分享数据失败:', error);
-        }
-      }
-    };
-
-    loadSharedData();
-  }, []);
-
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       if (e.ctrlKey) {
@@ -338,6 +319,71 @@ const AppMain: React.FC = () => {
     redoStackRef.current = [];
     setHistoryVersion(v => v + 1);
   }, []);
+
+  const applyShareDataToCanvas = useCallback(
+    (shareData: ShareData, opts?: { openShareModal?: boolean }) => {
+      pushUndo(gridRef.current);
+      const size = shareData.gridSize || shareData.gridWidth || 32;
+      setGridWidth(size);
+      setGridHeight(shareData.gridHeight || size);
+      setGrid(shareData.grid);
+      setPixelStyle(shareData.pixelStyle as PixelStyle);
+      setPanOffset({ x: 0, y: 0 });
+      if (opts?.openShareModal) setShareModalOpen(true);
+    },
+    [pushUndo]
+  );
+
+  useEffect(() => {
+    const loadSharedData = async () => {
+      const shareKey = getShareKeyFromUrl();
+      if (!shareKey) return;
+      try {
+        const shareData = await loadFromUpstash(shareKey);
+        if (shareData) {
+          applyShareDataToCanvas(shareData, { openShareModal: true });
+          window.history.replaceState({}, document.title, window.location.pathname);
+          alert('已加载分享的拼豆图纸！');
+        }
+      } catch (error) {
+        console.error('加载分享数据失败:', error);
+      }
+    };
+    void loadSharedData();
+  }, [applyShareDataToCanvas]);
+
+  const pasteShareLinkFromClipboard = useCallback(async () => {
+    try {
+      const t = await navigator.clipboard.readText();
+      if (t?.trim()) setShareLinkDraft(t.trim());
+    } catch {
+      alert('无法读取剪贴板，请在输入框内长按粘贴。');
+    }
+  }, []);
+
+  const handleConfirmShareLinkImport = useCallback(async () => {
+    const key = parseShareKeyFromInput(shareLinkDraft);
+    if (!key) {
+      alert('未识别到有效内容。请粘贴含 #share= 的完整链接，或仅粘贴 bead: 开头的 key。');
+      return;
+    }
+    setShareLinkImportLoading(true);
+    try {
+      const shareData = await loadFromUpstash(key);
+      if (!shareData) {
+        alert('链接无效或已过期。');
+        return;
+      }
+      applyShareDataToCanvas(shareData);
+      setShareLinkImportOpen(false);
+      setShareLinkDraft('');
+      alert('已载入分享图纸！');
+    } catch {
+      alert('加载失败，请检查网络后重试。');
+    } finally {
+      setShareLinkImportLoading(false);
+    }
+  }, [shareLinkDraft, applyShareDataToCanvas]);
 
   const handleApplyMaterial = useCallback(async (material: any) => {
     let materialWidth, materialHeight;
@@ -1416,6 +1462,15 @@ const AppMain: React.FC = () => {
               <span className="hidden sm:inline">导入</span>
             </button>
             <button
+              type="button"
+              onClick={() => setShareLinkImportOpen(true)}
+              className="hidden md:flex bg-teal-50 hover:bg-teal-100 text-teal-800 px-3 py-2 rounded-xl font-bold text-xs transition-all items-center gap-2 border border-teal-200/80"
+              title="导入分享链接"
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+              <span className="hidden sm:inline">分享链接</span>
+            </button>
+            <button
               onClick={async () => {
                 const data = JSON.stringify({ grid, gridWidth, gridHeight });
                 const blob = new Blob([data], { type: 'application/json' });
@@ -2230,23 +2285,27 @@ const AppMain: React.FC = () => {
             </div>
           )}
           <div className="flex items-center justify-around px-2 py-1.5">
-            <button onClick={handleExportImage} className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+            <button onClick={handleExportImage} className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
               <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               <span className="text-[9px] font-bold text-slate-600">导出</span>
             </button>
-            <button onClick={handleShare} disabled={isSharing} className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation disabled:opacity-50">
+            <button onClick={handleShare} disabled={isSharing} className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation disabled:opacity-50">
               <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
               <span className="text-[9px] font-bold text-slate-600">{isSharing ? '生成中' : '分享'}</span>
             </button>
-            <button onClick={() => setMaterialGalleryOpen(true)} className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+            <button type="button" onClick={() => setShareLinkImportOpen(true)} className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+              <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+              <span className="text-[9px] font-bold text-slate-600">链接</span>
+            </button>
+            <button onClick={() => setMaterialGalleryOpen(true)} className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
               <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
               <span className="text-[9px] font-bold text-slate-600">广场</span>
             </button>
-            <button onClick={() => setIsPlannerViewOpen(true)} className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+            <button onClick={() => setIsPlannerViewOpen(true)} className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
               <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               <span className="text-[9px] font-bold text-slate-600">拼豆</span>
             </button>
-            <button onClick={() => setHelpModalOpen(true)} className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+            <button onClick={() => setHelpModalOpen(true)} className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
               <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               <span className="text-[9px] font-bold text-slate-600">帮助</span>
             </button>
@@ -2457,6 +2516,74 @@ const AppMain: React.FC = () => {
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}
       />
+
+      {shareLinkImportOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="share-link-import-title"
+          className="fixed inset-0 bg-black/80 z-[1000] flex items-end sm:items-center justify-center p-0 sm:p-6 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !shareLinkImportLoading) setShareLinkImportOpen(false);
+          }}
+        >
+          <div
+            className="bg-white rounded-t-[1.75rem] sm:rounded-[2rem] p-5 sm:p-8 w-full max-w-lg max-h-[88vh] overflow-y-auto shadow-2xl space-y-4 border-t border-slate-100 sm:border-0"
+            style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 id="share-link-import-title" className="text-lg sm:text-xl font-black text-slate-900">
+                  导入分享链接
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  粘贴完整链接（含 <span className="font-mono text-slate-600">#share=</span>）或仅粘贴以{' '}
+                  <span className="font-mono text-slate-600">bead:</span> 开头的 key。
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={shareLinkImportLoading}
+                onClick={() => setShareLinkImportOpen(false)}
+                className="p-2 hover:bg-slate-100 rounded-xl transition-all shrink-0 touch-manipulation"
+              >
+                <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <textarea
+              value={shareLinkDraft}
+              onChange={(e) => setShareLinkDraft(e.target.value)}
+              placeholder="https://……#share=bead%3A……"
+              rows={5}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              className="w-full border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono text-slate-800 placeholder:text-slate-400 focus:border-teal-500 focus:ring-0 outline-none resize-y min-h-[7rem]"
+            />
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={pasteShareLinkFromClipboard}
+                disabled={shareLinkImportLoading}
+                className="px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-sm text-slate-800 transition-all touch-manipulation disabled:opacity-50"
+              >
+                从剪贴板粘贴
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmShareLinkImport()}
+                disabled={shareLinkImportLoading}
+                className="flex-1 px-4 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-sm shadow-md active:scale-[0.98] transition-all touch-manipulation disabled:opacity-50"
+              >
+                {shareLinkImportLoading ? '加载中…' : '载入画布'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {shareModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 md:p-6 backdrop-blur-sm">

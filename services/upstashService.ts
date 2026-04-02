@@ -200,6 +200,33 @@ export function getShareKeyFromUrl(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+/**
+ * 从用户粘贴的整段 URL 或纯 key 中解析分享 key（bead:...）。
+ */
+export function parseShareKeyFromInput(raw: string): string | null {
+  const t = raw.trim();
+  if (!t) return null;
+
+  const fromShareParam = (s: string): string | null => {
+    const m = s.match(/(?:^|[#&?])share=([^&\s#]+)/);
+    if (!m) return null;
+    try {
+      return decodeURIComponent(m[1]);
+    } catch {
+      return m[1];
+    }
+  };
+
+  const hit = fromShareParam(t);
+  if (hit) return hit;
+
+  const firstLine = t.split(/\r?\n/).map((l) => l.trim()).find(Boolean) || '';
+  const token = firstLine.split(/\s/)[0];
+  if (/^bead:\d+:/.test(token)) return token;
+
+  return null;
+}
+
 // 素材广场相关接口
 
 export interface MaterialData {
