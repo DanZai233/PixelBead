@@ -1556,7 +1556,9 @@ const AppMain: React.FC = () => {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className={`fixed bottom-0 left-0 z-[60] w-80 max-w-[85vw] bg-white border-r border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 space-y-4 md:space-y-6 flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out fixed-safe-top ${isMobileLeftOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
+        <aside
+          className={`fixed bottom-0 left-0 w-80 max-w-[85vw] bg-white border-r border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 space-y-4 md:space-y-6 flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out max-lg:top-[var(--app-mobile-header-offset)] max-lg:z-[72] max-lg:shadow-xl ${viewType === ViewType.TWO_D ? 'max-lg:pb-[var(--app-mobile-2d-bottom-chrome-height)]' : 'max-lg:pb-[var(--app-mobile-tab-bar-height)]'} lg:pb-0 lg:relative lg:top-auto lg:bottom-auto lg:z-auto lg:shadow-none lg:transform-none lg:translate-x-0 ${isMobileLeftOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        >
           <div className="flex justify-between items-center mb-2 lg:hidden">
             <h2 className="text-sm font-black text-slate-900">工具栏</h2>
             <button onClick={() => setIsMobileLeftOpen(false)} className="p-2 text-slate-400 hover:text-slate-600">
@@ -2312,7 +2314,9 @@ const AppMain: React.FC = () => {
           </div>
         </div>
 
-         <aside className={`fixed bottom-0 right-0 z-[60] w-80 max-w-[85vw] bg-white border-l border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 shrink-0 transform transition-transform duration-300 ease-in-out fixed-safe-top ${isMobileRightOpen ? 'translate-x-0' : 'translate-x-full'} lg:relative lg:transform-none lg:translate-x-0`}>
+         <aside
+           className={`fixed bottom-0 right-0 w-80 max-w-[85vw] bg-white border-l border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 shrink-0 transform transition-transform duration-300 ease-in-out max-lg:top-[var(--app-mobile-header-offset)] max-lg:z-[72] max-lg:shadow-xl ${viewType === ViewType.TWO_D ? 'max-lg:pb-[var(--app-mobile-2d-bottom-chrome-height)]' : 'max-lg:pb-[var(--app-mobile-tab-bar-height)]'} lg:pb-0 lg:relative lg:top-auto lg:bottom-auto lg:z-auto lg:shadow-none lg:transform-none lg:translate-x-0 ${isMobileRightOpen ? 'translate-x-0' : 'translate-x-full'}`}
+         >
           <div className="flex justify-between items-center mb-2 lg:hidden">
             <h2 className="text-sm font-black text-slate-900">颜色统计</h2>
             <button onClick={() => setIsMobileRightOpen(false)} className="p-2 text-slate-400 hover:text-slate-600">
@@ -2481,16 +2485,18 @@ const AppMain: React.FC = () => {
       )}
 
       {isMobileLeftOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-[50] lg:hidden"
+        <div
+          className="fixed inset-0 bg-black/50 z-[71] lg:hidden"
           onClick={() => setIsMobileLeftOpen(false)}
+          aria-hidden
         />
       )}
 
       {isMobileRightOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-[50] lg:hidden"
+        <div
+          className="fixed inset-0 bg-black/50 z-[71] lg:hidden"
           onClick={() => setIsMobileRightOpen(false)}
+          aria-hidden
         />
       )}
 

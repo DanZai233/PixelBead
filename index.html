@@ -39,6 +39,8 @@
       --app-mobile-2d-bottom-chrome-height = 2D 时再多一行绘图快捷工具
     */
     :root {
+      /* 顶栏（含 logo/标题）+ border，供 fixed 侧栏 top 避让，避免与 header 重叠（iPad 竖屏等 <lg 宽度） */
+      --app-mobile-header-offset: calc(env(safe-area-inset-top, 0px) + 3.75rem);
       --app-mobile-tab-actions-height: 3.75rem;
       --app-mobile-2d-tools-strip: 2.875rem;
       --app-mobile-tab-bar-height: calc(var(--app-mobile-tab-actions-height) + env(safe-area-inset-bottom, 0px));

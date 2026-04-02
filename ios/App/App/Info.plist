@@ -48,10 +48,10 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>用于从相册选择图片，转换为拼豆图纸、智能生成参考图或背景底图。</string>
+	<string>拼豆糕手需要访问您的照片图库，以便您从相册中选取图片：将照片转换为拼豆像素网格图纸、作为「智能生成」功能的参考示意图、或导入为画布背景底图。例如：选择已保存的拼豆设计截图以继续编辑，或选用实拍照片生成图纸。</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>用于将作品保存到系统相册，以及从相册选取、导入图片。</string>
+	<string>当您主动将拼豆作品导出或保存为图片时，应用可将图片写入系统相册，方便您在微信、小红书等平台分享。除您确认的保存操作外，应用不会擅自向相册写入内容。</string>
 	<key>NSCameraUsageDescription</key>
-	<string>仅在您于系统选图界面中选择「拍照」时使用摄像头；您也可以仅从相册选取照片，无需使用相机。</string>
+	<string>当您从系统选图界面选择「拍照」时，拼豆糕手会使用摄像头拍摄一张照片，用于：将实拍画面转换为拼豆像素图纸、作为智能生成的参考图、或设为背景底图。例如：拍摄桌上的拼豆成品或色卡以对照编辑。若您只从相册选图，则不会使用相机。</string>
 </dict>
 </plist>
