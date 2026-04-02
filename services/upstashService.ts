@@ -1,80 +1,78 @@
+import { Capacitor } from '@capacitor/core';
 import { Redis } from '@upstash/redis';
 import type { BeadGrid } from '../types';
+import {
+  compressShareGrid,
+  decompressShareGrid,
+  jsonByteLength,
+  SHARE_EXPIRE_HOURS,
+  SHARE_MAX_JSON_BYTES,
+  type CompressedSharePayload,
+  type ShareData,
+} from '../shareCodec';
 
-// 使用环境变量或默认配置
+const env = import.meta.env as Record<string, string | undefined>;
+const redisUrl = env.VITE_UPSTASH_REDIS_REST_URL || '';
+const redisToken = env.VITE_UPSTASH_REDIS_REST_TOKEN || '';
+const hasDirectRedis = Boolean(redisUrl && redisToken);
+
+/** 浏览器可直连 Upstash；Capacitor/iOS 里 Origin 非 https，Upstash REST 常被 CORS 拦掉，分享改走 VITE_API_BASE_URL/api/share */
+function useHttpShareApi(): boolean {
+  return !hasDirectRedis || Capacitor.isNativePlatform();
+}
+
 const redis = new Redis({
-  url: (import.meta as any).env.VITE_UPSTASH_REDIS_REST_URL || '',
-  token: (import.meta as any).env.VITE_UPSTASH_REDIS_REST_TOKEN || '',
+  url: redisUrl,
+  token: redisToken,
 });
 
-export interface ShareData {
-  grid: string[][];
-  gridSize?: number;
-  gridWidth?: number;
-  gridHeight?: number;
-  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
-  createdAt: number;
-  expiresAt: number;
+function apiBaseTrimmed(): string {
+  return (env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 }
 
-interface CompressedShareData {
-  v: 2;
-  palette: string[];
-  rle: number[];
-  gridWidth: number;
-  gridHeight: number;
-  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
-  createdAt: number;
-  expiresAt: number;
-}
+export type { ShareData };
 
-function compressGrid(grid: string[][]): { palette: string[]; rle: number[] } {
-  const colorToIdx = new Map<string, number>();
-  const palette: string[] = [];
+const EXPIRE_SECONDS = SHARE_EXPIRE_HOURS * 60 * 60;
 
-  const flat: number[] = [];
-  for (const row of grid) {
-    for (const color of row) {
-      let idx = colorToIdx.get(color);
-      if (idx === undefined) {
-        idx = palette.length;
-        palette.push(color);
-        colorToIdx.set(color, idx);
-      }
-      flat.push(idx);
+async function saveShareViaHttpApi(
+  grid: string[][],
+  gridWidth: number,
+  gridHeight: number,
+  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED'
+): Promise<string | null> {
+  const base = apiBaseTrimmed();
+  if (!base) return null;
+  try {
+    const res = await fetch(`${base}/api/share`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ grid, gridWidth, gridHeight, pixelStyle }),
+    });
+    if (!res.ok) {
+      console.error('分享 API POST 失败', res.status);
+      return null;
     }
+    const data = (await res.json()) as { key?: string };
+    return typeof data.key === 'string' ? data.key : null;
+  } catch (error) {
+    console.error('分享 API 请求失败:', error);
+    return null;
   }
-
-  const rle: number[] = [];
-  let i = 0;
-  while (i < flat.length) {
-    const val = flat[i];
-    let count = 1;
-    while (i + count < flat.length && flat[i + count] === val) count++;
-    rle.push(val, count);
-    i += count;
-  }
-
-  return { palette, rle };
 }
 
-function decompressGrid(palette: string[], rle: number[], width: number, height: number): string[][] {
-  const flat: string[] = [];
-  for (let i = 0; i < rle.length; i += 2) {
-    const color = palette[rle[i]];
-    const count = rle[i + 1];
-    for (let j = 0; j < count; j++) flat.push(color);
+async function loadShareViaHttpApi(key: string): Promise<ShareData | null> {
+  const base = apiBaseTrimmed();
+  if (!base) return null;
+  try {
+    const res = await fetch(`${base}/api/share?key=${encodeURIComponent(key)}`);
+    if (res.status === 404 || res.status === 410) return null;
+    if (!res.ok) return null;
+    return (await res.json()) as ShareData;
+  } catch (error) {
+    console.error('分享 API GET 失败:', error);
+    return null;
   }
-
-  const grid: string[][] = [];
-  for (let r = 0; r < height; r++) {
-    grid.push(flat.slice(r * width, (r + 1) * width));
-  }
-  return grid;
 }
-
-const EXPIRE_HOURS = 24 * 7;
-const MAX_COMPRESSED_SIZE = 1024 * 1024;
 
 export async function saveToUpstash(
   grid: string[][],
@@ -82,13 +80,17 @@ export async function saveToUpstash(
   gridHeight: number,
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED'
 ): Promise<string | null> {
+  if (useHttpShareApi()) {
+    return saveShareViaHttpApi(grid, gridWidth, gridHeight, pixelStyle);
+  }
+
   try {
     const key = `bead:${Date.now()}:${Math.random().toString(36).substring(2, 9)}`;
     const now = Date.now();
 
-    const { palette, rle } = compressGrid(grid);
+    const { palette, rle } = compressShareGrid(grid);
 
-    const compressed: CompressedShareData = {
+    const compressed: CompressedSharePayload = {
       v: 2,
       palette,
       rle,
@@ -96,19 +98,19 @@ export async function saveToUpstash(
       gridHeight,
       pixelStyle,
       createdAt: now,
-      expiresAt: now + EXPIRE_HOURS * 60 * 60 * 1000,
+      expiresAt: now + SHARE_EXPIRE_HOURS * 60 * 60 * 1000,
     };
 
     const dataStr = JSON.stringify(compressed);
-    const dataSize = new Blob([dataStr]).size;
+    const dataSize = jsonByteLength(dataStr);
 
-    if (dataSize > MAX_COMPRESSED_SIZE) {
+    if (dataSize > SHARE_MAX_JSON_BYTES) {
       console.error(`压缩后仍超过 1MB 限制 (${(dataSize / 1024).toFixed(0)}KB)`);
       return null;
     }
 
     await redis.set(key, dataStr, {
-      ex: EXPIRE_HOURS * 60 * 60,
+      ex: EXPIRE_SECONDS,
     });
 
     return key;
@@ -119,6 +121,10 @@ export async function saveToUpstash(
 }
 
 export async function loadFromUpstash(key: string): Promise<ShareData | null> {
+  if (useHttpShareApi()) {
+    return loadShareViaHttpApi(key);
+  }
+
   try {
     const raw = await redis.get<any>(key);
     if (!raw) return null;
@@ -126,7 +132,7 @@ export async function loadFromUpstash(key: string): Promise<ShareData | null> {
     const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
 
     if (data.v === 2) {
-      const grid = decompressGrid(data.palette, data.rle, data.gridWidth, data.gridHeight);
+      const grid = decompressShareGrid(data.palette, data.rle, data.gridWidth, data.gridHeight);
       const shareData: ShareData = {
         grid,
         gridWidth: data.gridWidth,
