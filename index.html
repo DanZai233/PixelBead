@@ -39,10 +39,14 @@
       --app-mobile-2d-bottom-chrome-height = 2D 时再多一行绘图快捷工具
     */
     :root {
-      /* 顶栏（含 logo/标题）+ border，供 fixed 侧栏 top 避让，避免与 header 重叠（iPad 竖屏等 <lg 宽度） */
-      --app-mobile-header-offset: calc(env(safe-area-inset-top, 0px) + 3.75rem);
-      --app-mobile-tab-actions-height: 3.75rem;
-      --app-mobile-2d-tools-strip: 2.875rem;
+      /*
+        顶栏：#root 已有 safe-area padding，fixed 抽屉从视口算是 safe-top + 顶栏高度。
+        略放大余量，避免窄屏/大字体系下与顶栏重叠。
+      */
+      --app-mobile-header-offset: calc(env(safe-area-inset-top, 0px) + 4.75rem);
+      /* 底栏：多按钮 + 文案，实际高度可能高于理论值，预留略大 */
+      --app-mobile-tab-actions-height: 4.25rem;
+      --app-mobile-2d-tools-strip: 3.125rem;
       --app-mobile-tab-bar-height: calc(var(--app-mobile-tab-actions-height) + env(safe-area-inset-bottom, 0px));
       --app-mobile-2d-bottom-chrome-height: calc(
         var(--app-mobile-2d-tools-strip) + var(--app-mobile-tab-actions-height) + env(safe-area-inset-bottom, 0px)

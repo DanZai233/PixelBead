@@ -1337,7 +1337,7 @@ const AppMain: React.FC = () => {
   }, [stats, getColorKey]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F1F5F9] text-slate-900 select-none overflow-hidden h-screen">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-[#F1F5F9] text-slate-900 select-none overflow-hidden h-screen max-lg:h-[100dvh] max-lg:max-h-[100dvh]">
       <header className="bg-white border-b border-slate-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between gap-2 z-[100] shadow-sm shrink-0 overflow-x-auto overflow-y-hidden no-scrollbar">
         <div className="flex items-center gap-2 md:gap-3">
           <button 
@@ -1557,7 +1557,7 @@ const AppMain: React.FC = () => {
 
       <div className="flex-1 flex overflow-hidden">
         <aside
-          className={`fixed bottom-0 left-0 w-80 max-w-[85vw] bg-white border-r border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 space-y-4 md:space-y-6 flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out max-lg:top-[var(--app-mobile-header-offset)] max-lg:z-[72] max-lg:shadow-xl ${viewType === ViewType.TWO_D ? 'max-lg:pb-[var(--app-mobile-2d-bottom-chrome-height)]' : 'max-lg:pb-[var(--app-mobile-tab-bar-height)]'} lg:pb-0 lg:relative lg:top-auto lg:bottom-auto lg:z-auto lg:shadow-none lg:transform-none lg:translate-x-0 ${isMobileLeftOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          className={`fixed bottom-0 left-0 w-80 max-w-[85vw] bg-white border-r border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 space-y-4 md:space-y-6 flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out max-lg:top-[var(--app-mobile-header-offset)] max-lg:z-[76] max-lg:shadow-xl ${viewType === ViewType.TWO_D ? 'max-lg:pb-[var(--app-mobile-2d-bottom-chrome-height)]' : 'max-lg:pb-[var(--app-mobile-tab-bar-height)]'} lg:pb-0 lg:relative lg:top-auto lg:bottom-auto lg:z-auto lg:shadow-none lg:transform-none lg:translate-x-0 ${isMobileLeftOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
           <div className="flex justify-between items-center mb-2 lg:hidden">
             <h2 className="text-sm font-black text-slate-900">工具栏</h2>
@@ -2101,10 +2101,12 @@ const AppMain: React.FC = () => {
 
          <main
           className={`flex-1 bg-[#EBEDF0] relative overflow-hidden ${
-            viewType === ViewType.THREE_D || viewType === ViewType.SLICES ? 'max-lg:pb-[var(--app-mobile-tab-bar-height)]' : ''
-          }`}
+            viewType === ViewType.TWO_D
+              ? 'max-lg:pb-[var(--app-mobile-2d-bottom-chrome-height)]'
+              : 'max-lg:pb-[var(--app-mobile-tab-bar-height)]'
+          } lg:pb-0`}
         >
-           <div className="absolute top-2 left-2 right-2 md:top-6 md:left-1/2 md:right-auto md:-translate-x-1/2 flex items-center justify-center gap-1 md:gap-4 bg-white/95 backdrop-blur-sm px-2 md:px-6 py-1.5 md:py-2 rounded-2xl md:rounded-full shadow-xl border border-white/50 z-[55] md:z-50 md:max-w-fit">
+           <div className="absolute top-2 left-2 right-2 max-lg:flex-wrap max-lg:justify-center max-lg:gap-x-1 max-lg:gap-y-1 md:top-6 md:left-1/2 md:right-auto md:-translate-x-1/2 flex items-center justify-center gap-1 md:gap-4 bg-white/95 backdrop-blur-sm px-2 md:px-6 py-1.5 md:py-2 rounded-2xl md:rounded-full shadow-xl border border-white/50 z-[55] md:z-50 md:max-w-fit">
             <button onClick={() => setZoom(z => Math.max(10, z - 5))} className="p-1 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-base md:text-lg min-w-[28px] min-h-[28px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center touch-manipulation">－</button>
             <input type="range" min="10" max="300" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} className="w-12 md:w-40 h-3 accent-indigo-600 touch-manipulation flex-1 md:flex-initial" />
             <button onClick={() => setZoom(z => Math.min(400, z + 5))} className="p-1 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-base md:text-lg min-w-[28px] min-h-[28px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center touch-manipulation">＋</button>
@@ -2139,7 +2141,7 @@ const AppMain: React.FC = () => {
             <div className="w-full h-full overflow-auto no-scrollbar bg-dots">
             {viewType === ViewType.TWO_D ? (
               <>
-                <div className="min-w-full min-h-full flex items-center justify-center p-2 md:p-40 pt-14 md:pt-8 max-lg:pb-[calc(var(--app-mobile-2d-bottom-chrome-height)+5.5rem)] md:pb-8">
+                <div className="min-w-full min-h-full flex items-center justify-center p-2 md:p-40 max-lg:pt-[6.75rem] md:pt-8 max-lg:pb-[6.75rem] md:pb-8">
                   <div
                     className={`relative ${joystickMove.x === 0 && joystickMove.y === 0 ? 'transition-transform duration-75' : ''}`}
                     style={{
@@ -2174,7 +2176,7 @@ const AppMain: React.FC = () => {
                      </div>
                   </div>
                 </div>
-                <div className="lg:hidden fixed bottom-[calc(var(--app-mobile-2d-bottom-chrome-height)+0.75rem)] left-6 z-[50]">
+                <div className="lg:hidden fixed bottom-[calc(var(--app-mobile-2d-bottom-chrome-height)+0.5rem)] left-4 z-[74]">
                   <VirtualJoystick
                     type="move"
                     onMove={(x, y) => setJoystickMove({ x: -x, y: -y })}
@@ -2182,7 +2184,7 @@ const AppMain: React.FC = () => {
                     knobSize={36}
                   />
                 </div>
-                <div className="lg:hidden fixed bottom-[calc(var(--app-mobile-2d-bottom-chrome-height)+0.75rem)] right-6 z-[50]">
+                <div className="lg:hidden fixed bottom-[calc(var(--app-mobile-2d-bottom-chrome-height)+0.5rem)] right-4 z-[74]">
                   <VirtualJoystick
                     type="zoom"
                     onZoom={(delta) => setJoystickZoom(delta)}
@@ -2225,10 +2227,10 @@ const AppMain: React.FC = () => {
            </div>
 
            <div
-             className={`absolute right-3 z-[45] md:z-50 group md:bottom-6 ${
+             className={`absolute right-3 z-[74] md:z-50 group md:bottom-6 ${
                viewType === ViewType.TWO_D
-                 ? 'max-lg:bottom-[calc(var(--app-mobile-2d-bottom-chrome-height)+4.5rem)]'
-                 : 'max-lg:bottom-[calc(11rem+env(safe-area-inset-bottom,0px))]'
+                 ? 'max-lg:bottom-[calc(var(--app-mobile-2d-bottom-chrome-height)+5.25rem)]'
+                 : 'max-lg:bottom-[calc(12rem+env(safe-area-inset-bottom,0px))]'
              }`}
            >
              <button
@@ -2315,7 +2317,7 @@ const AppMain: React.FC = () => {
         </div>
 
          <aside
-           className={`fixed bottom-0 right-0 w-80 max-w-[85vw] bg-white border-l border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 shrink-0 transform transition-transform duration-300 ease-in-out max-lg:top-[var(--app-mobile-header-offset)] max-lg:z-[72] max-lg:shadow-xl ${viewType === ViewType.TWO_D ? 'max-lg:pb-[var(--app-mobile-2d-bottom-chrome-height)]' : 'max-lg:pb-[var(--app-mobile-tab-bar-height)]'} lg:pb-0 lg:relative lg:top-auto lg:bottom-auto lg:z-auto lg:shadow-none lg:transform-none lg:translate-x-0 ${isMobileRightOpen ? 'translate-x-0' : 'translate-x-full'}`}
+           className={`fixed bottom-0 right-0 w-80 max-w-[85vw] bg-white border-l border-slate-200 overflow-y-auto no-scrollbar p-4 md:p-6 shrink-0 transform transition-transform duration-300 ease-in-out max-lg:top-[var(--app-mobile-header-offset)] max-lg:z-[76] max-lg:shadow-xl ${viewType === ViewType.TWO_D ? 'max-lg:pb-[var(--app-mobile-2d-bottom-chrome-height)]' : 'max-lg:pb-[var(--app-mobile-tab-bar-height)]'} lg:pb-0 lg:relative lg:top-auto lg:bottom-auto lg:z-auto lg:shadow-none lg:transform-none lg:translate-x-0 ${isMobileRightOpen ? 'translate-x-0' : 'translate-x-full'}`}
          >
           <div className="flex justify-between items-center mb-2 lg:hidden">
             <h2 className="text-sm font-black text-slate-900">颜色统计</h2>
