@@ -7,6 +7,9 @@
   "functions": {
     "api/ai/generate-image.ts": {
       "maxDuration": 120
+    },
+    "api/share.ts": {
+      "includeFiles": "lib/shareCodec.ts"
     }
   }
 }

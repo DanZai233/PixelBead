@@ -9,17 +9,12 @@ import {
   SHARE_MAX_JSON_BYTES,
   type CompressedSharePayload,
   type ShareData,
-} from '../shareCodec';
+} from '../lib/shareCodec';
 
 const env = import.meta.env as Record<string, string | undefined>;
 const redisUrl = env.VITE_UPSTASH_REDIS_REST_URL || '';
 const redisToken = env.VITE_UPSTASH_REDIS_REST_TOKEN || '';
 const hasDirectRedis = Boolean(redisUrl && redisToken);
-
-/** 浏览器可直连 Upstash；Capacitor/iOS 里 Origin 非 https，Upstash REST 常被 CORS 拦掉，分享改走 VITE_API_BASE_URL/api/share */
-function useHttpShareApi(): boolean {
-  return !hasDirectRedis || Capacitor.isNativePlatform();
-}
 
 const redis = new Redis({
   url: redisUrl,
@@ -27,7 +22,11 @@ const redis = new Redis({
 });
 
 function apiBaseTrimmed(): string {
-  return (env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+  let b = (env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '');
+  if (b.endsWith('/api')) {
+    b = b.slice(0, -4).replace(/\/$/, '');
+  }
+  return b;
 }
 
 export type { ShareData };
@@ -49,7 +48,13 @@ async function saveShareViaHttpApi(
       body: JSON.stringify({ grid, gridWidth, gridHeight, pixelStyle }),
     });
     if (!res.ok) {
-      console.error('分享 API POST 失败', res.status);
+      let detail = '';
+      try {
+        detail = (await res.clone().text()).slice(0, 200);
+      } catch {
+        /* ignore */
+      }
+      console.error('分享 API POST 失败', res.status, detail);
       return null;
     }
     const data = (await res.json()) as { key?: string };
@@ -74,16 +79,13 @@ async function loadShareViaHttpApi(key: string): Promise<ShareData | null> {
   }
 }
 
-export async function saveToUpstash(
+async function saveShareDirectRedis(
   grid: string[][],
   gridWidth: number,
   gridHeight: number,
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED'
 ): Promise<string | null> {
-  if (useHttpShareApi()) {
-    return saveShareViaHttpApi(grid, gridWidth, gridHeight, pixelStyle);
-  }
-
+  if (!hasDirectRedis) return null;
   try {
     const key = `bead:${Date.now()}:${Math.random().toString(36).substring(2, 9)}`;
     const now = Date.now();
@@ -120,11 +122,8 @@ export async function saveToUpstash(
   }
 }
 
-export async function loadFromUpstash(key: string): Promise<ShareData | null> {
-  if (useHttpShareApi()) {
-    return loadShareViaHttpApi(key);
-  }
-
+async function loadShareDirectRedis(key: string): Promise<ShareData | null> {
+  if (!hasDirectRedis) return null;
   try {
     const raw = await redis.get<any>(key);
     if (!raw) return null;
@@ -157,6 +156,37 @@ export async function loadFromUpstash(key: string): Promise<ShareData | null> {
     console.error('从 Upstash 加载失败:', error);
     return null;
   }
+}
+
+export async function saveToUpstash(
+  grid: string[][],
+  gridWidth: number,
+  gridHeight: number,
+  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED'
+): Promise<string | null> {
+  if (Capacitor.isNativePlatform()) {
+    const viaApi = await saveShareViaHttpApi(grid, gridWidth, gridHeight, pixelStyle);
+    if (viaApi) return viaApi;
+    return saveShareDirectRedis(grid, gridWidth, gridHeight, pixelStyle);
+  }
+
+  if (hasDirectRedis) {
+    return saveShareDirectRedis(grid, gridWidth, gridHeight, pixelStyle);
+  }
+  return saveShareViaHttpApi(grid, gridWidth, gridHeight, pixelStyle);
+}
+
+export async function loadFromUpstash(key: string): Promise<ShareData | null> {
+  if (Capacitor.isNativePlatform()) {
+    const viaApi = await loadShareViaHttpApi(key);
+    if (viaApi) return viaApi;
+    return loadShareDirectRedis(key);
+  }
+
+  if (hasDirectRedis) {
+    return loadShareDirectRedis(key);
+  }
+  return loadShareViaHttpApi(key);
 }
 
 export function generateShareUrl(key: string, baseUrl?: string): string {

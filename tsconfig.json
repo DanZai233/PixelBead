@@ -27,7 +27,6 @@
     "noEmit": true
   },
   "exclude": [
-    "api",
-    "lib"
+    "api"
   ]
 }

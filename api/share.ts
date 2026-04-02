@@ -7,7 +7,7 @@ import {
   SHARE_MAX_JSON_BYTES,
   type CompressedSharePayload,
   type ShareData,
-} from '../shareCodec';
+} from '../lib/shareCodec';
 
 const PIXEL_STYLES = new Set(['CIRCLE', 'SQUARE', 'ROUNDED']);
 const MAX_GRID_SIDE = 200;
