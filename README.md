@@ -1,6 +1,12 @@
 # 拼豆糕手
 
-一个功能强大的拼豆（Perler Beads/Hama Beads）像素画设计工具，支持智能生成拼豆示意图、本地图片转图纸等功能。
+一个功能强大的拼豆（Perler Beads/Hama Beads）像素画设计工具，支持智能生成拼豆示意图、本地图片转图纸等功能，现已提供 iOS App Store 版本。
+
+## 📲 App Store 下载
+
+**拼豆糕手现已上架 iOS App Store，iPhone / iPad 可直接下载使用：**
+
+👉 [立即前往 App Store 获取《拼豆糕手》](https://apps.apple.com/cn/app/%E6%8B%BC%E8%B1%86%E7%B3%95%E6%89%8B/id6761361385)
 
 ![首页](./屏幕截图%202026-03-04%20112130.png)
 
@@ -67,7 +73,7 @@
 
 ### 📦 多平台支持
 - **Web 应用** - 支持所有现代浏览器，无需安装
-- **iOS App** - 基于 Capacitor 封装，原生壳 + WKWebView，可上架 App Store
+- **iOS App** - 基于 Capacitor 封装，原生壳 + WKWebView，已上架 App Store
 - **微信小程序** - 使用 WebView 内嵌 H5，开发量最少，体验流畅
 - **一键部署** - 支持 Vercel 一键部署
 
