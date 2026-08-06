@@ -67,6 +67,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [aiReferenceImage, setAiReferenceImage] = useState<string | null>(null);
   // ── View State ──
   const [aiGeneratedImage, setAiGeneratedImage] = useState<string | null>(null);
+  const [showAIResultModal, setShowAIResultModal] = useState(false);
   const [showGridLines, setShowGridLines] = useState(true);
   const [zoom, setZoom] = useState(saved?.zoom ?? 80);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -875,6 +876,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
       const base64 = await generatePixelArtImage(aiPrompt, aiReferenceImage || undefined);
       applyImageToGrid(base64, gridWidth, gridHeight, 0, 0);
       setAiGeneratedImage(base64);
+      setShowAIResultModal(true);
       // 不自动清空：用户可能需要修改描述或参考图后重试
     } catch (error) {
       console.error('AI generation error:', error);
@@ -961,6 +963,8 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     }
     backgroundImageRef.current?.click();
   }, [applyBackgroundFromDataUrl]);
+
+  const closeAIResultModal = useCallback(() => setShowAIResultModal(false), []);
 
   const handleSaveGeneratedImage = async () => {
     if (!aiGeneratedImage) return;
@@ -1389,6 +1393,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     joystickMove, setJoystickMove, joystickZoom, setJoystickZoom,
     joystickMoveRef, joystickZoomRef,
     handleSaveGeneratedImage,
+    showAIResultModal, closeAIResultModal,
     applyImageToGrid,
     generateExportImage, generateShareImage, generateShareCaption, getUniqueColors,
     stats,

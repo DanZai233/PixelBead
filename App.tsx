@@ -26,7 +26,9 @@ import { MaterialGallery } from './components/MaterialGallery';
 import { HelpModal } from './components/HelpModal';
 import { ToastProvider, useToast } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AIResultModal } from './components/AIResultModal';
 import { useEditor } from './hooks/useEditor';
+import { useGenerationHistory } from './hooks/useGenerationHistory';
 import { OnboardingGuide } from './components/OnboardingGuide';
 import { AdminPanel } from './components/AdminPanel';
 import { VirtualJoystick } from './components/VirtualJoystick';
@@ -145,6 +147,7 @@ const AppMain: React.FC = () => {
     applyImageToGrid,
     generateExportImage, generateShareImage, generateShareCaption, getUniqueColors,
     stats,
+    showAIResultModal, closeAIResultModal,
     backgroundImageRef,
     onFileChange,
     onImportFile,
@@ -153,6 +156,23 @@ const AppMain: React.FC = () => {
     expandedColorGroups, setExpandedColorGroups,
     toggleColorGroup,
   } = useEditor(toast);
+
+  const { history, addToHistory, removeFromHistory, clearHistory } = useGenerationHistory();
+
+  // Auto-save to history when AI generates
+  const prevGeneratedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (aiGeneratedImage && aiGeneratedImage !== prevGeneratedRef.current) {
+      prevGeneratedRef.current = aiGeneratedImage;
+      addToHistory({
+        imageDataUrl: aiGeneratedImage,
+        prompt: aiPrompt,
+        referenceImage: aiReferenceImage,
+        gridWidth,
+        gridHeight,
+      });
+    }
+  }, [aiGeneratedImage, aiPrompt, aiReferenceImage, gridWidth, gridHeight, addToHistory]);
 
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col bg-[#F1F5F9] text-slate-900 select-none overflow-hidden h-screen max-lg:h-[100dvh] max-lg:max-h-[100dvh]">
@@ -1740,6 +1760,26 @@ const AppMain: React.FC = () => {
           setShowOnboarding(false);
           localStorage.setItem('onboarding_done', '1');
         }} />
+      )}
+
+      {showAIResultModal && aiGeneratedImage && (
+        <AIResultModal
+          imageDataUrl={aiGeneratedImage}
+          prompt={aiPrompt}
+          referenceImage={aiReferenceImage}
+          gridWidth={gridWidth}
+          gridHeight={gridHeight}
+          history={history}
+          onClose={closeAIResultModal}
+          onPublishToGallery={(prefillTitle: string) => {
+            closeAIResultModal();
+            setMaterialTitle(prefillTitle);
+            setShareToGallery(true);
+            setShareModalOpen(true);
+          }}
+          onRemoveHistory={removeFromHistory}
+          onClearHistory={clearHistory}
+        />
       )}
 
       {helpModalOpen && (
