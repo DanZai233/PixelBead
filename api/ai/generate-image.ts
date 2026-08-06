@@ -56,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const apiKey = process.env.PIXELBEAD_AI_API_KEY;
   const baseUrl = (process.env.PIXELBEAD_AI_API_BASE || 'https://ark.cn-beijing.volces.com/api/v3').replace(/\/$/, '');
-  const model = process.env.PIXELBEAD_AI_IMAGE_MODEL || 'doubao-seedream-4-5-251128';
+  const model = process.env.PIXELBEAD_AI_IMAGE_MODEL || 'doubao-seedream-5-0-260128';
 
   if (!apiKey?.trim()) {
     return res.status(503).json({ error: '智能生成功能暂未开放' });
@@ -77,13 +77,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     model,
     size: '2K',
     response_format: 'b64_json',
+    sequential_image_generation: 'disabled',
     watermark: false,
   };
 
   const pureBase64 = referenceImage ? referenceImage.replace(/^data:image\/\w+;base64,/, '') : '';
 
   if (pureBase64) {
-    requestBody.reference_images = [pureBase64];
+    requestBody.image = [pureBase64];
     requestBody.prompt =
       prompt ||
       'Convert this image to a clean 1:1 square pixel art suitable for Perler beads (hama beads). The style should be clean, vibrant, limited color palette, solid white background, clear and bold outlines, centered subject.';
