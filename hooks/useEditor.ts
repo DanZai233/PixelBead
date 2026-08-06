@@ -27,6 +27,10 @@ import colorSystemMapping from '../colorSystemMapping.json';
 import { Capacitor } from '@capacitor/core';
 import { pickSingleImageNative } from '../utils/pickImageNative';
 
+// ═══════════════════════════════════════════
+// SECTION: Grid State & History
+//   grid state, undo/redo, resize, autosave
+// ═══════════════════════════════════════════
 export function useEditor(toast: (msg: string, type?: 'error' | 'success' | 'info') => void) {
 const SAVE_KEY = 'pixelbead_autosave';
 
@@ -61,6 +65,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [isGenerating, setIsGenerating] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [aiReferenceImage, setAiReferenceImage] = useState<string | null>(null);
+  // ── View State ──
   const [aiGeneratedImage, setAiGeneratedImage] = useState<string | null>(null);
   const [showGridLines, setShowGridLines] = useState(true);
   const [zoom, setZoom] = useState(saved?.zoom ?? 80);
@@ -78,6 +83,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [showColorKeys, setShowColorKeys] = useState(true);
   const [selectedColorSystem, setSelectedColorSystem] = useState<ColorSystem>('MARD');
   const [isPalettePanelOpen, setIsPalettePanelOpen] = useState(true);
+  // ── AI Generation State ──
   const [highlightedColor, setHighlightedColor] = useState<ColorHex | null>(null);
   const [highlightOpacity, setHighlightOpacity] = useState(90);
   const [isPlannerViewOpen, setIsPlannerViewOpen] = useState(false);
@@ -98,12 +104,14 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [showRuler, setShowRuler] = useState(true);
 
   const [showGuideLines, setShowGuideLines] = useState(true);
+  // ── Image Import & Background State ──
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportPixelStyle, setExportPixelStyle] = useState<PixelStyle>(PixelStyle.CIRCLE);
   const [exportShowGuideLines, setExportShowGuideLines] = useState(false);
   const [exportMirror, setExportMirror] = useState(false);
   const [exportSelectionOnly, setExportSelectionOnly] = useState(false);
+  // ── Share & Material Gallery State ──
   const [exportPreviewUrl, setExportPreviewUrl] = useState<string | null>(null);
   const [exportPreviewBlob, setExportPreviewBlob] = useState<Blob | null>(null);
   const [exportPreviewName, setExportPreviewName] = useState('');
@@ -112,6 +120,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [shareToGallery, setShareToGallery] = useState(false);
   const [materialTitle, setMaterialTitle] = useState('');
   const [materialDescription, setMaterialDescription] = useState('');
+  // ── Export State ──
   const [materialAuthor, setMaterialAuthor] = useState('');
   const [materialTags, setMaterialTags] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
@@ -119,12 +128,14 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [helpModalOpen, setHelpModalOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('onboarding_done');
+  // ── Selection & Clipboard State ──
   });
 
   const [selection, setSelection] = useState<Selection | null>(null);
   const [clipboard, setClipboard] = useState<string[][] | null>(null);
   const [brushSize, setBrushSize] = useState(1);
 
+  // ── Palette State ──
   const [joystickMove, setJoystickMove] = useState({ x: 0, y: 0 });
   const [joystickZoom, setJoystickZoom] = useState(0);
   const joystickMoveRef = useRef({ x: 0, y: 0 });
