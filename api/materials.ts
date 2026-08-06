@@ -2,12 +2,21 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { MongoClient, Db } from 'mongodb';
 
 let cachedDb: Db | null = null;
+let cachedClient: MongoClient | null = null;
 async function getDb(): Promise<Db> {
   if (cachedDb) return cachedDb;
   const client = new MongoClient(process.env.MONGODB_URI!);
+  cachedClient = client;
   await client.connect();
   cachedDb = client.db('pixelbead');
   return cachedDb;
+}
+
+// Vercel serverless: cleanup on shutdown
+if (typeof process !== 'undefined') {
+  process.once('SIGTERM', async () => {
+    if (cachedClient) await cachedClient.close().catch(() => {});
+  });
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

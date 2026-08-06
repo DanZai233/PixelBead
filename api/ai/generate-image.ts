@@ -37,6 +37,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Rate limit: max 20 req/min per IP
+  {
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 'unknown';
+    if (!(globalThis as any)._pixelbeadRateStore) (globalThis as any)._pixelbeadRateStore = new Map();
+    const rs = (globalThis as any)._pixelbeadRateStore as Map<string, { count: number; resetAt: number }>;
+    const now = Date.now();
+    const entry = rs.get(clientIp);
+    if (entry && now <= entry.resetAt && entry.count >= 20) {
+      return res.status(429).json({ error: '请求过于频繁，请稍后再试' });
+    }
+    if (!entry || now > entry.resetAt) {
+      rs.set(clientIp, { count: 1, resetAt: now + 60_000 });
+    } else {
+      entry.count++;
+    }
+  }
+
   const apiKey = process.env.PIXELBEAD_AI_API_KEY;
   const baseUrl = (process.env.PIXELBEAD_AI_API_BASE || 'https://ark.cn-beijing.volces.com/api/v3').replace(/\/$/, '');
   const model = process.env.PIXELBEAD_AI_IMAGE_MODEL || 'doubao-seedream-4-5-251128';
@@ -64,8 +81,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     watermark: false,
   };
 
-  if (referenceImage) {
-    requestBody.reference_images = [referenceImage];
+  const pureBase64 = referenceImage ? referenceImage.replace(/^data:image\/\w+;base64,/, '') : '';
+
+  if (pureBase64) {
+    requestBody.image = [pureBase64];
     requestBody.prompt =
       prompt ||
       'Convert this image to a clean 1:1 square pixel art suitable for Perler beads (hama beads). The style should be clean, vibrant, limited color palette, solid white background, clear and bold outlines, centered subject.';

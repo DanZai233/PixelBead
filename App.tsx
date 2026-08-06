@@ -24,6 +24,8 @@ import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { PromoSection } from './components/PromoSection';
 import { MaterialGallery } from './components/MaterialGallery';
 import { HelpModal } from './components/HelpModal';
+import { ToastProvider, useToast } from './components/Toast';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { OnboardingGuide } from './components/OnboardingGuide';
 import { AdminPanel } from './components/AdminPanel';
 import { VirtualJoystick } from './components/VirtualJoystick';
@@ -55,7 +57,11 @@ const App: React.FC = () => {
     return <AdminPanel onBack={() => { window.location.hash = ''; setIsAdminRoute(false); }} />;
   }
 
-  return <AppMain />;
+  return (
+    <ErrorBoundary>
+      <AppMain />
+    </ErrorBoundary>
+  );
 };
 
 const SAVE_KEY = 'pixelbead_autosave';
@@ -72,7 +78,8 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   return null;
 }
 
-const AppMain: React.FC = () => {
+const AppMainInner: React.FC = () => {
+  const { toast } = useToast();
   const saved = useMemo(() => loadSavedCanvas(), []);
 
   const [gridWidth, setGridWidth] = useState(saved?.gridWidth ?? 32);
@@ -343,7 +350,7 @@ const AppMain: React.FC = () => {
         if (shareData) {
           applyShareDataToCanvas(shareData, { openShareModal: true });
           window.history.replaceState({}, document.title, window.location.pathname);
-          alert('已加载分享的拼豆图纸！');
+          toast('已加载分享的拼豆图纸！', 'success');
         }
       } catch (error) {
         console.error('加载分享数据失败:', error);
@@ -357,29 +364,29 @@ const AppMain: React.FC = () => {
       const t = await navigator.clipboard.readText();
       if (t?.trim()) setShareLinkDraft(t.trim());
     } catch {
-      alert('无法读取剪贴板，请在输入框内长按粘贴。');
+      toast('无法读取剪贴板，请在输入框内长按粘贴。', 'error');
     }
   }, []);
 
   const handleConfirmShareLinkImport = useCallback(async () => {
     const key = parseShareKeyFromInput(shareLinkDraft);
     if (!key) {
-      alert('未识别到有效内容。请粘贴含 #share= 的完整链接，或仅粘贴 bead: 开头的 key。');
+      toast('未识别到有效内容。请粘贴含 #share= 的完整链接，或仅粘贴 bead: 开头的 key。', 'error');
       return;
     }
     setShareLinkImportLoading(true);
     try {
       const shareData = await loadFromUpstash(key);
       if (!shareData) {
-        alert('链接无效或已过期。');
+        toast('链接无效或已过期。', 'error');
         return;
       }
       applyShareDataToCanvas(shareData);
       setShareLinkImportOpen(false);
       setShareLinkDraft('');
-      alert('已载入分享图纸！');
+      toast('已载入分享图纸！', 'success');
     } catch {
-      alert('加载失败，请检查网络后重试。');
+      toast('加载失败，请检查网络后重试。', 'error');
     } finally {
       setShareLinkImportLoading(false);
     }
@@ -458,7 +465,7 @@ const AppMain: React.FC = () => {
     const width = parseInt(customWidth);
     const height = parseInt(customHeight);
     if (isNaN(width) || isNaN(height) || width < 4 || width > 200 || height < 4 || height > 200) {
-      alert('请输入 4-200 之间的数字');
+      toast('请输入 4-200 之间的数字', 'error');
       return;
     }
     handleResize(width, height);
@@ -472,7 +479,7 @@ const AppMain: React.FC = () => {
     }
   }, [gridWidth, gridHeight, pushUndo]);
 
-  const processImageToGrid = useCallback((imageSrc: string, width: number, height: number, xAlign: number = 0, yAlign: number = 0, customCrop?: { x: number; y: number; width: number; height: number }) => {
+  const applyImageToGrid = useCallback((imageSrc: string, width: number, height: number, xAlign: number = 0, yAlign: number = 0, customCrop?: { x: number; y: number; width: number; height: number }) => {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
@@ -557,7 +564,7 @@ const AppMain: React.FC = () => {
       copiedGrid.push(row);
     }
     setClipboard(copiedGrid);
-    alert('已复制选区内容');
+    toast('已复制选区内容', 'success');
   }, [selection, grid]);
 
   const handleCutSelection = useCallback(() => {
@@ -589,7 +596,7 @@ const AppMain: React.FC = () => {
       return newGrid;
     });
     setSelection(null);
-    alert('已剪切选区内容');
+    toast('已剪切选区内容', 'success');
   }, [selection, grid, pushUndo]);
 
   const handlePasteSelection = useCallback((pasteRow: number, pasteCol: number) => {
@@ -611,7 +618,7 @@ const AppMain: React.FC = () => {
       }
       return newGrid;
     });
-    alert('已粘贴内容');
+    toast('已粘贴内容', 'success');
   }, [clipboard, gridHeight, gridWidth, pushUndo]);
 
   const handleInvertSelection = useCallback(() => {
@@ -886,20 +893,19 @@ const AppMain: React.FC = () => {
   const handleAiGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!aiPrompt.trim() && !aiReferenceImage) {
-      alert('请输入描述或上传参考图片');
+      toast('请输入描述或上传参考图片', 'error');
       return;
     }
 
     setIsGenerating(true);
     try {
       const base64 = await generatePixelArtImage(aiPrompt, aiReferenceImage || undefined);
-      processImageToGrid(base64, gridWidth, gridHeight, 0, 0);
+      applyImageToGrid(base64, gridWidth, gridHeight, 0, 0);
       setAiGeneratedImage(base64);
-      setAiPrompt('');
-      setAiReferenceImage(null);
+      // 不自动清空：用户可能需要修改描述或参考图后重试
     } catch (error) {
       console.error('AI generation error:', error);
-      alert(`生成失败：${error instanceof Error ? error.message : '未知错误'}`);
+      toast(`生成失败：${error instanceof Error ? error.message : '未知错误'}`, 'error');
     } finally {
       setIsGenerating(false);
     }
@@ -948,7 +954,7 @@ const AppMain: React.FC = () => {
         if (url) setPendingImage(url);
       } catch (err) {
         console.error(err);
-        alert(`选择图片失败：${err instanceof Error ? err.message : '未知错误'}`);
+        toast(`选择图片失败：${err instanceof Error ? err.message : '未知错误'}`, 'error');
       }
       return;
     }
@@ -962,7 +968,7 @@ const AppMain: React.FC = () => {
         if (url) setAiReferenceImage(url);
       } catch (err) {
         console.error(err);
-        alert(`选择图片失败：${err instanceof Error ? err.message : '未知错误'}`);
+        toast(`选择图片失败：${err instanceof Error ? err.message : '未知错误'}`, 'error');
       }
       return;
     }
@@ -976,7 +982,7 @@ const AppMain: React.FC = () => {
         if (url) applyBackgroundFromDataUrl(url);
       } catch (err) {
         console.error(err);
-        alert(`选择图片失败：${err instanceof Error ? err.message : '未知错误'}`);
+        toast(`选择图片失败：${err instanceof Error ? err.message : '未知错误'}`, 'error');
       }
       return;
     }
@@ -1034,10 +1040,10 @@ const AppMain: React.FC = () => {
           setGrid(data.grid);
           setPanOffset({ x: 0, y: 0 });
         } else {
-          alert('无效的文件格式');
+          toast('无效的文件格式', 'error');
         }
       } catch (error) {
-        alert('导入失败：文件格式不正确');
+        toast('导入失败：文件格式不正确', 'error');
       }
     };
     reader.readAsText(file);
@@ -1073,7 +1079,7 @@ const AppMain: React.FC = () => {
   const handleExportImage = useCallback(() => {
     const hasContent = grid.some(row => row.some(c => c !== '#FFFFFF'));
     if (!hasContent) {
-      alert('画布为空，无法导出图片');
+      toast('画布为空，无法导出图片', 'error');
       return;
     }
 
@@ -1235,17 +1241,17 @@ const AppMain: React.FC = () => {
   const handleShare = useCallback(async () => {
     const hasContent = grid.some(row => row.some(c => c !== '#FFFFFF'));
     if (!hasContent) {
-      alert('画布为空，无法分享');
+      toast('画布为空，无法分享', 'error');
       return;
     }
 
     if (shareToGallery) {
       if (!materialTitle.trim()) {
-        alert('请输入素材名称');
+        toast('请输入素材名称', 'error');
         return;
       }
       if (!materialAuthor.trim()) {
-        alert('请输入作者名称');
+        toast('请输入作者名称', 'error');
         return;
       }
 
@@ -1267,7 +1273,7 @@ const AppMain: React.FC = () => {
           tags
         );
         if (key) {
-          alert('素材已成功发布到广场！');
+          toast('素材已成功发布到广场！', 'success');
           setShareModalOpen(false);
           setMaterialTitle('');
           setMaterialDescription('');
@@ -1275,11 +1281,11 @@ const AppMain: React.FC = () => {
           setMaterialTags('');
           setShareToGallery(false);
         } else {
-          alert('发布失败，请检查网络连接或稍后重试');
+          toast('发布失败，请检查网络连接或稍后重试', 'error');
         }
       } catch (error) {
         console.error('发布失败:', error);
-        alert('发布失败，请检查网络连接或稍后重试');
+        toast('发布失败，请检查网络连接或稍后重试', 'error');
       } finally {
         setIsPublishing(false);
       }
@@ -1292,11 +1298,11 @@ const AppMain: React.FC = () => {
           setShareUrl(url);
           setShareModalOpen(true);
         } else {
-          alert('分享失败，请检查网络连接或稍后重试');
+          toast('分享失败，请检查网络连接或稍后重试', 'error');
         }
       } catch (error) {
         console.error('分享失败:', error);
-        alert('分享失败，请检查网络连接或稍后重试');
+        toast('分享失败，请检查网络连接或稍后重试', 'error');
       } finally {
         setIsSharing(false);
       }
@@ -1306,7 +1312,7 @@ const AppMain: React.FC = () => {
   const copyShareUrl = useCallback(() => {
     if (shareUrl) {
       navigator.clipboard.writeText(shareUrl);
-      alert('链接已复制到剪贴板！');
+      toast('链接已复制到剪贴板！', 'success');
     }
   }, [shareUrl]);
 
@@ -2460,7 +2466,7 @@ const AppMain: React.FC = () => {
                     setUseAdvancedCrop(false);
                   }} className="flex-1 py-3 md:py-4 bg-slate-100 text-slate-500 rounded-xl md:rounded-2xl font-black text-sm">取消</button>
                   <button
-                    onClick={() => processImageToGrid(pendingImage, gridWidth, gridHeight, cropOffset.x, cropOffset.y)}
+                    onClick={() => applyImageToGrid(pendingImage, gridWidth, gridHeight, cropOffset.x, cropOffset.y)}
                     className="flex-[2] py-3 md:py-4 bg-emerald-500 text-white rounded-xl md:rounded-2xl font-black text-sm shadow-xl active:scale-95"
                   >
                     确认并转换
@@ -2478,7 +2484,7 @@ const AppMain: React.FC = () => {
           gridWidth={gridWidth}
           gridHeight={gridHeight}
           onConfirm={(x, y, width, height) => {
-            processImageToGrid(pendingImage, gridWidth, gridHeight, 0, 0, { x, y, width, height });
+            applyImageToGrid(pendingImage, gridWidth, gridHeight, 0, 0, { x, y, width, height });
             setCustomCrop(null);
             setPendingImage(null);
           }}
@@ -2933,5 +2939,11 @@ const AppMain: React.FC = () => {
     </div>
   );
 };
+
+const AppMain: React.FC = () => (
+    <ToastProvider>
+      <AppMainInner />
+    </ToastProvider>
+  );
 
 export default App;
