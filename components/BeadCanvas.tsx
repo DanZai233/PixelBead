@@ -421,6 +421,28 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       isTouchPanningRef.current = false;
 
+      // Hand tool on touch: start panning
+      if (currentTool === 'HAND') {
+        e.preventDefault();
+        isMiddleButtonDraggingRef.current = true;
+        setIsDragging(true);
+        canvasRef.current?.setPointerCapture(e.pointerId);
+        return;
+      }
+
+      // Selection tool on touch: start selection box
+      if (currentTool === 'SELECT') {
+        e.preventDefault();
+        const { row, col } = getCellFromEvent(e);
+        if (row >= 0 && col >= 0) {
+          setSelectionStart({ row, col });
+          setSelection({ startRow: row, startCol: col, endRow: row, endCol: col });
+          canvasRef.current?.setPointerCapture(e.pointerId);
+        }
+        return;
+      }
+
+      // Drawing tools on touch
       const { row, col } = getCellFromEvent(e);
       if (row >= 0 && col >= 0) {
         isDrawingRef.current = true;

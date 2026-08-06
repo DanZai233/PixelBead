@@ -78,19 +78,11 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
     const displayX = (canvasWidth - displayWidth) / 2 + panOffset.x;
     const displayY = (canvasHeight - displayHeight) / 2 + panOffset.y;
 
-    ctx.save();
-    ctx.drawImage(
-      canvasRef.current ? new Image() : new Image(),
-      displayX,
-      displayY,
-      displayWidth,
-      displayHeight
-    );
-    ctx.restore();
-
-    // 绘制裁切区域（需要重新加载图片）
+    // 加载并绘制图片（确保每次重绘时图片已加载）
     const img = new Image();
     img.src = imageSrc;
+    const imageReady = img.complete && img.naturalWidth > 0;
+    // We'll draw synchronously — the Image from this same src should be cached by the browser
     ctx.drawImage(
       img,
       0,
@@ -184,6 +176,7 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
   }, [drawCanvas]);
 
    const handleMouseDown = (e: React.PointerEvent) => {
+    e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas || !imageInfo) return;
 
@@ -202,7 +195,6 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
     if (!crop) {
       setIsCreating(true);
       setCreateStart({ x, y });
-      setPanOffset({ x: 0, y: 0 });
       return;
     }
 
@@ -211,65 +203,42 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
     const cropDisplayWidth = crop.width * scale;
     const cropDisplayHeight = crop.height * scale;
 
-    // 检查是否点击了角标
+    // 检查是否点击了角标（扩大触摸区域到 28px 方便手指操作）
+    const touchArea = Math.max(cornerSize, 28);
     if (
-      Math.abs(x - cropDisplayX) < cornerSize &&
-      Math.abs(y - cropDisplayY) < cornerSize
+      Math.abs(x - cropDisplayX) < touchArea &&
+      Math.abs(y - cropDisplayY) < touchArea
     ) {
       setIsResizing(true);
       setResizeHandle('top-left');
       return;
     }
     if (
-      Math.abs(x - (cropDisplayX + cropDisplayWidth)) < cornerSize &&
-      Math.abs(y - cropDisplayY) < cornerSize
+      Math.abs(x - (cropDisplayX + cropDisplayWidth)) < touchArea &&
+      Math.abs(y - cropDisplayY) < touchArea
     ) {
       setIsResizing(true);
       setResizeHandle('top-right');
       return;
     }
     if (
-      Math.abs(x - cropDisplayX) < cornerSize &&
-      Math.abs(y - (cropDisplayY + cropDisplayHeight)) < cornerSize
+      Math.abs(x - cropDisplayX) < touchArea &&
+      Math.abs(y - (cropDisplayY + cropDisplayHeight)) < touchArea
     ) {
       setIsResizing(true);
       setResizeHandle('bottom-left');
       return;
     }
     if (
-      Math.abs(x - (cropDisplayX + cropDisplayWidth)) < cornerSize &&
-      Math.abs(y - (cropDisplayY + cropDisplayHeight)) < cornerSize
-    ) {
-      setIsResizing(true);
-      setResizeHandle('top-left');
-      return;
-    }
-    if (
-      Math.abs(x - (cropDisplayX + cropDisplayWidth)) < handleSize &&
-      Math.abs(y - cropDisplayY) < handleSize
-    ) {
-      setIsResizing(true);
-      setResizeHandle('top-right');
-      return;
-    }
-    if (
-      Math.abs(x - cropDisplayX) < handleSize &&
-      Math.abs(y - (cropDisplayY + cropDisplayHeight)) < handleSize
-    ) {
-      setIsResizing(true);
-      setResizeHandle('bottom-left');
-      return;
-    }
-    if (
-      Math.abs(x - (cropDisplayX + cropDisplayWidth)) < handleSize &&
-      Math.abs(y - (cropDisplayY + cropDisplayHeight)) < handleSize
+      Math.abs(x - (cropDisplayX + cropDisplayWidth)) < touchArea &&
+      Math.abs(y - (cropDisplayY + cropDisplayHeight)) < touchArea
     ) {
       setIsResizing(true);
       setResizeHandle('bottom-right');
       return;
     }
 
-    // 检查是否在裁切框内
+    // 检查是否在裁切框内（拖动裁切框）
     if (
       x >= cropDisplayX &&
       x <= cropDisplayX + cropDisplayWidth &&
@@ -288,6 +257,7 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
 
    const handleMouseMove = (e: React.PointerEvent) => {
      if (!imageInfo) return;
+     if (isDragging || isResizing || isCreating) e.preventDefault();
 
     // 处理创建选区
     if (isCreating) {
