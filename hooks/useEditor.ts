@@ -71,6 +71,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   // ── View State ──
   const [aiGeneratedImage, setAiGeneratedImage] = useState<string | null>(null);
   const [showAIResultModal, setShowAIResultModal] = useState(false);
+  const [importResultModalOpen, setImportResultModalOpen] = useState(false);
   const [showGridLines, setShowGridLines] = useState(true);
   const [zoom, setZoom] = useState(saved?.zoom ?? 80);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -537,6 +538,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
       setGrid(newGrid);
       setPendingImage(null);
       setIsProcessingImage(false);
+      setImportResultModalOpen(true);
     };
     img.src = imageSrc;
   }, [pushUndo]);
@@ -1295,6 +1297,15 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     pushUndo(gridRef.current);
   }, [selectedPalettePreset, selectedColorSystem, pushUndo]);
 
+  const closeImportResultModal = useCallback(() => setImportResultModalOpen(false), []);
+
+  const handleImportMapPalette = useCallback((maxColors: number) => {
+    const palette = createFullPaletteFromMapping(colorSystemMapping, selectedColorSystem, maxColors);
+    setGrid(prev => mapColorsToPalette(prev, palette));
+    pushUndo(gridRef.current);
+    setImportResultModalOpen(false);
+  }, [selectedColorSystem, pushUndo]);
+
   const handleShare = useCallback(async () => {
     const hasContent = grid.some(row => row.some(c => c !== '#FFFFFF'));
     if (!hasContent) {
@@ -1473,7 +1484,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     joystickMove, setJoystickMove, joystickZoom, setJoystickZoom,
     joystickMoveRef, joystickZoomRef,
     handleSaveGeneratedImage,
-    showAIResultModal, closeAIResultModal,
+    showAIResultModal, closeAIResultModal, importResultModalOpen, setImportResultModalOpen, closeImportResultModal, handleImportMapPalette,
     applyImageToGrid,
     generateExportImage, generateShareImage, generateShareCaption, getUniqueColors,
     stats,

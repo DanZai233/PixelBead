@@ -149,7 +149,7 @@ const AppMain: React.FC = () => {
     applyImageToGrid,
     generateExportImage, generateShareImage, generateShareCaption, getUniqueColors,
     stats,
-    showAIResultModal, closeAIResultModal,
+    showAIResultModal, closeAIResultModal, importResultModalOpen, setImportResultModalOpen, closeImportResultModal, handleImportMapPalette,
     backgroundImageRef,
     onFileChange,
     onImportFile,
@@ -1831,6 +1831,62 @@ const AppMain: React.FC = () => {
           onRemoveHistory={removeFromHistory}
           onClearHistory={clearHistory}
         />
+      )}
+
+      {importResultModalOpen && (
+        <div className="fixed inset-0 bg-black/80 z-[1100] flex items-end sm:items-center justify-center p-0 sm:p-6 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) closeImportResultModal(); }}>
+          <div className="bg-white rounded-t-[2rem] sm:rounded-[2.5rem] w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl"
+            style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}
+            onClick={e => e.stopPropagation()}>
+
+            <div className="sticky top-0 bg-white/95 backdrop-blur z-10 px-5 pt-5 pb-3 rounded-t-[2rem] sm:rounded-t-[2.5rem] flex items-center justify-between">
+              <span className="font-black text-sm text-slate-700">图片已导入画布 🎉</span>
+              <button onClick={closeImportResultModal} className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <div className="px-5 pb-6 space-y-4">
+              {/* Info */}
+              <div className="flex items-center gap-3 text-xs text-slate-500 bg-slate-50 rounded-xl px-4 py-3">
+                <span className="font-mono">{gridWidth}×{gridHeight}</span>
+                <span>{(() => { const s = new Set<string>(); grid.forEach(r => r.forEach(c => { if (c !== '#FFFFFF') s.add(c); })); return s.size; })()} 种颜色</span>
+              </div>
+
+              {/* Color palette mapping suggestion */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs space-y-3">
+                <p className="font-black text-emerald-700 flex items-center gap-1.5">🎨 映射到拼豆色板</p>
+                <p className="text-emerald-600 leading-relaxed">导入图片的颜色可能超出标准拼豆色号范围，建议映射到品牌的色板，确保成品能买到对应的拼豆。</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: '48 色', count: 48, desc: '常用色' },
+                    { label: '96 色', count: 96, desc: '丰富色' },
+                    { label: '144 色', count: 144, desc: '精细色' },
+                    { label: '全色板', count: 0, desc: '不限制' },
+                  ].map(opt => (
+                    <button
+                      key={opt.count}
+                      onClick={() => handleImportMapPalette(opt.count > 0 ? opt.count : 999)}
+                      className="flex flex-col items-center py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-bold text-xs transition-all active:scale-95"
+                    >
+                      <span>{opt.label}</span>
+                      <span className="text-[9px] opacity-70">{opt.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Skip */}
+              <button
+                onClick={closeImportResultModal}
+                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-2xl font-black text-sm transition-all active:scale-[0.98]"
+              >
+                暂不映射，直接编辑
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showFeedback && (
