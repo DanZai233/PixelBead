@@ -7,8 +7,23 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  *   PIXELBEAD_AI_API_BASE     — 可选，不填则使用代码内默认基地址
  *   PIXELBEAD_AI_IMAGE_MODEL  — 可选，不填则使用代码内默认模型 ID
  */
-const PIXEL_ART_PROMPT =
-  'The style should be clean, vibrant, suitable for Perler beads (hama beads). Solid white background, clear and bold outlines, limited color palette. Centered subject.';
+const PIXEL_ART_STYLE =
+  'Pixel art composed of uniform square blocks of identical size. ' +
+  'Pixels are solid-filled pure color squares with no gaps, no grid lines, no borders, ' +
+  'and no separators between them. Pixels sit flush against each other. ' +
+  'Clean flat colors, no gradients, no shading. ' +
+  'Limited color palette, vibrant and bright. ' +
+  'Solid plain white background. Centered subject.';
+const IMG2IMG_DEFAULT =
+  'Convert this image into a clean 1:1 pixel art composed of uniform square blocks. ' +
+  'Use solid-filled pure color squares with no gaps, grid lines, or borders between pixels. ' +
+  'Flat colors only, no gradients. Solid white background. Limited palette. Centered subject.';
+
+interface SeedreamImageItem {
+  b64_json?: string;
+  url?: string;
+  size?: string;
+}
 
 function mapUpstreamError(error: unknown): string {
   if (error && typeof error === 'object' && 'error' in error) {
@@ -55,7 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const apiKey = process.env.PIXELBEAD_AI_API_KEY;
-  const baseUrl = (process.env.PIXELBEAD_AI_API_BASE || 'https://ark.cn-beijing.volces.com/api/v3').replace(/\/$/, '');
+  const baseUrl = (process.env.PIXELBEAD_AI_API_BASE || 'https://ark.cn-beijing.volces.com/api/v3').replace(//$/, '');
   const model = process.env.PIXELBEAD_AI_IMAGE_MODEL || 'doubao-seedream-5-0-260128';
 
   if (!apiKey?.trim()) {
@@ -73,6 +88,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: '描述过长' });
   }
 
+  const pureBase64 = referenceImage ? referenceImage.replace(/^data:image/\w+;base64,/, '') : '';
+
   const requestBody: Record<string, unknown> = {
     model,
     size: '2K',
@@ -81,15 +98,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     watermark: false,
   };
 
-  const pureBase64 = referenceImage ? referenceImage.replace(/^data:image\/\w+;base64,/, '') : '';
-
   if (pureBase64) {
     requestBody.image = [pureBase64];
-    requestBody.prompt =
-      prompt ||
-      'Convert this image to a clean 1:1 square pixel art suitable for Perler beads (hama beads). The style should be clean, vibrant, limited color palette, solid white background, clear and bold outlines, centered subject.';
+    requestBody.prompt = prompt || IMG2IMG_DEFAULT;
   } else {
-    requestBody.prompt = `A high-quality 1:1 square pixel art of ${prompt}. ${PIXEL_ART_PROMPT}`;
+    requestBody.prompt = `A 1:1 square pixel art of ${prompt}. ${PIXEL_ART_STYLE}`;
   }
 
   try {
@@ -102,32 +115,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       body: JSON.stringify(requestBody),
     });
 
-    const text = await upstream.text();
-    interface SeedreamImageItem {
-  b64_json?: string;
-  url?: string;
-  size?: string;
-}
-let data: {
-  data?: SeedreamImageItem[];
-  output?: { b64_json?: string };
-  error?: { message?: string; code?: string };
-};
+    const responseText = await upstream.text();
+    let data: {
+      data?: SeedreamImageItem[];
+      output?: { b64_json?: string };
+      error?: { message?: string; code?: string };
+    };
     try {
-      data = JSON.parse(text) as typeof data;
+      data = JSON.parse(responseText) as typeof data;
     } catch {
       return res.status(502).json({ error: '生成服务暂时不可用，请稍后重试' });
     }
 
-    // Log upstream response for debugging (truncated)
-    console.error('Seedream upstream status:', upstream.status, 'body sample:', text.slice(0, 300));
+    console.error('Seedream upstream status:', upstream.status, 'body sample:', responseText.slice(0, 300));
 
     if (!upstream.ok) {
       return res.status(502).json({ error: mapUpstreamError(data) });
     }
 
-    // Seedream 5.0 returns b64_json when request uses b64_json format,
-    // but also try url as fallback, and check old output.b64_json format
     const firstImage = data.data?.[0];
     let b64Json = firstImage?.b64_json ?? data.output?.b64_json;
     if (!b64Json) {
