@@ -27,8 +27,10 @@ import { HelpModal } from './components/HelpModal';
 import { ToastProvider, useToast } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AIResultModal } from './components/AIResultModal';
+import { FeedbackModal } from './components/FeedbackModal';
 import { useEditor } from './hooks/useEditor';
 import { useGenerationHistory } from './hooks/useGenerationHistory';
+import { useFeedback } from './hooks/useFeedback';
 import { OnboardingGuide } from './components/OnboardingGuide';
 import { AdminPanel } from './components/AdminPanel';
 import { VirtualJoystick } from './components/VirtualJoystick';
@@ -173,6 +175,28 @@ const AppMain: React.FC = () => {
       });
     }
   }, [aiGeneratedImage, aiPrompt, aiReferenceImage, gridWidth, gridHeight, addToHistory]);
+
+  // Feedback system (rate-limited to once per 24h)
+  const { shouldShow: showFeedback, source: feedbackSource,
+    tryShow, close: closeFeedback, submit: submitFeedback, getMailtoUrl } = useFeedback();
+
+  // Trigger feedback when export modal closes
+  const prevExportOpen = useRef(false);
+  useEffect(() => {
+    if (prevExportOpen.current && !exportModalOpen) {
+      tryShow('export');
+    }
+    prevExportOpen.current = exportModalOpen;
+  }, [exportModalOpen, tryShow]);
+
+  // Trigger feedback when AI result modal closes
+  const prevAIResultOpen = useRef(false);
+  useEffect(() => {
+    if (prevAIResultOpen.current && !showAIResultModal) {
+      tryShow('ai_result');
+    }
+    prevAIResultOpen.current = showAIResultModal;
+  }, [showAIResultModal, tryShow]);
 
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col bg-[#F1F5F9] text-slate-900 select-none overflow-hidden h-screen max-lg:h-[100dvh] max-lg:max-h-[100dvh]">
@@ -1082,6 +1106,7 @@ const AppMain: React.FC = () => {
                <button onClick={() => { setShowOnboarding(true); }} className="flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-all whitespace-nowrap">
                  <span>👋</span> 新手引导
                </button>
+              <button onClick={() => tryShow('manual')} className="hidden sm:flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-indigo-500 transition-all px-2 py-1 rounded-lg hover:bg-indigo-50">💬 反馈</button>
                <button onClick={() => setHelpModalOpen(true)} className="flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-all whitespace-nowrap">
                  <span>📖</span> 使用指南
                </button>
@@ -1779,6 +1804,15 @@ const AppMain: React.FC = () => {
           }}
           onRemoveHistory={removeFromHistory}
           onClearHistory={clearHistory}
+        />
+      )}
+
+      {showFeedback && (
+        <FeedbackModal
+          source={feedbackSource}
+          onSubmit={submitFeedback}
+          onClose={closeFeedback}
+          getMailtoUrl={getMailtoUrl}
         />
       )}
 
