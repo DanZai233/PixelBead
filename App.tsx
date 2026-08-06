@@ -133,7 +133,7 @@ const AppMain: React.FC = () => {
     isPublishing, setIsPublishing,
     handleApplyMaterial, normalizeTags,
     selectedPalettePreset, setSelectedPalettePreset,
-    targetColorCount, setTargetColorCount, removeBgEnabled, setRemoveBgEnabled,
+    targetColorCount, setTargetColorCount, hasSourceImage, setHasSourceImage, hasBgRemovalRestore, setHasBgRemovalRestore,
     showColorKeys, setShowColorKeys,
     selectedColorSystem, setSelectedColorSystem,
     isPalettePanelOpen, setIsPalettePanelOpen,
@@ -141,7 +141,7 @@ const AppMain: React.FC = () => {
     highlightOpacity, setHighlightOpacity,
     paletteGroups, paletteColors, allColors, getColorKey, displayStats,
     colorSystemOptions,
-    handleMergeSimilarColors, handleMapToPalette, handlePalettePresetChange,
+    handleMergeSimilarColors, handleMapToPalette, handlePalettePresetChange, handleRemoveBackground, handleRestoreSelection,
     handleResize, handleCustomSize, resetGrid,
     joystickMove, setJoystickMove, joystickZoom, setJoystickZoom,
     joystickMoveRef, joystickZoomRef,
@@ -742,16 +742,26 @@ const AppMain: React.FC = () => {
             >
               选择图片
             </button>
-            <div className="flex items-center gap-2 pt-1">
-              <input
-                type="checkbox"
-                id="removeBgEnabled"
-                checked={removeBgEnabled}
-                onChange={(e) => setRemoveBgEnabled(e.target.checked)}
-                className="w-3 h-3 rounded border-2 border-emerald-300"
-              />
-              <label htmlFor="removeBgEnabled" className="text-[9px] font-bold text-emerald-100">自动去背景</label>
-            </div>
+            {hasSourceImage && (
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleRemoveBackground}
+                  className="flex-1 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg font-bold text-[9px] transition-all active:scale-95"
+                >
+                  去背景
+                </button>
+                {hasBgRemovalRestore && selection && (
+                  <button
+                    type="button"
+                    onClick={handleRestoreSelection}
+                    className="flex-1 py-1.5 bg-amber-500 hover:bg-amber-400 text-white rounded-lg font-bold text-[9px] transition-all active:scale-95"
+                  >
+                    恢复选区
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="bg-purple-600 rounded-3xl p-4 md:p-5 text-white shadow-xl space-y-2 md:space-y-3">

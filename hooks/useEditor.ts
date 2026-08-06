@@ -84,7 +84,8 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
 
   const [selectedPalettePreset, setSelectedPalettePreset] = useState('all');
   const [targetColorCount, setTargetColorCount] = useState(16);
-  const [removeBgEnabled, setRemoveBgEnabled] = useState(true);
+  const [hasSourceImage, setHasSourceImage] = useState(false);
+  const [hasBgRemovalRestore, setHasBgRemovalRestore] = useState(false);
 
   const [showColorKeys, setShowColorKeys] = useState(true);
   const [selectedColorSystem, setSelectedColorSystem] = useState<ColorSystem>('MARD');
@@ -151,7 +152,8 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const importFileRef = useRef<HTMLInputElement>(null);
   const aiReferenceImageRef = useRef<HTMLInputElement>(null);
   const backgroundImageRef = useRef<HTMLInputElement>(null);
-  const removeBgRef = useRef(true);
+  const sourceImageCacheRef = useRef<{ data: Uint8ClampedArray; width: number; height: number } | null>(null);
+  const preRemovalGridRef = useRef<string[][] | null>(null);
   const undoStackRef = useRef<string[][][]>([]);
   const redoStackRef = useRef<string[][][]>([]);
   const gridRef = useRef(grid);
@@ -161,8 +163,6 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   useEffect(() => {
     gridRef.current = grid;
   }, [grid]);
-  // Keep removeBgRef in sync
-  useEffect(() => { removeBgRef.current = removeBgEnabled; }, [removeBgEnabled]);
 
 
   useEffect(() => {
@@ -501,13 +501,18 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
       }
 
       ctx.drawImage(img, sourceX, sourceY, sourceDrawWidth, sourceDrawHeight, 0, 0, width, height);
-      let fullImageData = ctx.getImageData(0, 0, width, height);
-      
-      // 自动去背景
-      if (removeBgRef.current) {
-        fullImageData = removeBackground(fullImageData);
-      }
-      
+      const fullImageData = ctx.getImageData(0, 0, width, height);
+
+      // 缓存原始像素数据，供后续去背景使用
+      sourceImageCacheRef.current = {
+        data: new Uint8ClampedArray(fullImageData.data),
+        width,
+        height,
+      };
+      setHasSourceImage(true);
+      preRemovalGridRef.current = null;
+      setHasBgRemovalRestore(false);
+
       const imageData = fullImageData.data;
       const newGrid: string[][] = [];
       for (let i = 0; i < height; i++) {
@@ -1217,6 +1222,64 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     pushUndo(gridRef.current);
   }, [grid, targetColorCount, pushUndo]);
 
+  const handleRemoveBackground = useCallback(() => {
+    const cache = sourceImageCacheRef.current;
+    if (!cache) return;
+
+    // 保存当前画布，用于选区恢复
+    preRemovalGridRef.current = grid.map(row => [...row]);
+    setHasBgRemovalRestore(true);
+
+    // 用缓存的原始像素数据重新执行去背景
+    const imageData = new ImageData(
+      new Uint8ClampedArray(cache.data),
+      cache.width,
+      cache.height,
+    );
+    const cleaned = removeBackground(imageData);
+    const pixels = cleaned.data;
+
+    const newGrid: string[][] = [];
+    for (let i = 0; i < cache.height; i++) {
+      const row: string[] = [];
+      for (let j = 0; j < cache.width; j++) {
+        const idx = (i * cache.width + j) * 4;
+        if (pixels[idx + 3] < 128) {
+          row.push('#FFFFFF');
+        } else {
+          const hex = '#' + ((1 << 24) + (pixels[idx] << 16) + (pixels[idx + 1] << 8) + pixels[idx + 2]).toString(16).slice(1).toUpperCase();
+          row.push(hex);
+        }
+      }
+      newGrid.push(row);
+    }
+
+    pushUndo(gridRef.current);
+    setGrid(newGrid);
+  }, [grid, pushUndo]);
+
+  const handleRestoreSelection = useCallback(() => {
+    const pre = preRemovalGridRef.current;
+    if (!pre || !selection) return;
+    if (!confirm('将选区恢复到去背景前的状态，确定吗？')) return;
+
+    const { startRow, startCol, endRow, endCol } = selection;
+    const rMin = Math.min(startRow, endRow);
+    const rMax = Math.max(startRow, endRow);
+    const cMin = Math.min(startCol, endCol);
+    const cMax = Math.max(startCol, endCol);
+
+    const newGrid = grid.map(row => [...row]);
+    for (let r = rMin; r <= Math.min(rMax, pre.length - 1); r++) {
+      for (let c = cMin; c <= Math.min(cMax, pre[0].length - 1); c++) {
+        newGrid[r][c] = pre[r][c];
+      }
+    }
+
+    pushUndo(gridRef.current);
+    setGrid(newGrid);
+  }, [grid, selection, pushUndo]);
+
   const handleMapToPalette = useCallback(() => {
     if (!confirm('映射到色板将把所有颜色转换为色板中最接近的颜色，确定吗？')) return;
 
@@ -1397,7 +1460,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     isPublishing, setIsPublishing,
     handleApplyMaterial, normalizeTags,
     selectedPalettePreset, setSelectedPalettePreset,
-    targetColorCount, setTargetColorCount, removeBgEnabled, setRemoveBgEnabled,
+    targetColorCount, setTargetColorCount, hasSourceImage, setHasSourceImage, hasBgRemovalRestore, setHasBgRemovalRestore,
     showColorKeys, setShowColorKeys,
     selectedColorSystem, setSelectedColorSystem,
     isPalettePanelOpen, setIsPalettePanelOpen,
@@ -1405,7 +1468,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     highlightOpacity, setHighlightOpacity,
     paletteGroups, paletteColors, allColors, getColorKey, displayStats,
     colorSystemOptions,
-    handleMergeSimilarColors, handleMapToPalette, handlePalettePresetChange,
+    handleMergeSimilarColors, handleMapToPalette, handlePalettePresetChange, handleRemoveBackground, handleRestoreSelection,
     handleResize, handleCustomSize, resetGrid,
     joystickMove, setJoystickMove, joystickZoom, setJoystickZoom,
     joystickMoveRef, joystickZoomRef,
