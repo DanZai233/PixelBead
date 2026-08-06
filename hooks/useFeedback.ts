@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 export interface FeedbackEntry {
   id: string;
@@ -27,18 +27,26 @@ function saveFeedback(items: FeedbackEntry[]) {
   } catch {}
 }
 
+const API_BASE = (import.meta as any).env.VITE_API_BASE_URL || '';
+
+async function submitToServer(suggestion: string, contact: string, source: string): Promise<boolean> {
+  try {
+    const url = API_BASE ? API_BASE.replace(/\/$/, '') + '/api/feedback' : '/api/feedback';
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ suggestion, contact, source }),
+    });
+    return resp.ok;
+  } catch {
+    return false; // network error, localStorage fallback is fine
+  }
+}
+
 export function useFeedback() {
   const [shouldShow, setShouldShow] = useState(false);
   const [source, setSource] = useState('');
   const [feedback, setFeedback] = useState<FeedbackEntry[]>(loadFeedback);
-
-  useEffect(() => {
-    const pending = sessionStorage.getItem('pixelbead_feedback_pending');
-    if (pending) {
-      sessionStorage.removeItem('pixelbead_feedback_pending');
-      try { const s = JSON.parse(pending); tryShow(s.source); } catch {}
-    }
-  }, []);
 
   const tryShow = useCallback((triggerSource: string) => {
     const lastShown = localStorage.getItem(LAST_SHOWN_KEY);
@@ -49,15 +57,11 @@ export function useFeedback() {
     localStorage.setItem(LAST_SHOWN_KEY, String(now));
   }, []);
 
-  const requestShow = useCallback((triggerSource: string) => {
-    sessionStorage.setItem('pixelbead_feedback_pending', JSON.stringify({ source: triggerSource }));
-  }, []);
-
   const close = useCallback(() => {
     setShouldShow(false);
   }, []);
 
-  const submit = useCallback((suggestion: string, contact: string) => {
+  const submit = useCallback(async (suggestion: string, contact: string) => {
     const entry: FeedbackEntry = {
       id: Date.now() + '_' + Math.random().toString(36).slice(2, 6),
       suggestion,
@@ -65,11 +69,14 @@ export function useFeedback() {
       createdAt: Date.now(),
       source,
     };
+    // Always save locally
     setFeedback(prev => {
       const next = [entry, ...prev];
       saveFeedback(next);
       return next;
     });
+    // Submit to server (fire-and-forget)
+    submitToServer(suggestion, contact, source);
     setShouldShow(false);
   }, [source]);
 
@@ -87,5 +94,5 @@ export function useFeedback() {
     return 'mailto:932351233@qq.com?subject=' + subject + '&body=' + body;
   }, [source]);
 
-  return { shouldShow, source, feedback, tryShow, requestShow, close, submit, getMailtoUrl };
+  return { shouldShow, source, feedback, tryShow, close, submit, getMailtoUrl };
 }

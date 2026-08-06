@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { AdminFeedbackPanel } from './AdminFeedbackPanel';
 
 interface AdminMaterial {
   id: string;
@@ -26,6 +27,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<'materials' | 'feedback'>('materials');
 
   const [materials, setMaterials] = useState<AdminMaterial[]>([]);
   const [total, setTotal] = useState(0);
@@ -95,7 +98,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
     }
   }, [token, page, search, authHeaders]);
 
-  useEffect(() => { loadMaterials(); }, [loadMaterials]);
+  useEffect(() => { if (activeTab === 'materials') loadMaterials(); }, [loadMaterials, activeTab]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -157,7 +160,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-2xl mx-auto mb-3">🔐</div>
-              <h1 className="text-2xl font-black text-slate-900">素材管理后台</h1>
+              <h1 className="text-2xl font-black text-slate-900">拼豆糕手后台</h1>
               <p className="text-sm text-slate-400 mt-1">请登录管理员账号</p>
             </div>
             <form onSubmit={handleLogin} className="space-y-4">
@@ -213,10 +216,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-lg">🔧</div>
-            <div>
-              <h1 className="text-lg font-black text-slate-900">素材管理后台</h1>
-              <p className="text-xs text-slate-400">共 {total} 个素材</p>
+            <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-0.5">
+              <button
+                onClick={() => { setActiveTab('materials'); setPage(1); }}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'materials' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+              >
+                素材管理{total > 0 ? ` (${total})` : ''}
+              </button>
+              <button
+                onClick={() => setActiveTab('feedback')}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'feedback' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+              >
+                用户反馈
+              </button>
             </div>
+          </div>
+          <div>
+            <h1 className="text-lg font-black text-slate-900">
+              拼豆糕手后台
+            </h1>
+            <p className="text-xs text-slate-400">
+              {activeTab === 'materials' ? `共 ${total} 个素材` : '用户反馈中心'}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={onBack} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all">
@@ -230,6 +251,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-6">
+        {activeTab === 'feedback' ? (
+          <AdminFeedbackPanel token={token} onLogout={handleLogout} />
+        ) : (
+          <>
         {/* Search bar */}
         <div className="mb-6 flex gap-3">
           <div className="relative flex-1">
@@ -352,6 +377,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </main>
     </div>
