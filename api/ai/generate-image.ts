@@ -88,7 +88,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: '描述过长' });
   }
 
-  const pureBase64 = referenceImage ? referenceImage.replace(/^data:image/\w+;base64,/, '') : '';
 
   const requestBody: Record<string, unknown> = {
     model,
@@ -98,8 +97,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     watermark: false,
   };
 
-  if (pureBase64) {
-    requestBody.image = [pureBase64];
+  if (referenceImage) {
+    requestBody.image = referenceImage;
     requestBody.prompt = prompt || IMG2IMG_DEFAULT;
   } else {
     requestBody.prompt = `A 1:1 square pixel art of ${prompt}. ${PIXEL_ART_STYLE}`;
