@@ -103,18 +103,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const text = await upstream.text();
-    let data: { data?: { b64_json?: string }[]; output?: { b64_json?: string }; error?: { message?: string } };
+    interface SeedreamImageItem {
+  b64_json?: string;
+  url?: string;
+  size?: string;
+}
+let data: {
+  data?: SeedreamImageItem[];
+  output?: { b64_json?: string };
+  error?: { message?: string; code?: string };
+};
     try {
       data = JSON.parse(text) as typeof data;
     } catch {
       return res.status(502).json({ error: '生成服务暂时不可用，请稍后重试' });
     }
 
+    // Log upstream response for debugging (truncated)
+    console.error('Seedream upstream status:', upstream.status, 'body sample:', text.slice(0, 300));
+
     if (!upstream.ok) {
       return res.status(502).json({ error: mapUpstreamError(data) });
     }
 
-    const b64Json = data.data?.[0]?.b64_json ?? data.output?.b64_json;
+    // Seedream 5.0 returns b64_json when request uses b64_json format,
+    // but also try url as fallback, and check old output.b64_json format
+    const firstImage = data.data?.[0];
+    let b64Json = firstImage?.b64_json ?? data.output?.b64_json;
     if (!b64Json) {
       return res.status(502).json({ error: '未获取到图像，请重试' });
     }
