@@ -240,8 +240,7 @@ export interface MaterialData {
   gridWidth?: number;
   gridHeight?: number;
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
-  grid: string[][] | null;
-  thumbnailGrid?: string[][] | null;
+  grid: string[][];
   createdAt: number;
   views: number;
   likes: number;
