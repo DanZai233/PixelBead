@@ -77,14 +77,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     model,
     size: '2K',
     response_format: 'b64_json',
-    n: 1,
     watermark: false,
   };
 
   const pureBase64 = referenceImage ? referenceImage.replace(/^data:image\/\w+;base64,/, '') : '';
 
   if (pureBase64) {
-    requestBody.image = [pureBase64];
+    requestBody.reference_images = [pureBase64];
     requestBody.prompt =
       prompt ||
       'Convert this image to a clean 1:1 square pixel art suitable for Perler beads (hama beads). The style should be clean, vibrant, limited color palette, solid white background, clear and bold outlines, centered subject.';
