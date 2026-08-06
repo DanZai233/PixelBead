@@ -133,7 +133,7 @@ const AppMain: React.FC = () => {
     isPublishing, setIsPublishing,
     handleApplyMaterial, normalizeTags,
     selectedPalettePreset, setSelectedPalettePreset,
-    mergeThreshold, setMergeThreshold,
+    targetColorCount, setTargetColorCount, removeBgEnabled, setRemoveBgEnabled,
     showColorKeys, setShowColorKeys,
     selectedColorSystem, setSelectedColorSystem,
     isPalettePanelOpen, setIsPalettePanelOpen,
@@ -742,6 +742,16 @@ const AppMain: React.FC = () => {
             >
               选择图片
             </button>
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="removeBgEnabled"
+                checked={removeBgEnabled}
+                onChange={(e) => setRemoveBgEnabled(e.target.checked)}
+                className="w-3 h-3 rounded border-2 border-emerald-300"
+              />
+              <label htmlFor="removeBgEnabled" className="text-[9px] font-bold text-emerald-100">自动去背景</label>
+            </div>
           </div>
 
           <div className="bg-purple-600 rounded-3xl p-4 md:p-5 text-white shadow-xl space-y-2 md:space-y-3">
@@ -791,18 +801,24 @@ const AppMain: React.FC = () => {
 
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label className="text-[9px] font-bold text-white">合并阈值</label>
-                    <span className="text-[9px] text-white/90">{Math.round(mergeThreshold * 100)}%</span>
+                    <label className="text-[9px] font-bold text-white">目标颜色数</label>
+                    <span className="text-[9px] text-white/90">{targetColorCount} 色</span>
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="0.5"
-                    step="0.01"
-                    value={mergeThreshold}
-                    onChange={(e) => setMergeThreshold(parseFloat(e.target.value))}
-                    className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
-                  />
+                  <div className="flex gap-1">
+                    {[4, 8, 12, 16, 24, 32].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => setTargetColorCount(n)}
+                        className={`flex-1 py-1 text-[8px] rounded-lg font-bold transition-all ${
+                          targetColorCount === n
+                            ? 'bg-white text-purple-600 shadow-md'
+                            : 'bg-white/15 text-white hover:bg-white/25'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">

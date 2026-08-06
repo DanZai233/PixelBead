@@ -15,6 +15,9 @@ import {
 } from '../services/upstashService';
 import { saveMaterial } from '../services/materialService';
 import {
+  reduceGridColors,
+  removeBackground,
+
   mergeSimilarColors,
   mapColorsToPalette,
   createPaletteFromGrid,
@@ -80,7 +83,9 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [layers, setLayers] = useState(3);
 
   const [selectedPalettePreset, setSelectedPalettePreset] = useState('all');
-  const [mergeThreshold, setMergeThreshold] = useState(0.15);
+  const [targetColorCount, setTargetColorCount] = useState(16);
+  const [removeBgEnabled, setRemoveBgEnabled] = useState(true);
+
   const [showColorKeys, setShowColorKeys] = useState(true);
   const [selectedColorSystem, setSelectedColorSystem] = useState<ColorSystem>('MARD');
   const [isPalettePanelOpen, setIsPalettePanelOpen] = useState(true);
@@ -146,6 +151,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const importFileRef = useRef<HTMLInputElement>(null);
   const aiReferenceImageRef = useRef<HTMLInputElement>(null);
   const backgroundImageRef = useRef<HTMLInputElement>(null);
+  const removeBgRef = useRef(true);
   const undoStackRef = useRef<string[][][]>([]);
   const redoStackRef = useRef<string[][][]>([]);
   const gridRef = useRef(grid);
@@ -155,6 +161,9 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   useEffect(() => {
     gridRef.current = grid;
   }, [grid]);
+  // Keep removeBgRef in sync
+  useEffect(() => { removeBgRef.current = removeBgEnabled; }, [removeBgEnabled]);
+
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -492,8 +501,14 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
       }
 
       ctx.drawImage(img, sourceX, sourceY, sourceDrawWidth, sourceDrawHeight, 0, 0, width, height);
-      const imageData = ctx.getImageData(0, 0, width, height).data;
+      let fullImageData = ctx.getImageData(0, 0, width, height);
       
+      // 自动去背景
+      if (removeBgRef.current) {
+        fullImageData = removeBackground(fullImageData);
+      }
+      
+      const imageData = fullImageData.data;
       const newGrid: string[][] = [];
       for (let i = 0; i < height; i++) {
         const row: string[] = [];
@@ -1191,14 +1206,16 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   }, [showColorKeys, selectedColorSystem]);
 
   const handleMergeSimilarColors = useCallback(() => {
-    if (!confirm('合并相似颜色将修改当前画布，确定吗？')) return;
+    const currentColorCount = new Set<string>();
+    grid.forEach(row => row.forEach(c => { if (c !== '#FFFFFF') currentColorCount.add(c); }));
+    const k = Math.min(currentColorCount.size, targetColorCount);
+    if (k >= currentColorCount.size) return;
+    if (!confirm(`将 ${currentColorCount.size} 种颜色合并为 ${k} 种，确定吗？`)) return;
 
-    const currentColors = createPaletteFromGrid(grid);
-    const mergedColors = mergeSimilarColors(currentColors, mergeThreshold);
-
-    setGrid(prev => mapColorsToPalette(prev, mergedColors));
+    const reduced = reduceGridColors(grid, k);
+    setGrid(reduced);
     pushUndo(gridRef.current);
-  }, [grid, mergeThreshold, pushUndo]);
+  }, [grid, targetColorCount, pushUndo]);
 
   const handleMapToPalette = useCallback(() => {
     if (!confirm('映射到色板将把所有颜色转换为色板中最接近的颜色，确定吗？')) return;
@@ -1380,7 +1397,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     isPublishing, setIsPublishing,
     handleApplyMaterial, normalizeTags,
     selectedPalettePreset, setSelectedPalettePreset,
-    mergeThreshold, setMergeThreshold,
+    targetColorCount, setTargetColorCount, removeBgEnabled, setRemoveBgEnabled,
     showColorKeys, setShowColorKeys,
     selectedColorSystem, setSelectedColorSystem,
     isPalettePanelOpen, setIsPalettePanelOpen,

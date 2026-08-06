@@ -60,18 +60,202 @@ export function rgbToHsl(r: number, g: number, b: number): { h: number; s: numbe
   return { h: h * 360, s: s * 100, l: l * 100 };
 }
 
-// RGB 欧几里得距离算法
+/**
+ * 感知加权 RGB 欧几里得颜色距离
+ *
+ * 采用人眼对不同波长的敏感度权重（类似 BT.601 亮度系数）：
+ * - 绿色最敏感 (0.587)，红色次之 (0.299)，蓝色最弱 (0.114)
+ * - 归一化到 0–100 范围，与 UI 滑条百分比直接对应
+ * - 0 = 完全相同, ~100 = 最大色差（黑 vs 白 ≈ 100）
+ */
 export function colorDistance(hex1: string, hex2: string): number {
   const rgb1 = hexToRgb(hex1);
   const rgb2 = hexToRgb(hex2);
 
   if (!rgb1 || !rgb2) return Infinity;
 
-  const dr = rgb1.r - rgb2.r;
-  const dg = rgb1.g - rgb2.g;
-  const db = rgb1.b - rgb2.b;
+  const dr = (rgb1.r - rgb2.r) * 0.299;
+  const dg = (rgb1.g - rgb2.g) * 0.587;
+  const db = (rgb1.b - rgb2.b) * 0.114;
 
-  return Math.sqrt(dr * dr + dg * dg + db * db);
+  // 归一化到 0–100
+  return Math.sqrt(dr * dr + dg * dg + db * db) * (100 / 255);
+}
+
+/**
+ * K-Means 聚类：将颜色列表归约为 targetK 个代表性颜色
+ *
+ * 优势：结果与输入顺序无关，每个颜色都找到最优归属，
+ * 避免贪心单链聚合导致的"A 并 B、B 并 C、但 A 不并 C"问题。
+ */
+export function kMeansClustering(
+  colors: Map<string, number>, // hex -> pixel count
+  targetK: number,
+  maxIterations: number = 20,
+): PaletteColor[] {
+  const entries = Array.from(colors.entries());
+  if (entries.length === 0) return [];
+
+  // 颜色太少，直接返回
+  if (entries.length <= targetK) {
+    return entries.map(([hex, count]) => ({ hex, key: hex, count }));
+  }
+
+  // 将颜色转换为 RGB 向量
+  type Vec3 = { r: number; g: number; b: number; hex: string; count: number };
+    const vectors: Vec3[] = [];
+  for (const [hex, count] of entries) {
+    const rgb = hexToRgb(hex);
+    if (rgb) vectors.push({ ...rgb, hex, count });
+  }
+
+  if (vectors.length <= targetK) {
+    return vectors.map(v => ({ hex: v.hex, key: v.hex, count: v.count }));
+  }
+
+  // 初始化质心：用 k-means++ 思路，选分布最广的 k 个点
+  const centroids: { r: number; g: number; b: number }[] = [];
+  const used = new Set<number>();
+
+  // 第一个质心：数量最多的颜色
+  centroids.push({ r: vectors[0].r, g: vectors[0].g, b: vectors[0].b });
+  used.add(0);
+
+  // 后续质心：选离已有质心最远的
+  for (let k = 1; k < targetK; k++) {
+    let farthestIdx = -1;
+    let maxDist = -1;
+    for (let i = 0; i < vectors.length; i++) {
+      if (used.has(i)) continue;
+      let minDist = Infinity;
+      for (const c of centroids) {
+        const dr = (vectors[i].r - c.r) * 0.299;
+        const dg = (vectors[i].g - c.g) * 0.587;
+        const db = (vectors[i].b - c.b) * 0.114;
+        const d = dr * dr + dg * dg + db * db;
+        if (d < minDist) minDist = d;
+      }
+      if (minDist > maxDist) {
+        maxDist = minDist;
+        farthestIdx = i;
+      }
+    }
+    if (farthestIdx >= 0) {
+      centroids.push({ r: vectors[farthestIdx].r, g: vectors[farthestIdx].g, b: vectors[farthestIdx].b });
+      used.add(farthestIdx);
+    }
+  }
+
+  // 迭代
+  for (let iter = 0; iter < maxIterations; iter++) {
+    // 分配每个颜色到最近的质心
+    const clusters: Vec3[][] = centroids.map(() => []);
+    for (const v of vectors) {
+      let bestC = 0;
+      let bestDist = Infinity;
+      for (let c = 0; c < centroids.length; c++) {
+        const dr = (v.r - centroids[c].r) * 0.299;
+        const dg = (v.g - centroids[c].g) * 0.587;
+        const db = (v.b - centroids[c].b) * 0.114;
+        const d = dr * dr + dg * dg + db * db;
+        if (d < bestDist) {
+          bestDist = d;
+          bestC = c;
+        }
+      }
+      clusters[bestC].push(v);
+    }
+
+    // 更新质心为簇内均值
+    let changed = false;
+    for (let c = 0; c < centroids.length; c++) {
+      const cluster = clusters[c];
+      if (cluster.length === 0) continue;
+      const sumR = cluster.reduce((s, v) => s + v.r, 0);
+      const sumG = cluster.reduce((s, v) => s + v.g, 0);
+      const sumB = cluster.reduce((s, v) => s + v.b, 0);
+      const nr = Math.round(sumR / cluster.length);
+      const ng = Math.round(sumG / cluster.length);
+      const nb = Math.round(sumB / cluster.length);
+      if (nr !== centroids[c].r || ng !== centroids[c].g || nb !== centroids[c].b) {
+        centroids[c] = { r: nr, g: ng, b: nb };
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+
+  // 输出结果：每个质心找到簇内数量最多的颜色作为代表色
+  const finalClusters: Vec3[][] = centroids.map(() => []);
+  for (const v of vectors) {
+    let bestC = 0;
+    let bestDist = Infinity;
+    for (let c = 0; c < centroids.length; c++) {
+      const dr = (v.r - centroids[c].r) * 0.299;
+      const dg = (v.g - centroids[c].g) * 0.587;
+      const db = (v.b - centroids[c].b) * 0.114;
+      const d = dr * dr + dg * dg + db * db;
+      if (d < bestDist) { bestDist = d; bestC = c; }
+    }
+    finalClusters[bestC].push(v);
+  }
+
+  const result: PaletteColor[] = [];
+  for (const cluster of finalClusters) {
+    if (cluster.length === 0) continue;
+    cluster.sort((a, b) => b.count - a.count);
+    const dominant = cluster[0];
+    const totalCount = cluster.reduce((s, v) => s + v.count, 0);
+    result.push({ hex: dominant.hex, key: dominant.hex, count: totalCount });
+  }
+
+  return result.sort((a, b) => (b.count || 0) - (a.count || 0));
+}
+
+/**
+ * 用 K-Means 将画布颜色归约到 targetColorCount 种颜色。
+ * 这是新版"合并相似颜色"的核心入口。
+ */
+export function reduceGridColors(
+  grid: string[][],
+  targetColorCount: number,
+): string[][] {
+  // 统计画布上所有颜色
+  const colorCounts = new Map<string, number>();
+  for (const row of grid) {
+    for (const color of row) {
+      if (color && color !== '#FFFFFF') {
+        colorCounts.set(color, (colorCounts.get(color) || 0) + 1);
+      }
+    }
+  }
+
+  if (colorCounts.size === 0 || colorCounts.size <= targetColorCount) return grid;
+
+  // K-Means 聚类
+  const palette = kMeansClustering(colorCounts, targetColorCount);
+
+  // 构建查找表加速映射
+  const lookup = new Map<string, string>();
+  for (const [color] of colorCounts) {
+    let bestPalette = palette[0];
+    let bestDist = Infinity;
+    for (const p of palette) {
+      const d = colorDistance(color, p.hex);
+      if (d < bestDist) {
+        bestDist = d;
+        bestPalette = p;
+      }
+    }
+    lookup.set(color, bestPalette.hex);
+  }
+
+  return grid.map(row =>
+    row.map(color => {
+      if (!color || color === '#FFFFFF') return '#FFFFFF';
+      return lookup.get(color) || color;
+    }),
+  );
 }
 
 // 寻找最近的颜色
@@ -98,44 +282,35 @@ export function findClosestColor(
   return closestColor;
 }
 
-// 合并相似颜色
+/**
+ * @deprecated 保留旧接口兼容性，内部改用 K-Means 逻辑。
+ * 推荐直接使用 reduceGridColors(grid, targetColorCount)。
+ */
 export function mergeSimilarColors(
   colors: PaletteColor[],
   threshold: number = 0.15
 ): PaletteColor[] {
   if (colors.length === 0) return [];
 
-  const merged: PaletteColor[] = [...colors];
-  const processed = new Set<number>();
-  const result: PaletteColor[] = [];
+  const colorMap = new Map<string, number>();
+  for (const c of colors) colorMap.set(c.hex, (c.count || 0) + (colorMap.get(c.hex) || 0));
 
-  for (let i = 0; i < merged.length; i++) {
-    if (processed.has(i)) continue;
-
-    const current = merged[i];
-    const group: PaletteColor[] = [current];
-    processed.add(i);
-
-    for (let j = i + 1; j < merged.length; j++) {
-      if (processed.has(j)) continue;
-
-      const distance = colorDistance(current.hex, merged[j].hex);
-      if (distance <= threshold) {
-        group.push(merged[j]);
-        processed.add(j);
-      }
+  // 估算目标聚类数：颜色之间最小距离的启发式
+  const uniqueHexes = Array.from(colorMap.keys());
+  let minPairDist = Infinity;
+  for (let i = 0; i < uniqueHexes.length && i < 50; i++) {
+    for (let j = i + 1; j < uniqueHexes.length && j < 50; j++) {
+      const d = colorDistance(uniqueHexes[i], uniqueHexes[j]);
+      if (d > 0 && d < minPairDist) minPairDist = d;
     }
-
-    const totalCount = group.reduce((sum, c) => sum + (c.count || 0), 0);
-    const dominantColor = group.sort((a, b) => (b.count || 0) - (a.count || 0))[0];
-
-    result.push({
-      ...dominantColor,
-      count: totalCount,
-    });
   }
+  const normalizedThreshold = threshold * 100;
+  const estK = Math.max(1, Math.round(
+    colorMap.size / Math.max(1, Math.floor(normalizedThreshold / Math.max(minPairDist, 0.5)))
+  ));
+  const targetK = Math.min(colorMap.size, Math.max(1, estK));
 
-  return result.sort((a, b) => (b.count || 0) - (a.count || 0));
+  return kMeansClustering(colorMap, targetK);
 }
 
 // 将画布颜色映射到指定色板
@@ -150,6 +325,87 @@ export function mapColorsToPalette(
       return closest ? closest.hex : color;
     })
   );
+}
+
+/**
+ * 泛洪填充去背景：从图片边缘出发，将连通背景区域的像素设为透明。
+ *
+ * 适用于纯色/柔和渐变背景。从图片四边采样多个种子点做 flood fill，
+ * 相邻像素色差小于 bgThreshold 的视为背景，标记 alpha=0（透明）。
+ *
+ * @param imageData - canvas getImageData 返回的像素数据
+ * @param bgThreshold - 背景容差，默认 12（归一化距离，大致等于 ~30 RGB 欧氏单位）
+ * @returns 修改后的 ImageData（背景区域 alpha=0）
+ */
+export function removeBackground(
+  imageData: ImageData,
+  bgThreshold: number = 12,
+): ImageData {
+  const { data, width, height } = imageData;
+  const visited = new Uint8Array(width * height);
+  const queue: [number, number][] = [];
+
+  function getPixel(x: number, y: number): { r: number; g: number; b: number; a: number } {
+    const i = (y * width + x) * 4;
+    return { r: data[i], g: data[i + 1], b: data[i + 2], a: data[i + 3] };
+  }
+
+  function setAlpha(x: number, y: number, a: number) {
+    data[(y * width + x) * 4 + 3] = a;
+  }
+
+  function colorDiff(
+    r1: number, g1: number, b1: number,
+    r2: number, g2: number, b2: number,
+  ): number {
+    const dr = (r1 - r2) * 0.299;
+    const dg = (g1 - g2) * 0.587;
+    const db = (b1 - b2) * 0.114;
+    return Math.sqrt(dr * dr + dg * dg + db * db) * (100 / 255);
+  }
+
+  // 种子点：四边均匀采样
+  const seedPoints: [number, number][] = [];
+  const stepX = Math.max(1, Math.floor(width / 8));
+  const stepY = Math.max(1, Math.floor(height / 8));
+  for (let x = 0; x < width; x += stepX) {
+    seedPoints.push([x, 0], [x, height - 1]);
+  }
+  for (let y = 0; y < height; y += stepY) {
+    seedPoints.push([0, y], [width - 1, y]);
+  }
+
+  for (const [sx, sy] of seedPoints) {
+    const idx = sy * width + sx;
+    if (visited[idx]) continue;
+
+    const seed = getPixel(sx, sy);
+    if (seed.a < 128) continue;
+
+    queue.push([sx, sy]);
+    visited[idx] = 1;
+
+    while (queue.length > 0) {
+      const [x, y] = queue.shift()!;
+      setAlpha(x, y, 0);
+
+      for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+        const nidx = ny * width + nx;
+        if (visited[nidx]) continue;
+        const np = getPixel(nx, ny);
+        if (np.a < 128) continue;
+        if (colorDiff(seed.r, seed.g, seed.b, np.r, np.g, np.b) <= bgThreshold) {
+          visited[nidx] = 1;
+          queue.push([nx, ny]);
+        }
+      }
+    }
+  }
+
+  return imageData;
 }
 
 // 统计颜色使用量
