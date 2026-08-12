@@ -4,16 +4,19 @@
  * 说明：Capacitor / 本地静态包里没有 /api，必须用完整域名。
  * 优先 VITE_AI_GENERATE_URL；否则与素材广场一致使用 VITE_API_BASE_URL（见 .env.capacitor）。
  */
+const DEFAULT_API_BASE = 'https://pindou.danzaii.cn';
+
+function resolveApiBase(): string {
+  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  return apiBase || DEFAULT_API_BASE;
+}
+
 const resolveGenerateUrl = (): string => {
   const aiBase = (import.meta.env.VITE_AI_GENERATE_URL as string | undefined)?.trim();
   if (aiBase) {
     return `${aiBase.replace(/\/$/, '')}/api/ai/generate-image`;
   }
-  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-  if (apiBase) {
-    return `${apiBase.replace(/\/$/, '')}/api/ai/generate-image`;
-  }
-  return '/api/ai/generate-image';
+  return `${resolveApiBase().replace(/\/$/, '')}/api/ai/generate-image`;
 };
 
 export const generatePixelArtImage = async (

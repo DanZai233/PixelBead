@@ -12,6 +12,7 @@ import {
 } from '../lib/shareCodec';
 
 const env = import.meta.env as Record<string, string | undefined>;
+const DEFAULT_API_BASE = 'https://pindou.danzaii.cn';
 const redisUrl = env.VITE_UPSTASH_REDIS_REST_URL || '';
 const redisToken = env.VITE_UPSTASH_REDIS_REST_TOKEN || '';
 const hasDirectRedis = Boolean(redisUrl && redisToken);
@@ -22,7 +23,7 @@ const redis = new Redis({
 });
 
 function apiBaseTrimmed(): string {
-  let b = (env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '');
+  let b = (env.VITE_API_BASE_URL || DEFAULT_API_BASE).trim().replace(/\/$/, '');
   if (b.endsWith('/api')) {
     b = b.slice(0, -4).replace(/\/$/, '');
   }
