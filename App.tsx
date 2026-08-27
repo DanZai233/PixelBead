@@ -33,6 +33,7 @@ import { useEditor } from './hooks/useEditor';
 import { useGenerationHistory } from './hooks/useGenerationHistory';
 import { useFeedback } from './hooks/useFeedback';
 import { OnboardingGuide } from './components/OnboardingGuide';
+import { OwnedPaletteModal } from './components/OwnedPaletteModal';
 import { AdminPanel } from './components/AdminPanel';
 import { VirtualJoystick } from './components/VirtualJoystick';
 import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from './utils/colorUtils';
@@ -74,6 +75,7 @@ const App: React.FC = () => {
 const AppMain: React.FC = () => {
   const { toast } = useToast();
   const [ownedHexInput, setOwnedHexInput] = useState('');
+  const [ownedPaletteOpen, setOwnedPaletteOpen] = useState(false);
   const {
     grid, setGrid, gridWidth, setGridWidth, gridHeight, setGridHeight,
     customWidth, setCustomWidth, customHeight, setCustomHeight,
@@ -907,7 +909,16 @@ const AppMain: React.FC = () => {
                 <div className="bg-white/10 border border-white/15 rounded-2xl p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-[9px] font-black text-white flex items-center gap-1">📦 我的已有颜色</label>
-                    <span className="text-[9px] font-black text-white/90 bg-white/15 rounded-full px-2 py-0.5">{ownedColors.length} 种</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-black text-white/90 bg-white/15 rounded-full px-2 py-0.5">{ownedColors.length} 种</span>
+                      <button
+                        onClick={() => setOwnedPaletteOpen(true)}
+                        title="大屏展开色板：按色系分区的长条色卡 + 统计信息"
+                        className="px-2 py-1 bg-amber-400/90 hover:bg-amber-400 text-amber-950 rounded-full font-black text-[9px] transition-all active:scale-95"
+                      >
+                        ⛶ 展开色板
+                      </button>
+                    </div>
                   </div>
 
                   {!ownedGuideDismissed && (
@@ -945,7 +956,7 @@ const AppMain: React.FC = () => {
                           key={hex}
                           onClick={() => toggleOwnedColor(hex)}
                           title={`${key} · ${hex}`}
-                          className={`relative aspect-square rounded-md border transition-all active:scale-90 ${owned ? 'border-amber-300 ring-2 ring-amber-300/70' : 'border-white/25 hover:border-white/70 hover:scale-110'}`}
+                          className={`relative group aspect-square rounded-md border transition-all active:scale-90 ${owned ? 'border-amber-300 ring-2 ring-amber-300/70' : 'border-white/25 hover:border-white/70 hover:scale-110'}`}
                           style={{ backgroundColor: hex }}
                         >
                           {owned && (
@@ -953,6 +964,10 @@ const AppMain: React.FC = () => {
                               ✓
                             </span>
                           )}
+                          {/* hover 显示色号 */}
+                          <span className="absolute inset-0 flex items-center justify-center rounded-md bg-black/60 text-[7px] font-black text-white opacity-0 group-hover:opacity-100">
+                            {key}
+                          </span>
                         </button>
                       );
                     })}
@@ -1992,6 +2007,20 @@ const AppMain: React.FC = () => {
         <MaterialGallery
           onApplyMaterial={handleApplyMaterial}
           onClose={() => setMaterialGalleryOpen(false)}
+        />
+      )}
+
+      {ownedPaletteOpen && (
+        <OwnedPaletteModal
+          onClose={() => setOwnedPaletteOpen(false)}
+          paletteGroups={paletteGroups}
+          ownedColors={ownedColors}
+          toggleOwnedColor={toggleOwnedColor}
+          addOwnedColor={addOwnedColor}
+          addCanvasColors={addCanvasColors}
+          clearOwnedColors={clearOwnedColors}
+          ownedOnlyMode={ownedOnlyMode}
+          setOwnedOnlyMode={setOwnedOnlyMode}
         />
       )}
 
