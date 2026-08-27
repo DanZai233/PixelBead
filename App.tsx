@@ -18,6 +18,7 @@ import { BeadCanvas } from './components/BeadCanvas';
 import { Bead3DViewer } from './components/Bead3DViewer';
 import { BeadSliceViewer } from './components/BeadSliceViewer';
 import { BeadPlannerView } from './components/BeadPlannerView';
+import { FinishedPreview } from './components/FinishedPreview';
 import { ImageCropSelector } from './components/ImageCropSelector';
 import { ColorPicker } from './components/ColorPicker';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
@@ -112,6 +113,8 @@ const AppMain: React.FC = () => {
     exportShowGuideLines, setExportShowGuideLines,
     exportMirror, setExportMirror,
     exportSelectionOnly, setExportSelectionOnly,
+    exportWatermarkEnabled, setExportWatermarkEnabled,
+    exportWatermarkText, setExportWatermarkText,
     exportPreviewUrl, setExportPreviewUrl,
     exportPreviewBlob, setExportPreviewBlob,
     exportPreviewName, setExportPreviewName,
@@ -1105,6 +1108,15 @@ const AppMain: React.FC = () => {
                   onLayerCountChange={setLayers}
                 />
               </div>
+            ) : viewType === ViewType.PREVIEW ? (
+              <div className="min-w-full h-full min-h-0 flex flex-col">
+                <FinishedPreview
+                  grid={grid}
+                  gridWidth={gridWidth}
+                  gridHeight={gridHeight}
+                  pixelStyle={pixelStyle}
+                />
+              </div>
             ) : null}
           </div>
 
@@ -1719,6 +1731,36 @@ const AppMain: React.FC = () => {
                  <label htmlFor="exportSelectionOnly" className="text-sm font-black text-slate-700 cursor-pointer">
                    仅导出选区
                  </label>
+               </div>
+             )}
+
+             <div className="flex items-center gap-3">
+               <input
+                 type="checkbox"
+                 id="exportWatermark"
+                 checked={exportWatermarkEnabled}
+                 onChange={(e) => setExportWatermarkEnabled(e.target.checked)}
+                 className="w-5 h-5 rounded border-2 border-slate-300 text-indigo-600 focus:ring-indigo-500"
+               />
+               <label htmlFor="exportWatermark" className="text-sm font-black text-slate-700 cursor-pointer">
+                 添加平铺淡水印
+               </label>
+             </div>
+
+             {exportWatermarkEnabled && (
+               <div className="space-y-1.5">
+                 <label htmlFor="exportWatermarkText" className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                   水印文字
+                 </label>
+                 <input
+                   id="exportWatermarkText"
+                   type="text"
+                   value={exportWatermarkText}
+                   onChange={(e) => setExportWatermarkText(e.target.value)}
+                   placeholder="拼豆糕手"
+                   maxLength={30}
+                   className="w-full px-3 py-2.5 text-sm font-black text-slate-800 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                 />
                </div>
              )}
 

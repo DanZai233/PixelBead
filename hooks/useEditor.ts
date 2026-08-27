@@ -119,6 +119,8 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [exportShowGuideLines, setExportShowGuideLines] = useState(false);
   const [exportMirror, setExportMirror] = useState(false);
   const [exportSelectionOnly, setExportSelectionOnly] = useState(false);
+  const [exportWatermarkEnabled, setExportWatermarkEnabled] = useState(false);
+  const [exportWatermarkText, setExportWatermarkText] = useState('拼豆糕手');
   // ── Share & Material Gallery State ──
   const [exportPreviewUrl, setExportPreviewUrl] = useState<string | null>(null);
   const [exportPreviewBlob, setExportPreviewBlob] = useState<Blob | null>(null);
@@ -1119,6 +1121,8 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
       colorSystemMapping: colorSystemMapping as Record<string, Record<string, string>>,
       showGuideLines: exportShowGuideLines,
       mirror: exportMirror,
+      watermarkEnabled: exportWatermarkEnabled,
+      watermarkText: exportWatermarkText,
     });
 
     const fileName = exportSelectionOnly ? `pixel-bead-${exportWidth}x${exportHeight}-selection.png` : (exportMirror ? `pixel-bead-${gridWidth}x${gridHeight}-mirrored.png` : `pixel-bead-${gridWidth}x${gridHeight}.png`);
@@ -1130,7 +1134,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     setExportPreviewBlob(blob);
     setExportPreviewName(fileName);
     setExportModalOpen(false);
-  }, [grid, gridWidth, gridHeight, exportPixelStyle, exportShowGuideLines, exportMirror, selectedColorSystem, exportSelectionOnly, selection]);
+  }, [grid, gridWidth, gridHeight, exportPixelStyle, exportShowGuideLines, exportMirror, selectedColorSystem, exportSelectionOnly, selection, exportWatermarkEnabled, exportWatermarkText]);
 
   const handleShareImageExport = useCallback(async () => {
     const canvas = await generateShareImage({
@@ -1450,6 +1454,8 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     exportShowGuideLines, setExportShowGuideLines,
     exportMirror, setExportMirror,
     exportSelectionOnly, setExportSelectionOnly,
+    exportWatermarkEnabled, setExportWatermarkEnabled,
+    exportWatermarkText, setExportWatermarkText,
     exportPreviewUrl, setExportPreviewUrl,
     exportPreviewBlob, setExportPreviewBlob,
     exportPreviewName, setExportPreviewName,

@@ -31,6 +31,7 @@ export enum ViewType {
   TWO_D = 'TWO_D',
   THREE_D = 'THREE_D',
   SLICES = 'SLICES',
+  PREVIEW = 'PREVIEW',
 }
 
 export interface ColorInfo {
@@ -138,6 +139,7 @@ export const VIEW_TYPES = [
   { value: ViewType.TWO_D, name: '2D视图', icon: '⬜' },
   { value: ViewType.THREE_D, name: '3D立体', icon: '🧊' },
   { value: ViewType.SLICES, name: '分层切片', icon: '📚' },
+  { value: ViewType.PREVIEW, name: '成品预览', icon: '🖼️' },
 ];
 
 export const PALETTE_PRESETS = [

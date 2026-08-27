@@ -86,6 +86,8 @@ export interface ExportImageData {
   colorSystemMapping?: Record<string, Record<string, string>>;
   showGuideLines?: boolean;
   mirror?: boolean;
+  watermarkEnabled?: boolean;
+  watermarkText?: string;
 }
 
 function loadLogo(): Promise<HTMLImageElement> {
@@ -98,7 +100,7 @@ function loadLogo(): Promise<HTMLImageElement> {
 }
 
 export async function generateExportImage(data: ExportImageData): Promise<HTMLCanvasElement> {
-  const { grid, gridWidth, gridHeight, pixelStyle, colorSystem, colorSystemMapping, showGuideLines, mirror } = data;
+  const { grid, gridWidth, gridHeight, pixelStyle, colorSystem, colorSystemMapping, showGuideLines, mirror, watermarkEnabled, watermarkText } = data;
   
   const mirroredGrid = mirror ? grid.map(row => [...row].reverse()) : grid;
   const uniqueColors = getUniqueColors(mirroredGrid);
@@ -118,6 +120,29 @@ export async function generateExportImage(data: ExportImageData): Promise<HTMLCa
   
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+  const paintWatermark = (target: CanvasRenderingContext2D, width: number, height: number) => {
+    const text = (watermarkText || '拼豆糕手').trim() || '拼豆糕手';
+    const fontSize = 30;
+    const angle = -Math.PI / 5;
+    const stepX = 260;
+    const stepY = 180;
+    target.save();
+    target.translate(width / 2, height / 2);
+    target.rotate(angle);
+    target.fillStyle = 'rgba(100, 116, 139, 0.08)';
+    target.font = `bold ${fontSize}px "PingFang SC", "Microsoft YaHei", Arial, sans-serif`;
+    target.textAlign = 'center';
+    target.textBaseline = 'middle';
+    const startX = -width / 2 - 40;
+    const startY = -height / 2 - 40;
+    for (let y = startY; y <= height / 2 + 40; y += stepY) {
+      for (let x = startX; x <= width / 2 + 40; x += stepX) {
+        target.fillText(text, x, y);
+      }
+    }
+    target.restore();
+  };
   
   ctx.strokeStyle = '#E5E7EB';
   ctx.lineWidth = 1;
@@ -355,9 +380,12 @@ export async function generateExportImage(data: ExportImageData): Promise<HTMLCa
       newCtx.fillStyle = '#FFFFFF';
       newCtx.fillRect(0, 0, canvasWidth, newHeight);
       newCtx.drawImage(canvas, 0, 0);
+      if (watermarkEnabled) paintWatermark(newCtx, canvasWidth, newHeight);
       return newCanvas;
     }
   }
+
+  if (watermarkEnabled) paintWatermark(ctx, canvasWidth, canvasHeight);
   
   return canvas;
 }
