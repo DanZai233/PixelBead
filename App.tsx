@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import {
   ToolType, DEFAULT_COLORS, PixelStyle,
   TOOLS_INFO, MOBILE_2D_DOCK_TOOLS, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES,
-  ColorSystem, PaletteColor, PALETTE_PRESETS, Selection, BRUSH_SIZES, ToolInfo
+  ColorSystem, PaletteColor, PALETTE_PRESETS, Selection, BRUSH_SIZES, ToolInfo, SELECTION_MODES
 } from './types';
 import { generatePixelArtImage } from './services/aiService';
 import {
@@ -97,6 +97,7 @@ const AppMain: React.FC = () => {
     shapeStart, setShapeStart,
     handleCanvasAction, handleMiddleButtonDrag,
     selection, setSelection, clipboard, setClipboard,
+    selectionMode, setSelectionMode, handleSelectionChange, handleDeselect,
     wandTolerance, setWandTolerance,
     handleCopySelection, handleCutSelection, handlePasteSelection,
     handleInvertSelection, handleExcludeColorFromSelection, handleClearSelection,
@@ -545,11 +546,33 @@ const AppMain: React.FC = () => {
               <div className="flex justify-between items-center">
                 <h2 className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">选区操作</h2>
                 <button
-                  onClick={() => setSelection(null)}
+                  onClick={handleDeselect}
                   className="text-[8px] text-indigo-400 hover:text-red-500 font-black"
                 >
-                  ✕ 清除选区
+                  ✕ 取消框选
                 </button>
+              </div>
+
+              <div className="bg-white rounded-xl p-2 space-y-1.5">
+                <div className="flex gap-1">
+                  {SELECTION_MODES.map(m => (
+                    <button
+                      key={m.mode}
+                      onClick={() => setSelectionMode(m.mode)}
+                      title={m.hint}
+                      className={`flex-1 py-1.5 rounded-lg font-black text-[9px] transition-all active:scale-95 ${
+                        selectionMode === m.mode
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      }`}
+                    >
+                      {m.icon} {m.name}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[8px] text-slate-400 leading-snug">
+                  {SELECTION_MODES.find(m => m.mode === selectionMode)?.hint}。加选模式下，多次框选或魔棒点击会叠加成不规则选区；Ctrl+Z 可撤销每次选区操作，Esc 取消框选。
+                </p>
               </div>
 
               {currentTool === ToolType.WAND && (
@@ -1186,7 +1209,7 @@ const AppMain: React.FC = () => {
                           onBackgroundImageDrag={handleBackgroundImageDrag}
                           onZoomChange={setZoom}
                           onTouchPan={handleMiddleButtonDrag}
-                          onSelectionChange={setSelection}
+                          onSelectionChange={handleSelectionChange}
                         />
                      </div>
                   </div>

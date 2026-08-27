@@ -1,4 +1,4 @@
-import { Selection } from '../types';
+import { Selection, SelectionMode } from '../types';
 import { colorDistance } from './colorSystemUtils';
 
 const cellKey = (r: number, c: number) => `${r},${c}`;
@@ -78,4 +78,54 @@ export function wandSelectCells(
   }
 
   return Array.from(visited);
+}
+
+/** 由单元格集合构建选区（自动计算包围盒），空集合返回 null */
+export function selectionFromCells(cells: Set<string>): Selection | null {
+  if (cells.size === 0) return null;
+  let rMin = Infinity, rMax = -Infinity, cMin = Infinity, cMax = -Infinity;
+  for (const key of cells) {
+    const [r, c] = key.split(',').map(Number);
+    if (r < rMin) rMin = r;
+    if (r > rMax) rMax = r;
+    if (c < cMin) cMin = c;
+    if (c > cMax) cMax = c;
+  }
+  return {
+    startRow: rMin,
+    startCol: cMin,
+    endRow: rMax,
+    endCol: cMax,
+    cells: Array.from(cells),
+  };
+}
+
+/**
+ * 按叠加模式合并选区：
+ * - replace:直接采用新选区
+ * - add:新区域并入现有选区（并集），生成不规则选区
+ * - subtract:从现有选区减去新区域（差集），减空返回 null
+ */
+export function mergeSelectionCells(
+  current: Selection | null,
+  newCells: Set<string>,
+  mode: SelectionMode,
+  gridWidth: number,
+  gridHeight: number,
+): Selection | null {
+  if (mode === 'replace' || !current) {
+    if (mode === 'replace' && !newCells.size) return null;
+    return selectionFromCells(newCells);
+  }
+
+  const base = new Set(getSelectionCellSet(current, gridWidth, gridHeight));
+
+  if (mode === 'add') {
+    for (const key of newCells) base.add(key);
+    return selectionFromCells(base);
+  }
+
+  // subtract
+  for (const key of newCells) base.delete(key);
+  return selectionFromCells(base);
 }

@@ -129,9 +129,10 @@ export const SHORTCUTS = [
   { key: 'Ctrl + 滚轮', action: '缩放画布' },
   { key: '中键拖动', action: '移动画布' },
   { key: 'Space + 拖动', action: '移动画布' },
-  { key: 'Ctrl + Z', action: '撤销' },
   { key: 'Ctrl + Shift + Z', action: '重做' },
   { key: 'Delete / Backspace', action: '清空选区' },
+  { key: 'Esc', action: '取消框选（可 Ctrl+Z 撤销）' },
+  { key: 'Ctrl + Z', action: '撤销（含撤销上一次框选）' },
   { key: 'Ctrl + C', action: '复制选区' },
   { key: 'Ctrl + V', action: '粘贴选区' },
   { key: 'Ctrl + X', action: '剪切选区' },
@@ -171,6 +172,15 @@ export interface Selection {
   /** 不规则选区的单元格集合（"row,col"），魔棒等工具生成；为空/undefined 表示矩形选区 */
   cells?: string[];
 }
+
+/** 选区叠加模式：替换 / 加选（并集）/ 减选（差集） */
+export type SelectionMode = 'replace' | 'add' | 'subtract';
+
+export const SELECTION_MODES: Array<{ mode: SelectionMode; name: string; icon: string; hint: string }> = [
+  { mode: 'replace', name: '替换', icon: '🔄', hint: '每次框选/魔棒替换原选区' },
+  { mode: 'add', name: '加选', icon: '➕', hint: '多次框选/魔棒叠加为不规则选区' },
+  { mode: 'subtract', name: '减选', icon: '➖', hint: '从当前选区中减去框选/魔棒区域' },
+];
 
 export const BRUSH_SIZES = [
   { value: 1, name: '1x1' },

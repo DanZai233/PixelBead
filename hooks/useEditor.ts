@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import {
   ToolType, DEFAULT_COLORS, PixelStyle,
   TOOLS_INFO, ColorHex, ViewType,
-  ColorSystem, PaletteColor, Selection, BRUSH_SIZES,
+  ColorSystem, PaletteColor, Selection, SelectionMode, BRUSH_SIZES,
 } from '../types';
 import { generatePixelArtImage } from '../services/aiService';
 import {
@@ -22,7 +22,7 @@ import {
 } from '../utils/colorSystemUtils';
 import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from '../utils/colorUtils';
 import { useEditorPalette } from './useEditorPalette';
-import { wandSelectCells, getSelectionCellSet } from '../utils/selectionUtils';
+import { wandSelectCells, getSelectionCellSet, mergeSelectionCells } from '../utils/selectionUtils';
 import colorSystemMapping from '../colorSystemMapping.json';
 import { Capacitor } from '@capacitor/core';
 import { pickSingleImageNative } from '../utils/pickImageNative';
@@ -139,6 +139,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   });
 
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>('replace');
   const [clipboard, setClipboard] = useState<string[][] | null>(null);
   const [brushSize, setBrushSize] = useState(1);
   const [wandTolerance, setWandTolerance] = useState(20);
@@ -155,8 +156,9 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const backgroundImageRef = useRef<HTMLInputElement>(null);
   const sourceImageCacheRef = useRef<{ data: Uint8ClampedArray; width: number; height: number } | null>(null);
   const preRemovalGridRef = useRef<string[][] | null>(null);
-  const undoStackRef = useRef<string[][][]>([]);
-  const redoStackRef = useRef<string[][][]>([]);
+  type HistoryEntry = { type: 'grid'; grid: string[][] } | { type: 'selection'; selection: Selection | null };
+  const undoStackRef = useRef<HistoryEntry[]>([]);
+  const redoStackRef = useRef<HistoryEntry[]>([]);
   const gridRef = useRef(grid);
   const [historyVersion, setHistoryVersion] = useState(0);
   const MAX_HISTORY = 50;
@@ -306,7 +308,17 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   }, []);
 
   const pushUndo = useCallback((prev: string[][]) => {
-    undoStackRef.current = [...undoStackRef.current.slice(-(MAX_HISTORY - 1)), prev.map(r => [...r])];
+    undoStackRef.current = [...undoStackRef.current.slice(-(MAX_HISTORY - 1)), { type: 'grid', grid: prev.map(r => [...r]) }];
+    redoStackRef.current = [];
+    setHistoryVersion(v => v + 1);
+  }, []);
+
+  /** 记录一次「纯选区操作」（框选/魔棒/取消框选），Ctrl+Z 可撤销 */
+  const pushSelectionHistory = useCallback((prevSelection: Selection | null) => {
+    const snapshot: Selection | null = prevSelection
+      ? { ...prevSelection, cells: prevSelection.cells ? [...prevSelection.cells] : undefined }
+      : null;
+    undoStackRef.current = [...undoStackRef.current.slice(-(MAX_HISTORY - 1)), { type: 'selection', selection: snapshot }];
     redoStackRef.current = [];
     setHistoryVersion(v => v + 1);
   }, []);
@@ -411,19 +423,35 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
 
   const undo = useCallback(() => {
     if (undoStackRef.current.length === 0) return;
-    const prev = undoStackRef.current.pop()!;
-    redoStackRef.current = [...redoStackRef.current, grid.map(r => [...r])];
-    setGrid(prev);
+    const entry = undoStackRef.current.pop()!;
+    if (entry.type === 'grid') {
+      redoStackRef.current = [...redoStackRef.current, { type: 'grid', grid: grid.map(r => [...r]) }];
+      setGrid(entry.grid);
+    } else {
+      redoStackRef.current = [...redoStackRef.current, {
+        type: 'selection',
+        selection: selection ? { ...selection, cells: selection.cells ? [...selection.cells] : undefined } : null,
+      }];
+      setSelection(entry.selection);
+    }
     setHistoryVersion(v => v + 1);
-  }, [grid]);
+  }, [grid, selection]);
 
   const redo = useCallback(() => {
     if (redoStackRef.current.length === 0) return;
-    const next = redoStackRef.current.pop()!;
-    undoStackRef.current = [...undoStackRef.current, grid.map(r => [...r])];
-    setGrid(next);
+    const entry = redoStackRef.current.pop()!;
+    if (entry.type === 'grid') {
+      undoStackRef.current = [...undoStackRef.current, { type: 'grid', grid: grid.map(r => [...r]) }];
+      setGrid(entry.grid);
+    } else {
+      undoStackRef.current = [...undoStackRef.current, {
+        type: 'selection',
+        selection: selection ? { ...selection, cells: selection.cells ? [...selection.cells] : undefined } : null,
+      }];
+      setSelection(entry.selection);
+    }
     setHistoryVersion(v => v + 1);
-  }, [grid]);
+  }, [grid, selection]);
 
   const handleResize = useCallback((newWidth: number, newHeight?: number) => {
     const finalHeight = newHeight || newWidth;
@@ -671,6 +699,32 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     setSelection(null);
   }, [selection, gridWidth, gridHeight, pushUndo]);
 
+  /** 取消框选（可被 Ctrl+Z 撤销） */
+  const handleDeselect = useCallback(() => {
+    if (!selection) return;
+    pushSelectionHistory(selection);
+    setSelection(null);
+  }, [selection, pushSelectionHistory]);
+
+  /** 框选/魔棒提交选区时的统一入口：按「替换/加选/减选」模式合并 */
+  const handleSelectionChange = useCallback((newSel: Selection | null) => {
+    pushSelectionHistory(selection);
+    if (!newSel) {
+      setSelection(null);
+      return;
+    }
+    if (selectionMode === 'replace') {
+      setSelection(newSel);
+      return;
+    }
+    const newCells = getSelectionCellSet(newSel, gridWidth, gridHeight);
+    const merged = mergeSelectionCells(selection, newCells, selectionMode, gridWidth, gridHeight);
+    setSelection(merged);
+    if (merged && selectionMode === 'add') {
+      toast(`已叠加选区，共 ${merged.cells?.length ?? 0} 格`, 'info');
+    }
+  }, [selection, selectionMode, gridWidth, gridHeight, pushSelectionHistory]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isColorPickerOpen || isShortcutsOpen || helpModalOpen) return;
@@ -706,6 +760,13 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
         }
         return;
       }
+      if (e.key === 'Escape') {
+        if (selection) {
+          e.preventDefault();
+          handleDeselect();
+        }
+        return;
+      }
       if (e.key === '[') {
         e.preventDefault();
         setBrushSize(prev => Math.max(1, prev - 1));
@@ -724,7 +785,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isColorPickerOpen, isShortcutsOpen, helpModalOpen, undo, redo, handleCopySelection, handlePasteSelection, handleCutSelection, handleClearSelection, selection, gridHeight, gridWidth]);
+  }, [isColorPickerOpen, isShortcutsOpen, helpModalOpen, undo, redo, handleCopySelection, handlePasteSelection, handleCutSelection, handleClearSelection, handleDeselect, selection, gridHeight, gridWidth]);
 
   const handleCanvasAction = useCallback((row: number, col: number, backgroundColor?: string | null) => {
     if (currentTool === ToolType.PICKER) {
@@ -739,16 +800,19 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     if (currentTool === ToolType.WAND) {
       const cells = wandSelectCells(grid, row, col, wandTolerance);
       if (cells.length === 0) return;
-      let rMin = Infinity, rMax = -Infinity, cMin = Infinity, cMax = -Infinity;
-      for (const key of cells) {
-        const [r, c] = key.split(',').map(Number);
-        if (r < rMin) rMin = r;
-        if (r > rMax) rMax = r;
-        if (c < cMin) cMin = c;
-        if (c > cMax) cMax = c;
+      pushSelectionHistory(selection);
+      const merged = mergeSelectionCells(selection, new Set(cells), selectionMode, gridWidth, gridHeight);
+      setSelection(merged);
+      if (merged) {
+        const count = merged.cells?.length ?? 0;
+        toast(selectionMode === 'add'
+          ? `魔棒已叠加选区，共 ${count} 格，按 Delete 清空（抠图去背景）`
+          : selectionMode === 'subtract'
+            ? `已从选区减去 ${cells.length} 格，剩余 ${count} 格`
+            : `魔棒已选中 ${count} 格，按 Delete 即可清空（抠图去背景）`, 'info');
+      } else {
+        toast('已从选区中减去全部区域', 'info');
       }
-      setSelection({ startRow: rMin, startCol: cMin, endRow: rMax, endCol: cMax, cells });
-      toast(`魔棒已选中 ${cells.length} 格，按 Delete 即可清空（抠图去背景）`, 'info');
       return;
     }
 
@@ -867,7 +931,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
       }
       return newGrid;
     });
-  }, [selectedColor, currentTool, gridWidth, gridHeight, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo, selectedColorSystem, brushSize, wandTolerance]);
+  }, [selectedColor, currentTool, gridWidth, gridHeight, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo, selectedColorSystem, brushSize, wandTolerance, selection, selectionMode, pushSelectionHistory]);
 
   const handleMiddleButtonDrag = useCallback((deltaX: number, deltaY: number) => {
     setPanOffset(prev => ({
@@ -1349,6 +1413,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     shapeStart, setShapeStart,
     handleCanvasAction, handleMiddleButtonDrag,
     selection, setSelection, clipboard, setClipboard,
+    selectionMode, setSelectionMode, handleSelectionChange, handleDeselect,
     wandTolerance, setWandTolerance,
     handleCopySelection, handleCutSelection, handlePasteSelection,
     handleInvertSelection, handleExcludeColorFromSelection, handleClearSelection,
