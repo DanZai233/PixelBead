@@ -139,10 +139,11 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   });
 
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [selectionMode, setSelectionMode] = useState<SelectionMode>('replace');
+  // 默认加选：第一次框选生成选区，后续框选/魔棒自动叠加为不规则选区
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>('add');
   const [clipboard, setClipboard] = useState<string[][] | null>(null);
   const [brushSize, setBrushSize] = useState(1);
-  const [wandTolerance, setWandTolerance] = useState(20);
+  const [wandTolerance, setWandTolerance] = useState(5);
   const [wandContiguous, setWandContiguous] = useState(true);
 
   // ── Palette State ──

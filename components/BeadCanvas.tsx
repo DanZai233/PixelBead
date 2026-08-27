@@ -337,14 +337,30 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       ctx.setLineDash([5, 3]);
 
       if (selection.cells && selection.cells.length > 0) {
-        // 不规则选区（魔棒等）:逐格高亮 + 包围盒虚线
+        // 不规则选区:逐格高亮 + 边界轮廓描边（不画方形包围盒）
         ctx.fillStyle = 'rgba(99, 102, 241, 0.18)';
         for (const key of selection.cells) {
           const [r, c] = key.split(',').map(Number);
           if (r < 0 || r >= gridHeight || c < 0 || c >= gridWidth) continue;
           ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
         }
-        ctx.strokeRect(x, y, width, height);
+        const cellSet = new Set(selection.cells);
+        ctx.strokeStyle = 'rgba(99, 102, 241, 0.6)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+        for (const key of selection.cells) {
+          const [r, c] = key.split(',').map(Number);
+          if (r < 0 || r >= gridHeight || c < 0 || c >= gridWidth) continue;
+          // 只描边边界格：上下左右任一邻居不在选区内
+          const isBoundary =
+            !cellSet.has(`${r - 1},${c}`) ||
+            !cellSet.has(`${r + 1},${c}`) ||
+            !cellSet.has(`${r},${c - 1}`) ||
+            !cellSet.has(`${r},${c + 1}`);
+          if (isBoundary) {
+            ctx.strokeRect(c * cellSize + 0.5, r * cellSize + 0.5, cellSize - 1, cellSize - 1);
+          }
+        }
       } else {
         ctx.strokeRect(x, y, width, height);
         ctx.fillStyle = 'rgba(99, 102, 241, 0.1)';

@@ -179,7 +179,7 @@ export type SelectionMode = 'replace' | 'add' | 'subtract';
 
 export const SELECTION_MODES: Array<{ mode: SelectionMode; name: string; icon: string; hint: string }> = [
   { mode: 'replace', name: '替换', icon: '🔄', hint: '每次框选/魔棒替换原选区' },
-  { mode: 'add', name: '加选', icon: '➕', hint: '多次框选/魔棒叠加为不规则选区' },
+  { mode: 'add', name: '加选', icon: '➕', hint: '默认模式：连续框选/魔棒自动叠加为不规则选区' },
   { mode: 'subtract', name: '减选', icon: '➖', hint: '从当前选区中减去框选/魔棒区域' },
 ];
 

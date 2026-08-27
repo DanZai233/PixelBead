@@ -620,7 +620,7 @@ const AppMain: React.FC = () => {
                   ))}
                 </div>
                 <p className="text-[8px] text-slate-400 leading-snug">
-                  {SELECTION_MODES.find(m => m.mode === selectionMode)?.hint}。加选模式下，多次框选或魔棒点击会叠加成不规则选区；Ctrl+Z 可撤销每次选区操作，Esc 取消框选。
+                  {SELECTION_MODES.find(m => m.mode === selectionMode)?.hint}。默认加选：连续框选/魔棒自动叠加成不规则选区；想重新开始按 Esc 或「✕ 取消框选」，Ctrl+Z 可撤销每次选区操作。
                 </p>
               </div>
 
