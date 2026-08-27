@@ -22,6 +22,7 @@ import {
 } from '../utils/colorSystemUtils';
 import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from '../utils/colorUtils';
 import { useEditorPalette } from './useEditorPalette';
+import { wandSelectCells, getSelectionCellSet } from '../utils/selectionUtils';
 import colorSystemMapping from '../colorSystemMapping.json';
 import { Capacitor } from '@capacitor/core';
 import { pickSingleImageNative } from '../utils/pickImageNative';
@@ -140,6 +141,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [selection, setSelection] = useState<Selection | null>(null);
   const [clipboard, setClipboard] = useState<string[][] | null>(null);
   const [brushSize, setBrushSize] = useState(1);
+  const [wandTolerance, setWandTolerance] = useState(20);
 
   // ── Palette State ──
   const [joystickMove, setJoystickMove] = useState({ x: 0, y: 0 });
@@ -548,18 +550,20 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     const rMax = Math.max(startRow, endRow);
     const cMin = Math.min(startCol, endCol);
     const cMax = Math.max(startCol, endCol);
+    const cells = getSelectionCellSet(selection, gridWidth, gridHeight);
 
+    // 不规则选区:包围盒内非选中格子用白色（透明）填充，粘贴后保持形状
     const copiedGrid: string[][] = [];
     for (let r = rMin; r <= rMax; r++) {
       const row: string[] = [];
       for (let c = cMin; c <= cMax; c++) {
-        row.push(grid[r][c]);
+        row.push(cells.has(`${r},${c}`) ? grid[r][c] : '#FFFFFF');
       }
       copiedGrid.push(row);
     }
     setClipboard(copiedGrid);
     toast('已复制选区内容', 'success');
-  }, [selection, grid]);
+  }, [selection, grid, gridWidth, gridHeight]);
 
   const handleCutSelection = useCallback(() => {
     if (!selection) return;
@@ -568,12 +572,13 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     const rMax = Math.max(startRow, endRow);
     const cMin = Math.min(startCol, endCol);
     const cMax = Math.max(startCol, endCol);
+    const cells = getSelectionCellSet(selection, gridWidth, gridHeight);
 
     const copiedGrid: string[][] = [];
     for (let r = rMin; r <= rMax; r++) {
       const row: string[] = [];
       for (let c = cMin; c <= cMax; c++) {
-        row.push(grid[r][c]);
+        row.push(cells.has(`${r},${c}`) ? grid[r][c] : '#FFFFFF');
       }
       copiedGrid.push(row);
     }
@@ -582,16 +587,15 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     pushUndo(gridRef.current);
     setGrid(prev => {
       const newGrid = prev.map(r => [...r]);
-      for (let r = rMin; r <= rMax; r++) {
-        for (let c = cMin; c <= cMax; c++) {
-          newGrid[r][c] = '#FFFFFF';
-        }
+      for (const key of cells) {
+        const [r, c] = key.split(',').map(Number);
+        newGrid[r][c] = '#FFFFFF';
       }
       return newGrid;
     });
     setSelection(null);
     toast('已剪切选区内容', 'success');
-  }, [selection, grid, pushUndo]);
+  }, [selection, grid, gridWidth, gridHeight, pushUndo]);
 
   const handlePasteSelection = useCallback((pasteRow: number, pasteCol: number) => {
     if (!clipboard) return;
@@ -617,70 +621,55 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
 
   const handleInvertSelection = useCallback(() => {
     if (!selection) return;
-    const { startRow, startCol, endRow, endCol } = selection;
-    const rMin = Math.min(startRow, endRow);
-    const rMax = Math.max(startRow, endRow);
-    const cMin = Math.min(startCol, endCol);
-    const cMax = Math.max(startCol, endCol);
+    const cells = getSelectionCellSet(selection, gridWidth, gridHeight);
 
     pushUndo(gridRef.current);
     setGrid(prev => {
       const newGrid = prev.map(r => [...r]);
-      for (let r = rMin; r <= rMax; r++) {
-        for (let c = cMin; c <= cMax; c++) {
-          if (newGrid[r][c] === '#FFFFFF') {
-            newGrid[r][c] = selectedColor;
-          } else {
-            newGrid[r][c] = '#FFFFFF';
-          }
-        }
-      }
-      return newGrid;
-    });
-  }, [selection, selectedColor, pushUndo]);
-
-  const handleExcludeColorFromSelection = useCallback(() => {
-    if (!selection) return;
-    const { startRow, startCol, endRow, endCol } = selection;
-    const rMin = Math.min(startRow, endRow);
-    const rMax = Math.max(startRow, endRow);
-    const cMin = Math.min(startCol, endCol);
-    const cMax = Math.max(startCol, endCol);
-
-    pushUndo(gridRef.current);
-    setGrid(prev => {
-      const newGrid = prev.map(r => [...r]);
-      for (let r = rMin; r <= rMax; r++) {
-        for (let c = cMin; c <= cMax; c++) {
-          if (newGrid[r][c] === selectedColor) {
-            newGrid[r][c] = '#FFFFFF';
-          }
-        }
-      }
-      return newGrid;
-    });
-  }, [selection, selectedColor, pushUndo]);
-
-  const handleClearSelection = useCallback(() => {
-    if (!selection) return;
-    const { startRow, startCol, endRow, endCol } = selection;
-    const rMin = Math.min(startRow, endRow);
-    const rMax = Math.max(startRow, endRow);
-    const cMin = Math.min(startCol, endCol);
-    const cMax = Math.max(startCol, endCol);
-
-    pushUndo(gridRef.current);
-    setGrid(prev => {
-      const newGrid = prev.map(r => [...r]);
-      for (let r = rMin; r <= rMax; r++) {
-        for (let c = cMin; c <= cMax; c++) {
+      for (const key of cells) {
+        const [r, c] = key.split(',').map(Number);
+        if (newGrid[r][c] === '#FFFFFF') {
+          newGrid[r][c] = selectedColor;
+        } else {
           newGrid[r][c] = '#FFFFFF';
         }
       }
       return newGrid;
     });
+  }, [selection, selectedColor, gridWidth, gridHeight, pushUndo]);
+
+  const handleExcludeColorFromSelection = useCallback(() => {
+    if (!selection) return;
+    const cells = getSelectionCellSet(selection, gridWidth, gridHeight);
+
+    pushUndo(gridRef.current);
+    setGrid(prev => {
+      const newGrid = prev.map(r => [...r]);
+      for (const key of cells) {
+        const [r, c] = key.split(',').map(Number);
+        if (newGrid[r][c] === selectedColor) {
+          newGrid[r][c] = '#FFFFFF';
+        }
+      }
+      return newGrid;
+    });
+  }, [selection, selectedColor, gridWidth, gridHeight, pushUndo]);
+
+  const handleClearSelection = useCallback(() => {
+    if (!selection) return;
+    const cells = getSelectionCellSet(selection, gridWidth, gridHeight);
+
+    pushUndo(gridRef.current);
+    setGrid(prev => {
+      const newGrid = prev.map(r => [...r]);
+      for (const key of cells) {
+        const [r, c] = key.split(',').map(Number);
+        newGrid[r][c] = '#FFFFFF';
+      }
+      return newGrid;
+    });
     setSelection(null);
-  }, [selection, pushUndo]);
+  }, [selection, gridWidth, gridHeight, pushUndo]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -744,6 +733,22 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
         setSelectedColor(colorAt);
         setCurrentTool(ToolType.PENCIL);
       }
+      return;
+    }
+
+    if (currentTool === ToolType.WAND) {
+      const cells = wandSelectCells(grid, row, col, wandTolerance);
+      if (cells.length === 0) return;
+      let rMin = Infinity, rMax = -Infinity, cMin = Infinity, cMax = -Infinity;
+      for (const key of cells) {
+        const [r, c] = key.split(',').map(Number);
+        if (r < rMin) rMin = r;
+        if (r > rMax) rMax = r;
+        if (c < cMin) cMin = c;
+        if (c > cMax) cMax = c;
+      }
+      setSelection({ startRow: rMin, startCol: cMin, endRow: rMax, endCol: cMax, cells });
+      toast(`魔棒已选中 ${cells.length} 格，按 Delete 即可清空（抠图去背景）`, 'info');
       return;
     }
 
@@ -862,7 +867,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
       }
       return newGrid;
     });
-  }, [selectedColor, currentTool, gridWidth, gridHeight, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo, selectedColorSystem, brushSize]);
+  }, [selectedColor, currentTool, gridWidth, gridHeight, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo, selectedColorSystem, brushSize, wandTolerance]);
 
   const handleMiddleButtonDrag = useCallback((deltaX: number, deltaY: number) => {
     setPanOffset(prev => ({
@@ -1095,12 +1100,14 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
       const rMax = Math.max(startRow, endRow);
       const cMin = Math.min(startCol, endCol);
       const cMax = Math.max(startCol, endCol);
+      const cells = getSelectionCellSet(selection, gridWidth, gridHeight);
 
       exportGrid = [];
       for (let r = rMin; r <= rMax; r++) {
         const row: string[] = [];
         for (let c = cMin; c <= cMax; c++) {
-          row.push(grid[r][c]);
+          // 不规则选区:包围盒内非选中格子导出为白色（透明）
+          row.push(cells.has(`${r},${c}`) ? grid[r][c] : '#FFFFFF');
         }
         exportGrid.push(row);
       }
@@ -1216,22 +1223,19 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     if (!pre || !selection) return;
     if (!confirm('将选区恢复到去背景前的状态，确定吗？')) return;
 
-    const { startRow, startCol, endRow, endCol } = selection;
-    const rMin = Math.min(startRow, endRow);
-    const rMax = Math.max(startRow, endRow);
-    const cMin = Math.min(startCol, endCol);
-    const cMax = Math.max(startCol, endCol);
+    const cells = getSelectionCellSet(selection, gridWidth, gridHeight);
 
     const newGrid = grid.map(row => [...row]);
-    for (let r = rMin; r <= Math.min(rMax, pre.length - 1); r++) {
-      for (let c = cMin; c <= Math.min(cMax, pre[0].length - 1); c++) {
+    for (const key of cells) {
+      const [r, c] = key.split(',').map(Number);
+      if (r < pre.length && c < pre[0].length) {
         newGrid[r][c] = pre[r][c];
       }
     }
 
     pushUndo(gridRef.current);
     setGrid(newGrid);
-  }, [grid, selection, pushUndo]);
+  }, [grid, selection, gridWidth, gridHeight, pushUndo]);
 
   const closeImportResultModal = useCallback(() => setImportResultModalOpen(false), []);
 
@@ -1345,6 +1349,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     shapeStart, setShapeStart,
     handleCanvasAction, handleMiddleButtonDrag,
     selection, setSelection, clipboard, setClipboard,
+    wandTolerance, setWandTolerance,
     handleCopySelection, handleCutSelection, handlePasteSelection,
     handleInvertSelection, handleExcludeColorFromSelection, handleClearSelection,
     aiPrompt, setAiPrompt, isGenerating, setIsGenerating,

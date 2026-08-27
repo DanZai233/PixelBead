@@ -72,6 +72,11 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   const [selection, setSelection] = useState<Selection | null>(null);
   const [selectionStart, setSelectionStart] = useState<{ row: number; col: number } | null>(null);
 
+  // 外部选区（魔棒/去背景恢复/清除等）同步到画布显示
+  useEffect(() => {
+    setSelection(propSelection ?? null);
+  }, [propSelection]);
+
   useEffect(() => {
     lastZoomRef.current = propZoom;
   }, [propZoom]);
@@ -330,10 +335,21 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       ctx.strokeStyle = 'rgba(99, 102, 241, 0.8)';
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 3]);
-      ctx.strokeRect(x, y, width, height);
 
-      ctx.fillStyle = 'rgba(99, 102, 241, 0.1)';
-      ctx.fillRect(x, y, width, height);
+      if (selection.cells && selection.cells.length > 0) {
+        // 不规则选区（魔棒等）:逐格高亮 + 包围盒虚线
+        ctx.fillStyle = 'rgba(99, 102, 241, 0.18)';
+        for (const key of selection.cells) {
+          const [r, c] = key.split(',').map(Number);
+          if (r < 0 || r >= gridHeight || c < 0 || c >= gridWidth) continue;
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+        }
+        ctx.strokeRect(x, y, width, height);
+      } else {
+        ctx.strokeRect(x, y, width, height);
+        ctx.fillStyle = 'rgba(99, 102, 241, 0.1)';
+        ctx.fillRect(x, y, width, height);
+      }
     }
 
     ctx.restore();

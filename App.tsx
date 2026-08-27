@@ -97,6 +97,7 @@ const AppMain: React.FC = () => {
     shapeStart, setShapeStart,
     handleCanvasAction, handleMiddleButtonDrag,
     selection, setSelection, clipboard, setClipboard,
+    wandTolerance, setWandTolerance,
     handleCopySelection, handleCutSelection, handlePasteSelection,
     handleInvertSelection, handleExcludeColorFromSelection, handleClearSelection,
     aiPrompt, setAiPrompt, isGenerating, setIsGenerating,
@@ -542,7 +543,7 @@ const AppMain: React.FC = () => {
           {selection && (
             <div className="space-y-3 bg-indigo-50 rounded-3xl p-4 border-2 border-indigo-200">
               <div className="flex justify-between items-center">
-                <h2 className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">框选操作</h2>
+                <h2 className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">选区操作</h2>
                 <button
                   onClick={() => setSelection(null)}
                   className="text-[8px] text-indigo-400 hover:text-red-500 font-black"
@@ -550,6 +551,37 @@ const AppMain: React.FC = () => {
                   ✕ 清除选区
                 </button>
               </div>
+
+              {currentTool === ToolType.WAND && (
+                <div className="bg-white rounded-xl p-2.5 space-y-1">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[9px] font-black text-indigo-600">🪄 魔棒容差</label>
+                    <span className="text-[9px] font-black text-indigo-400">{wandTolerance}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="2"
+                    max="60"
+                    value={wandTolerance}
+                    onChange={(e) => setWandTolerance(parseInt(e.target.value))}
+                    className="w-full h-1.5 accent-indigo-500"
+                  />
+                  <p className="text-[8px] text-slate-400 leading-snug">
+                    数值越大，一次选中的相近颜色越多。点击画布即可选中相连的相似色区域，按 Delete 清空（抠图去背景）。
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 text-[8px] font-bold text-indigo-400">
+                {selection.cells && selection.cells.length > 0 ? (
+                  <span>不规则选区：{selection.cells.length} 格（包围盒 {Math.abs(selection.endRow - selection.startRow) + 1}×{Math.abs(selection.endCol - selection.startCol) + 1}）</span>
+                ) : (
+                  <span>矩形选区：{Math.abs(selection.endRow - selection.startRow) + 1}×{Math.abs(selection.endCol - selection.startCol) + 1}</span>
+                )}
+                <span className="text-slate-300">|</span>
+                <span className="text-slate-400">Delete 清空</span>
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={handleCopySelection}
