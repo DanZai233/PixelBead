@@ -1192,7 +1192,8 @@ const AppMain: React.FC = () => {
               : 'max-lg:pb-[var(--app-mobile-tab-bar-height)]'
           } lg:pb-0`}
         >
-           <div className="absolute top-2 left-2 right-2 max-lg:flex-wrap max-lg:justify-center max-lg:gap-x-1 max-lg:gap-y-1 md:top-6 md:left-1/2 md:right-auto md:-translate-x-1/2 flex items-center justify-center gap-1 md:gap-4 bg-white/95 backdrop-blur-sm px-2 md:px-6 py-1.5 md:py-2 rounded-2xl md:rounded-full shadow-xl border border-white/50 z-[55] md:z-50 md:max-w-fit">
+           {viewType === ViewType.TWO_D && (
+            <div className="absolute top-2 left-2 right-2 max-lg:flex-wrap max-lg:justify-center max-lg:gap-x-1 max-lg:gap-y-1 md:top-6 md:left-1/2 md:right-auto md:-translate-x-1/2 flex items-center justify-center gap-1 md:gap-4 bg-white/95 backdrop-blur-sm px-2 md:px-6 py-1.5 md:py-2 rounded-2xl md:rounded-full shadow-xl border border-white/50 z-[55] md:z-50 md:max-w-fit">
             <button onClick={() => setZoom(z => Math.max(10, z - 5))} className="p-1 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-base md:text-lg min-w-[28px] min-h-[28px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center touch-manipulation">－</button>
             <input type="range" min="10" max="300" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value))} className="w-12 md:w-40 h-3 accent-indigo-600 touch-manipulation flex-1 md:flex-initial" />
             <button onClick={() => setZoom(z => Math.min(400, z + 5))} className="p-1 md:p-0 font-black text-slate-400 hover:text-indigo-600 text-base md:text-lg min-w-[28px] min-h-[28px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center touch-manipulation">＋</button>
@@ -1223,6 +1224,7 @@ const AppMain: React.FC = () => {
               参考
             </button>
           </div>
+          )}
 
             <div className="w-full h-full overflow-auto no-scrollbar bg-dots">
             {viewType === ViewType.TWO_D ? (
