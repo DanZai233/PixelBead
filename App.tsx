@@ -100,7 +100,8 @@ const AppMain: React.FC = () => {
     handleCanvasAction, handleMiddleButtonDrag,
     selection, setSelection, clipboard, setClipboard,
     selectionMode, setSelectionMode, handleSelectionChange, handleDeselect,
-    wandTolerance, setWandTolerance,
+    wandTolerance, setWandTolerance, wandContiguous, setWandContiguous,
+    handleDetectBackground, handleInvertSelectionArea,
     handleCopySelection, handleCutSelection, handlePasteSelection,
     handleInvertSelection, handleExcludeColorFromSelection, handleClearSelection,
     aiPrompt, setAiPrompt, isGenerating, setIsGenerating,
@@ -543,6 +544,52 @@ const AppMain: React.FC = () => {
             </div>
           </div>
 
+          {currentTool === ToolType.WAND && (
+            <div className="bg-fuchsia-600 rounded-3xl p-4 md:p-5 text-white shadow-xl space-y-2 md:space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[10px] font-black uppercase tracking-widest text-white">🪄 魔棒</h2>
+                <span className="text-[8px] font-bold text-white/70">点击画布选中相似色</span>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[9px] font-bold text-white">容差</label>
+                  <span className="text-[9px] font-black text-white/90">{wandTolerance}</span>
+                </div>
+                <input
+                  type="range"
+                  min="2"
+                  max="60"
+                  value={wandTolerance}
+                  onChange={(e) => setWandTolerance(parseInt(e.target.value))}
+                  className="w-full h-2 accent-white"
+                />
+                <p className="text-[8px] text-white/60">数值越大，一次选中的相近颜色越多</p>
+              </div>
+
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={wandContiguous}
+                  onChange={(e) => setWandContiguous(e.target.checked)}
+                  className="w-3 h-3 rounded accent-white"
+                />
+                <span className="text-[9px] font-bold text-white">连续区域</span>
+                <span className="text-[8px] text-white/60">取消后选中全画布所有相近颜色</span>
+              </label>
+
+              <button
+                onClick={handleDetectBackground}
+                className="w-full py-2 md:py-2.5 bg-white text-fuchsia-700 rounded-xl font-black text-xs transition-all active:scale-95 shadow-md flex items-center justify-center gap-1.5"
+              >
+                🎯 识别背景（一键选中背景）
+              </button>
+              <p className="text-[8px] text-white/60 leading-relaxed">
+                抠图流程：点「识别背景」→ 背景变为选区 → 按 Delete 抠掉；想保留主体就点选区面板的「反选选区」再操作。
+              </p>
+            </div>
+          )}
+
           {selection && (
             <div className="space-y-3 bg-indigo-50 rounded-3xl p-4 border-2 border-indigo-200">
               <div className="flex justify-between items-center">
@@ -576,26 +623,6 @@ const AppMain: React.FC = () => {
                   {SELECTION_MODES.find(m => m.mode === selectionMode)?.hint}。加选模式下，多次框选或魔棒点击会叠加成不规则选区；Ctrl+Z 可撤销每次选区操作，Esc 取消框选。
                 </p>
               </div>
-
-              {currentTool === ToolType.WAND && (
-                <div className="bg-white rounded-xl p-2.5 space-y-1">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[9px] font-black text-indigo-600">🪄 魔棒容差</label>
-                    <span className="text-[9px] font-black text-indigo-400">{wandTolerance}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="2"
-                    max="60"
-                    value={wandTolerance}
-                    onChange={(e) => setWandTolerance(parseInt(e.target.value))}
-                    className="w-full h-1.5 accent-indigo-500"
-                  />
-                  <p className="text-[8px] text-slate-400 leading-snug">
-                    数值越大，一次选中的相近颜色越多。点击画布即可选中相连的相似色区域，按 Delete 清空（抠图去背景）。
-                  </p>
-                </div>
-              )}
 
               <div className="flex items-center gap-2 text-[8px] font-bold text-indigo-400">
                 {selection.cells && selection.cells.length > 0 ? (
@@ -634,6 +661,12 @@ const AppMain: React.FC = () => {
                   className="px-3 py-2 bg-white text-indigo-700 rounded-lg text-[9px] font-black hover:bg-indigo-100 transition-all shadow-sm flex items-center justify-center gap-1"
                 >
                   <span>🗑️</span> 清除
+                </button>
+                <button
+                  onClick={handleInvertSelectionArea}
+                  className="px-3 py-2 bg-white text-indigo-700 rounded-lg text-[9px] font-black hover:bg-indigo-100 transition-all shadow-sm flex items-center justify-center gap-1 col-span-2"
+                >
+                  <span>⤵</span> 反选选区（选中选区外的全部区域）
                 </button>
                 <button
                   onClick={handleInvertSelection}

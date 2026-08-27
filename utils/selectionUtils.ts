@@ -46,18 +46,33 @@ export function getSelectionCellSet(
  *
  * 返回 "row,col" 键数组（即不规则选区 cells）。
  * 白色视为透明/背景色，点击白格只会选中相近的白格。
+ * contiguous=false 时忽略连通性，选中全画布所有相近颜色（PS 魔棒取消勾选 Contiguous 的效果）。
  */
 export function wandSelectCells(
   grid: string[][],
   startRow: number,
   startCol: number,
   tolerance: number,
+  contiguous: boolean = true,
 ): string[] {
   const height = grid.length;
   const width = grid[0]?.length ?? 0;
   if (startRow < 0 || startRow >= height || startCol < 0 || startCol >= width) return [];
 
   const target = grid[startRow][startCol];
+
+  if (!contiguous) {
+    const result: string[] = [];
+    for (let r = 0; r < height; r++) {
+      for (let c = 0; c < width; c++) {
+        if (colorDistance(target, grid[r][c]) <= tolerance) {
+          result.push(cellKey(r, c));
+        }
+      }
+    }
+    return result;
+  }
+
   const visited = new Set<string>();
   const queue: Array<[number, number]> = [[startRow, startCol]];
   visited.add(cellKey(startRow, startCol));
@@ -78,6 +93,49 @@ export function wandSelectCells(
   }
 
   return Array.from(visited);
+}
+
+/**
+ * 识别背景：从画布四边均匀采样种子点，各自做连续泛洪后合并，
+ * 得到与边缘颜色相连的背景区域（类似 PS 点背景 + 魔棒的连招）。
+ * 主体不贴边时能一次选中整块背景，配合 Delete 即可抠图。
+ */
+export function detectBackgroundCells(grid: string[][], tolerance: number): Set<string> {
+  const height = grid.length;
+  const width = grid[0]?.length ?? 0;
+  if (height === 0 || width === 0) return new Set();
+
+  const result = new Set<string>();
+  const stepX = Math.max(1, Math.floor(width / 8));
+  const stepY = Math.max(1, Math.floor(height / 8));
+
+  for (let x = 0; x < width; x += stepX) {
+    wandSelectCells(grid, 0, x, tolerance).forEach(k => result.add(k));
+    wandSelectCells(grid, height - 1, x, tolerance).forEach(k => result.add(k));
+  }
+  for (let y = 0; y < height; y += stepY) {
+    wandSelectCells(grid, y, 0, tolerance).forEach(k => result.add(k));
+    wandSelectCells(grid, y, width - 1, tolerance).forEach(k => result.add(k));
+  }
+
+  return result;
+}
+
+/** 选区反选：画布中所有未被当前选区覆盖的格子（PS Ctrl+Shift+I） */
+export function invertSelectionCells(
+  current: Selection,
+  gridWidth: number,
+  gridHeight: number,
+): Set<string> {
+  const base = getSelectionCellSet(current, gridWidth, gridHeight);
+  const inverted = new Set<string>();
+  for (let r = 0; r < gridHeight; r++) {
+    for (let c = 0; c < gridWidth; c++) {
+      const k = cellKey(r, c);
+      if (!base.has(k)) inverted.add(k);
+    }
+  }
+  return inverted;
 }
 
 /** 由单元格集合构建选区（自动计算包围盒），空集合返回 null */

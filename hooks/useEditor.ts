@@ -22,7 +22,7 @@ import {
 } from '../utils/colorSystemUtils';
 import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from '../utils/colorUtils';
 import { useEditorPalette } from './useEditorPalette';
-import { wandSelectCells, getSelectionCellSet, mergeSelectionCells } from '../utils/selectionUtils';
+import { wandSelectCells, getSelectionCellSet, mergeSelectionCells, detectBackgroundCells, invertSelectionCells, selectionFromCells } from '../utils/selectionUtils';
 import colorSystemMapping from '../colorSystemMapping.json';
 import { Capacitor } from '@capacitor/core';
 import { pickSingleImageNative } from '../utils/pickImageNative';
@@ -143,6 +143,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [clipboard, setClipboard] = useState<string[][] | null>(null);
   const [brushSize, setBrushSize] = useState(1);
   const [wandTolerance, setWandTolerance] = useState(20);
+  const [wandContiguous, setWandContiguous] = useState(true);
 
   // ── Palette State ──
   const [joystickMove, setJoystickMove] = useState({ x: 0, y: 0 });
@@ -706,6 +707,28 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     setSelection(null);
   }, [selection, pushSelectionHistory]);
 
+  /** 识别背景：从画布四边自动选中相连的背景区域，Delete 即可抠图 */
+  const handleDetectBackground = useCallback(() => {
+    const cells = detectBackgroundCells(grid, wandTolerance);
+    if (cells.size === 0) {
+      toast('未识别到背景区域，试试调大容差', 'error');
+      return;
+    }
+    pushSelectionHistory(selection);
+    const sel = selectionFromCells(cells);
+    setSelection(sel);
+    toast(`已选中背景 ${cells.size} 格，按 Delete 即可抠掉背景`, 'info');
+  }, [grid, wandTolerance, selection, pushSelectionHistory]);
+
+  /** 选区反选：选中画布中未被当前选区覆盖的部分（PS Ctrl+Shift+I） */
+  const handleInvertSelectionArea = useCallback(() => {
+    if (!selection) return;
+    pushSelectionHistory(selection);
+    const inv = invertSelectionCells(selection, gridWidth, gridHeight);
+    setSelection(selectionFromCells(inv));
+    toast('已反选选区', 'info');
+  }, [selection, gridWidth, gridHeight, pushSelectionHistory]);
+
   /** 框选/魔棒提交选区时的统一入口：按「替换/加选/减选」模式合并 */
   const handleSelectionChange = useCallback((newSel: Selection | null) => {
     pushSelectionHistory(selection);
@@ -753,6 +776,11 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
         handleCutSelection();
         return;
       }
+      if (e.ctrlKey && e.shiftKey && e.key === 'i') {
+        e.preventDefault();
+        handleInvertSelectionArea();
+        return;
+      }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         if (selection) {
@@ -785,7 +813,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isColorPickerOpen, isShortcutsOpen, helpModalOpen, undo, redo, handleCopySelection, handlePasteSelection, handleCutSelection, handleClearSelection, handleDeselect, selection, gridHeight, gridWidth]);
+  }, [isColorPickerOpen, isShortcutsOpen, helpModalOpen, undo, redo, handleCopySelection, handlePasteSelection, handleCutSelection, handleClearSelection, handleDeselect, handleInvertSelectionArea, selection, gridHeight, gridWidth]);
 
   const handleCanvasAction = useCallback((row: number, col: number, backgroundColor?: string | null) => {
     if (currentTool === ToolType.PICKER) {
@@ -798,7 +826,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     }
 
     if (currentTool === ToolType.WAND) {
-      const cells = wandSelectCells(grid, row, col, wandTolerance);
+      const cells = wandSelectCells(grid, row, col, wandTolerance, wandContiguous);
       if (cells.length === 0) return;
       pushSelectionHistory(selection);
       const merged = mergeSelectionCells(selection, new Set(cells), selectionMode, gridWidth, gridHeight);
@@ -931,7 +959,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
       }
       return newGrid;
     });
-  }, [selectedColor, currentTool, gridWidth, gridHeight, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo, selectedColorSystem, brushSize, wandTolerance, selection, selectionMode, pushSelectionHistory]);
+  }, [selectedColor, currentTool, gridWidth, gridHeight, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo, selectedColorSystem, brushSize, wandTolerance, wandContiguous, selection, selectionMode, pushSelectionHistory]);
 
   const handleMiddleButtonDrag = useCallback((deltaX: number, deltaY: number) => {
     setPanOffset(prev => ({
@@ -1414,7 +1442,8 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     handleCanvasAction, handleMiddleButtonDrag,
     selection, setSelection, clipboard, setClipboard,
     selectionMode, setSelectionMode, handleSelectionChange, handleDeselect,
-    wandTolerance, setWandTolerance,
+    wandTolerance, setWandTolerance, wandContiguous, setWandContiguous,
+    handleDetectBackground, handleInvertSelectionArea,
     handleCopySelection, handleCutSelection, handlePasteSelection,
     handleInvertSelection, handleExcludeColorFromSelection, handleClearSelection,
     aiPrompt, setAiPrompt, isGenerating, setIsGenerating,

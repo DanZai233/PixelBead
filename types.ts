@@ -136,6 +136,7 @@ export const SHORTCUTS = [
   { key: 'Ctrl + C', action: '复制选区' },
   { key: 'Ctrl + V', action: '粘贴选区' },
   { key: 'Ctrl + X', action: '剪切选区' },
+  { key: 'Ctrl + Shift + I', action: '反选选区（选中选区外全部）' },
   { key: '[', action: '减小画笔大小' },
   { key: ']', action: '增大画笔大小' },
 ];
