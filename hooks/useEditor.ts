@@ -17,15 +17,11 @@ import { saveMaterial } from '../services/materialService';
 import {
   reduceGridColors,
   removeBackground,
-
-  mergeSimilarColors,
-  mapColorsToPalette,
-  createPaletteFromGrid,
-  createFullPaletteFromMapping,
   colorSystemOptions,
   findClosestColor,
 } from '../utils/colorSystemUtils';
 import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from '../utils/colorUtils';
+import { useEditorPalette } from './useEditorPalette';
 import colorSystemMapping from '../colorSystemMapping.json';
 import { Capacitor } from '@capacitor/core';
 import { pickSingleImageNative } from '../utils/pickImageNative';
@@ -1159,74 +1155,25 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
 
   const presetSizes = [16, 32, 48, 64, 80, 100];
 
-  const [expandedColorGroups, setExpandedColorGroups] = useState<Set<string>>(new Set());
-
-  const paletteGroups = useMemo(() => {
-    const groups: Map<string, Array<{ hex: ColorHex; key: string }>> = new Map();
-
-    Object.entries(colorSystemMapping).forEach(([hex, mapping]) => {
-      const colorKey = mapping[selectedColorSystem];
-      if (colorKey && !colorKey.startsWith('#')) {
-        const prefix = colorKey.charAt(0);
-        if (!groups.has(prefix)) {
-          groups.set(prefix, []);
-        }
-        groups.get(prefix)!.push({ hex: hex as ColorHex, key: colorKey });
-      }
-    });
-
-    const sortedGroups: Array<{ letter: string; colors: Array<{ hex: ColorHex; key: string }> }> = [];
-    groups.forEach((colors, letter) => {
-      colors.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
-      sortedGroups.push({ letter, colors });
-    });
-
-    return sortedGroups.sort((a, b) => a.letter.localeCompare(b.letter));
-  }, [selectedColorSystem]);
-
-  const toggleColorGroup = (letter: string) => {
-    setExpandedColorGroups(prev => {
-      const next = new Set(prev);
-      if (next.has(letter)) {
-        next.delete(letter);
-      } else {
-        next.add(letter);
-      }
-      return next;
-    });
-  };
-
-  const paletteColors = useMemo(() => {
-    const allColors: Array<{ hex: ColorHex; key: string }> = [];
-    paletteGroups.forEach(group => {
-      allColors.push(...group.colors);
-    });
-    return allColors;
-  }, [paletteGroups]);
-
-  const allColors = useMemo(() => {
-    const colorSet = new Set<ColorHex>([...DEFAULT_COLORS]);
-    stats.forEach(item => colorSet.add(item.hex));
-    return Array.from(colorSet);
-  }, [stats]);
-
-  const getColorKey = useCallback((hex: string): string => {
-    if (!showColorKeys || hex === '#FFFFFF') return '';
-    const mapping = colorSystemMapping[hex];
-    return mapping ? mapping[selectedColorSystem] || hex : hex;
-  }, [showColorKeys, selectedColorSystem]);
-
-  const handleMergeSimilarColors = useCallback(() => {
-    const currentColorCount = new Set<string>();
-    grid.forEach(row => row.forEach(c => { if (c !== '#FFFFFF') currentColorCount.add(c); }));
-    const k = Math.min(currentColorCount.size, targetColorCount);
-    if (k >= currentColorCount.size) return;
-    if (!confirm(`将 ${currentColorCount.size} 种颜色合并为 ${k} 种，确定吗？`)) return;
-
-    const reduced = reduceGridColors(grid, k);
-    setGrid(reduced);
-    pushUndo(gridRef.current);
-  }, [grid, targetColorCount, pushUndo]);
+  // ── 调色板逻辑（色板分组/映射/我的已有颜色）已拆分至 useEditorPalette ──
+  const {
+    paletteGroups, paletteColors, allColors, getColorKey, displayStats,
+    handleMergeSimilarColors, handleMapToPalette, handlePalettePresetChange, mapGridToPalette,
+    expandedColorGroups, setExpandedColorGroups, toggleColorGroup,
+    ownedColors, toggleOwnedColor, addOwnedColor, clearOwnedColors, addCanvasColors,
+    ownedOnlyMode, setOwnedOnlyMode, ownedGuideDismissed, dismissOwnedGuide,
+  } = useEditorPalette({
+    selectedColorSystem,
+    showColorKeys,
+    grid,
+    targetColorCount,
+    selectedPalettePreset,
+    stats,
+    pushUndo,
+    gridRef,
+    setGrid,
+    setSelectedPalettePreset,
+  });
 
   const handleRemoveBackground = useCallback(() => {
     const cache = sourceImageCacheRef.current;
@@ -1286,29 +1233,12 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     setGrid(newGrid);
   }, [grid, selection, pushUndo]);
 
-  const handleMapToPalette = useCallback(() => {
-    if (!confirm('映射到色板将把所有颜色转换为色板中最接近的颜色，确定吗？')) return;
-
-    // 根据选择的色板预设确定最大颜色数
-    let maxColors: number | undefined;
-    if (selectedPalettePreset !== 'all' && selectedPalettePreset !== 'custom') {
-      maxColors = parseInt(selectedPalettePreset);
-    }
-
-    const fullPalette = createFullPaletteFromMapping(colorSystemMapping, selectedColorSystem, maxColors);
-
-    setGrid(prev => mapColorsToPalette(prev, fullPalette));
-    pushUndo(gridRef.current);
-  }, [selectedPalettePreset, selectedColorSystem, pushUndo]);
-
   const closeImportResultModal = useCallback(() => setImportResultModalOpen(false), []);
 
   const handleImportMapPalette = useCallback((maxColors: number) => {
-    const palette = createFullPaletteFromMapping(colorSystemMapping, selectedColorSystem, maxColors);
-    setGrid(prev => mapColorsToPalette(prev, palette));
-    pushUndo(gridRef.current);
+    mapGridToPalette(maxColors > 0 ? maxColors : undefined);
     setImportResultModalOpen(false);
-  }, [selectedColorSystem, pushUndo]);
+  }, [mapGridToPalette]);
 
   const handleShare = useCallback(async () => {
     const hasContent = grid.some(row => row.some(c => c !== '#FFFFFF'));
@@ -1388,31 +1318,9 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     }
   }, [shareUrl]);
 
-  const handlePalettePresetChange = useCallback((preset: string) => {
-    setSelectedPalettePreset(preset);
-
-    if (preset !== 'custom' && preset !== 'all') {
-      const maxColors = parseInt(preset);
-
-      if (confirm(`当前颜色将被映射到 ${maxColors} 色的色板，确定吗？`)) {
-        // 从色板映射数据中创建指定数量的色板
-        const targetPalette = createFullPaletteFromMapping(colorSystemMapping, selectedColorSystem, maxColors);
-        setGrid(prev => mapColorsToPalette(prev, targetPalette));
-        pushUndo(gridRef.current);
-      }
-    }
-  }, [grid, selectedColorSystem, pushUndo]);
-
   const normalizeTags = useCallback((value: string): string => {
     return value.replace(/[\uFF0C\uFF0C\u3002]/g, ',');
   }, []);
-
-  const displayStats = useMemo(() => {
-    return stats.map(item => ({
-      ...item,
-      key: getColorKey(item.hex),
-    }));
-  }, [stats, getColorKey]);
 
   return {
     grid, setGrid, gridWidth, setGridWidth, gridHeight, setGridHeight,
@@ -1501,5 +1409,8 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     presetSizes,
     expandedColorGroups, setExpandedColorGroups,
     toggleColorGroup,
+    ownedColors, toggleOwnedColor, addOwnedColor, clearOwnedColors, addCanvasColors,
+    ownedOnlyMode, setOwnedOnlyMode, ownedGuideDismissed, dismissOwnedGuide,
+    mapGridToPalette,
   };
 }

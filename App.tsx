@@ -73,6 +73,7 @@ const App: React.FC = () => {
 
 const AppMain: React.FC = () => {
   const { toast } = useToast();
+  const [ownedHexInput, setOwnedHexInput] = useState('');
   const {
     grid, setGrid, gridWidth, setGridWidth, gridHeight, setGridHeight,
     customWidth, setCustomWidth, customHeight, setCustomHeight,
@@ -160,6 +161,8 @@ const AppMain: React.FC = () => {
     presetSizes,
     expandedColorGroups, setExpandedColorGroups,
     toggleColorGroup,
+    ownedColors, toggleOwnedColor, addOwnedColor, clearOwnedColors, addCanvasColors,
+    ownedOnlyMode, setOwnedOnlyMode, ownedGuideDismissed, dismissOwnedGuide,
   } = useEditor(toast);
 
   const { history, addToHistory, removeFromHistory, clearHistory } = useGenerationHistory();
@@ -843,6 +846,95 @@ const AppMain: React.FC = () => {
                     className="w-3 h-3 rounded border-2 border-white/40"
                   />
                   <label htmlFor="showColorKeys" className="text-[9px] font-bold text-white">显示色号</label>
+                </div>
+
+                {/* ── 我的已有颜色:勾选手头已有的拼豆,映射时优先使用 ── */}
+                <div className="bg-white/10 border border-white/15 rounded-2xl p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[9px] font-black text-white flex items-center gap-1">📦 我的已有颜色</label>
+                    <span className="text-[9px] font-black text-white/90 bg-white/15 rounded-full px-2 py-0.5">{ownedColors.length} 种</span>
+                  </div>
+
+                  {!ownedGuideDismissed && (
+                    <div className="bg-amber-400/15 border border-amber-300/30 rounded-xl p-2.5 space-y-1.5">
+                      <p className="text-[9px] font-black text-amber-200">🎯 已有颜色三步走</p>
+                      <ol className="text-[9px] text-amber-100/90 leading-relaxed space-y-0.5">
+                        <li>① 先在上方选好你的色号系统（如 MARD）</li>
+                        <li>② 点选下方你手头已有的颜色</li>
+                        <li>③ 点「映射到色板」，画布会优先换用你有的颜色，省下买新豆子的钱</li>
+                      </ol>
+                      <button
+                        onClick={dismissOwnedGuide}
+                        className="w-full py-1 bg-amber-300 hover:bg-amber-200 text-amber-900 rounded-lg font-black text-[9px] transition-all active:scale-95"
+                      >
+                        知道了
+                      </button>
+                    </div>
+                  )}
+
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={ownedOnlyMode}
+                      onChange={(e) => setOwnedOnlyMode(e.target.checked)}
+                      className="w-3 h-3 rounded accent-amber-400"
+                    />
+                    <span className="text-[9px] font-bold text-white">严格模式：只映射到已有颜色</span>
+                  </label>
+
+                  <div className="grid grid-cols-8 gap-1 max-h-36 overflow-y-auto pr-0.5">
+                    {paletteColors.map(({ hex, key }) => {
+                      const owned = ownedColors.includes(hex);
+                      return (
+                        <button
+                          key={hex}
+                          onClick={() => toggleOwnedColor(hex)}
+                          title={`${key} · ${hex}`}
+                          className={`relative aspect-square rounded-md border transition-all active:scale-90 ${owned ? 'border-amber-300 ring-2 ring-amber-300/70' : 'border-white/25 hover:border-white/70 hover:scale-110'}`}
+                          style={{ backgroundColor: hex }}
+                        >
+                          {owned && (
+                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full text-[7px] text-amber-900 font-black flex items-center justify-center shadow">
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={ownedHexInput}
+                      onChange={(e) => setOwnedHexInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { addOwnedColor(ownedHexInput); setOwnedHexInput(''); } }}
+                      placeholder="#RRGGBB 自定义颜色"
+                      className="flex-1 min-w-0 px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-[9px] font-mono text-white placeholder:text-white/40 outline-none focus:border-amber-300/60"
+                    />
+                    <button
+                      onClick={() => { addOwnedColor(ownedHexInput); setOwnedHexInput(''); }}
+                      className="px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-black text-[9px] transition-all active:scale-95"
+                    >
+                      添加
+                    </button>
+                  </div>
+
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={addCanvasColors}
+                      title="把当前画布用到的所有颜色加入已有颜色"
+                      className="flex-1 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg font-black text-[9px] transition-all active:scale-95"
+                    >
+                      ＋ 从画布添加
+                    </button>
+                    <button
+                      onClick={clearOwnedColors}
+                      className="flex-1 py-1.5 bg-white/10 hover:bg-red-400/30 text-white rounded-lg font-black text-[9px] transition-all active:scale-95"
+                    >
+                      清空
+                    </button>
+                  </div>
                 </div>
 
                 <button
@@ -1900,6 +1992,11 @@ const AppMain: React.FC = () => {
               <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs space-y-3">
                 <p className="font-black text-emerald-700 flex items-center gap-1.5">🎨 映射到拼豆色板</p>
                 <p className="text-emerald-600 leading-relaxed">导入图片的颜色可能超出标准拼豆色号范围，建议映射到品牌的色板，确保成品能买到对应的拼豆。</p>
+                {ownedColors.length > 0 && (
+                  <p className="bg-amber-100 border border-amber-200 text-amber-700 rounded-xl px-3 py-2 font-bold">
+                    📦 已启用你的 {ownedColors.length} 种已有颜色优先映射{ownedOnlyMode ? '（严格模式：仅使用已有颜色）' : ''}
+                  </p>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { label: '48 色', count: 48, desc: '常用色' },

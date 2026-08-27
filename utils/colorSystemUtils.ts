@@ -328,6 +328,40 @@ export function mapColorsToPalette(
 }
 
 /**
+ * 按「用户已有颜色」优先映射画布颜色。
+ *
+ * - strictOwned = true : 画布颜色只映射到用户已有颜色（不引入任何新色号）
+ * - strictOwned = false: 画布颜色与某个已有颜色足够接近（距离 <= threshold）时
+ *   使用该已有颜色，否则回退到全色板中最近的颜色（保证明显不同的颜色仍可映射）
+ */
+export function mapColorsToPaletteWithOwned(
+  grid: string[][],
+  ownedPalette: PaletteColor[],
+  fallbackPalette: PaletteColor[],
+  strictOwned: boolean,
+  threshold: number = 12,
+): string[][] {
+  return grid.map(row =>
+    row.map(color => {
+      if (color === '#FFFFFF' || !color) return color;
+
+      const ownedClosest = ownedPalette.length > 0 ? findClosestColor(color, ownedPalette) : null;
+
+      if (strictOwned) {
+        return ownedClosest ? ownedClosest.hex : color;
+      }
+
+      if (ownedClosest && colorDistance(color, ownedClosest.hex) <= threshold) {
+        return ownedClosest.hex;
+      }
+
+      const fallbackClosest = findClosestColor(color, fallbackPalette);
+      return fallbackClosest ? fallbackClosest.hex : color;
+    })
+  );
+}
+
+/**
  * 泛洪填充去背景：从图片边缘出发，将连通背景区域的像素设为透明。
  *
  * 适用于纯色/柔和渐变背景。从图片四边采样多个种子点做 flood fill，
