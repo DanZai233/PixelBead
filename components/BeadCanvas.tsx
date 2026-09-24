@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { PixelStyle, Selection } from '../types';
+import { isCellInSelection } from '../utils/selectionUtils';
 
 interface BeadCanvasProps {
   grid: string[][];
@@ -24,6 +25,9 @@ interface BeadCanvasProps {
   onZoomChange: (zoom: number) => void;
   onTouchPan?: (deltaX: number, deltaY: number) => void;
   onSelectionChange?: (selection: Selection | null) => void;
+  onSelectionMoveStart?: () => void;
+  onSelectionMove?: (deltaRow: number, deltaCol: number) => void;
+  onSelectionMoveEnd?: () => void;
 }
 
 export const BeadCanvas: React.FC<BeadCanvasProps> = ({
@@ -49,6 +53,9 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   onZoomChange,
   onTouchPan,
   onSelectionChange,
+  onSelectionMoveStart,
+  onSelectionMove,
+  onSelectionMoveEnd,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -71,6 +78,9 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [selectionStart, setSelectionStart] = useState<{ row: number; col: number } | null>(null);
+  const [isMovingSelection, setIsMovingSelection] = useState(false);
+  const isMovingSelectionRef = useRef(false);
+  const selectionMoveStartRef = useRef<{ row: number; col: number } | null>(null);
 
   // 外部选区（魔棒/去背景恢复/清除等）同步到画布显示
   useEffect(() => {
@@ -445,6 +455,24 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
   }, [backgroundImage, backgroundImageImgRef, cellSize, baseBeadSize]);
 
+  const getClampedCellFromEvent = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { row: 0, col: 0 };
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    const offsetX = showRuler ? Math.max(20, cellSize * 0.5) : 0;
+    const offsetY = showRuler ? Math.max(20, cellSize * 0.5) : 0;
+
+    return {
+      row: Math.max(0, Math.min(gridHeight - 1, Math.floor((y - offsetY) / cellSize))),
+      col: Math.max(0, Math.min(gridWidth - 1, Math.floor((x - offsetX) / cellSize))),
+    };
+  }, [gridWidth, gridHeight, cellSize, showRuler]);
+
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPinchingRef.current) return;
 
@@ -467,6 +495,14 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         e.preventDefault();
         const { row, col } = getCellFromEvent(e);
         if (row >= 0 && col >= 0) {
+          if (selection && isCellInSelection(selection, row, col)) {
+            isMovingSelectionRef.current = true;
+            selectionMoveStartRef.current = { row, col };
+            setIsMovingSelection(true);
+            onSelectionMoveStart?.();
+            canvasRef.current?.setPointerCapture(e.pointerId);
+            return;
+          }
           setSelectionStart({ row, col });
           setSelection({ startRow: row, startCol: col, endRow: row, endCol: col });
           canvasRef.current?.setPointerCapture(e.pointerId);
@@ -501,6 +537,14 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     if (currentTool === 'SELECT') {
       const { row, col } = getCellFromEvent(e);
       if (row >= 0 && col >= 0) {
+        if (selection && isCellInSelection(selection, row, col)) {
+          isMovingSelectionRef.current = true;
+          selectionMoveStartRef.current = { row, col };
+          setIsMovingSelection(true);
+          onSelectionMoveStart?.();
+          canvasRef.current?.setPointerCapture(e.pointerId);
+          return;
+        }
         setSelectionStart({ row, col });
         setSelection({ startRow: row, startCol: col, endRow: row, endCol: col });
         canvasRef.current?.setPointerCapture(e.pointerId);
@@ -520,7 +564,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         onPointerDown(row, col, backgroundColor);
       }
     }
-  }, [getCellFromEvent, getBackgroundColorAtPosition, onPointerDown, selectedLayer, backgroundImage, currentTool]);
+  }, [getCellFromEvent, getBackgroundColorAtPosition, onPointerDown, onSelectionMoveStart, selectedLayer, backgroundImage, currentTool, selection]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPinchingRef.current) return;
@@ -561,6 +605,16 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       return;
     }
 
+    if (currentTool === 'SELECT' && isMovingSelectionRef.current && selectionMoveStartRef.current) {
+      e.preventDefault();
+      const { row, col } = getClampedCellFromEvent(e);
+      onSelectionMove?.(
+        row - selectionMoveStartRef.current.row,
+        col - selectionMoveStartRef.current.col,
+      );
+      return;
+    }
+
     if (currentTool === 'SELECT' && selectionStart) {
       e.preventDefault();
       const { row, col } = getCellFromEvent(e);
@@ -588,7 +642,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         onPointerMove(row, col, backgroundColor);
       }
     }
-  }, [getCellFromEvent, getBackgroundColorAtPosition, onPointerMove, onMiddleButtonDrag, onBackgroundImageDrag, currentTool, selectionStart, gridHeight, gridWidth]);
+  }, [getCellFromEvent, getClampedCellFromEvent, getBackgroundColorAtPosition, onPointerMove, onSelectionMove, onMiddleButtonDrag, onBackgroundImageDrag, currentTool, selectionStart, gridHeight, gridWidth]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (e.pointerType === 'touch') {
@@ -607,7 +661,12 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
       setIsDragging(false);
     }
 
-    if (currentTool === 'SELECT' && selection && onSelectionChange) {
+    if (isMovingSelectionRef.current) {
+      onSelectionMoveEnd?.();
+      isMovingSelectionRef.current = false;
+      selectionMoveStartRef.current = null;
+      setIsMovingSelection(false);
+    } else if (currentTool === 'SELECT' && selectionStart && selection && onSelectionChange) {
       onSelectionChange(selection);
       setSelectionStart(null);
     }
@@ -617,7 +676,7 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
     lastTouchDrawRowRef.current = null;
     lastTouchDrawColRef.current = null;
     onPointerUp();
-  }, [onPointerDown, onPointerUp, currentTool, selection, onSelectionChange]);
+  }, [onPointerDown, onPointerUp, onSelectionMoveEnd, currentTool, selectionStart, selection, onSelectionChange]);
 
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     if (e.ctrlKey) {
@@ -700,7 +759,13 @@ export const BeadCanvas: React.FC<BeadCanvasProps> = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
-        className={`${currentTool === 'HAND' ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-crosshair'} touch-none`}
+        className={`${
+          currentTool === 'HAND'
+            ? (isDragging ? 'cursor-grabbing' : 'cursor-grab')
+            : isMovingSelection
+              ? 'cursor-grabbing'
+              : 'cursor-crosshair'
+        } touch-none`}
          style={{
            width: `${canvasWidth}px`,
            height: `${canvasHeight}px`,

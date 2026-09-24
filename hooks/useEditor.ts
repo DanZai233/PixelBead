@@ -22,7 +22,7 @@ import {
 } from '../utils/colorSystemUtils';
 import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from '../utils/colorUtils';
 import { useEditorPalette } from './useEditorPalette';
-import { wandSelectCells, getSelectionCellSet, mergeSelectionCells, detectBackgroundCells, invertSelectionCells, selectionFromCells } from '../utils/selectionUtils';
+import { wandSelectCells, getSelectionCellSet, mergeSelectionCells, detectBackgroundCells, invertSelectionCells, selectionFromCells, moveSelectionContent } from '../utils/selectionUtils';
 import colorSystemMapping from '../colorSystemMapping.json';
 import { Capacitor } from '@capacitor/core';
 import { pickSingleImageNative } from '../utils/pickImageNative';
@@ -158,10 +158,18 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const backgroundImageRef = useRef<HTMLInputElement>(null);
   const sourceImageCacheRef = useRef<{ data: Uint8ClampedArray; width: number; height: number } | null>(null);
   const preRemovalGridRef = useRef<string[][] | null>(null);
-  type HistoryEntry = { type: 'grid'; grid: string[][] } | { type: 'selection'; selection: Selection | null };
+  type HistoryEntry =
+    | { type: 'grid'; grid: string[][] }
+    | { type: 'selection'; selection: Selection | null }
+    | { type: 'grid-selection'; grid: string[][]; selection: Selection | null };
   const undoStackRef = useRef<HistoryEntry[]>([]);
   const redoStackRef = useRef<HistoryEntry[]>([]);
   const gridRef = useRef(grid);
+  const selectionMoveRef = useRef<{
+    grid: string[][];
+    selection: Selection;
+    hasMoved: boolean;
+  } | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
   const MAX_HISTORY = 50;
 
@@ -325,6 +333,23 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     setHistoryVersion(v => v + 1);
   }, []);
 
+  /** 移动选区会同时改变画布和选区，撤销时需作为一个原子操作恢复。 */
+  const pushGridSelectionHistory = useCallback((prevGrid: string[][], prevSelection: Selection | null) => {
+    const selectionSnapshot: Selection | null = prevSelection
+      ? { ...prevSelection, cells: prevSelection.cells ? [...prevSelection.cells] : undefined }
+      : null;
+    undoStackRef.current = [
+      ...undoStackRef.current.slice(-(MAX_HISTORY - 1)),
+      {
+        type: 'grid-selection',
+        grid: prevGrid.map(row => [...row]),
+        selection: selectionSnapshot,
+      },
+    ];
+    redoStackRef.current = [];
+    setHistoryVersion(v => v + 1);
+  }, []);
+
   const applyShareDataToCanvas = useCallback(
     (shareData: ShareData, opts?: { openShareModal?: boolean }) => {
       pushUndo(gridRef.current);
@@ -429,11 +454,19 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     if (entry.type === 'grid') {
       redoStackRef.current = [...redoStackRef.current, { type: 'grid', grid: grid.map(r => [...r]) }];
       setGrid(entry.grid);
-    } else {
+    } else if (entry.type === 'selection') {
       redoStackRef.current = [...redoStackRef.current, {
         type: 'selection',
         selection: selection ? { ...selection, cells: selection.cells ? [...selection.cells] : undefined } : null,
       }];
+      setSelection(entry.selection);
+    } else {
+      redoStackRef.current = [...redoStackRef.current, {
+        type: 'grid-selection',
+        grid: grid.map(row => [...row]),
+        selection: selection ? { ...selection, cells: selection.cells ? [...selection.cells] : undefined } : null,
+      }];
+      setGrid(entry.grid);
       setSelection(entry.selection);
     }
     setHistoryVersion(v => v + 1);
@@ -445,11 +478,19 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     if (entry.type === 'grid') {
       undoStackRef.current = [...undoStackRef.current, { type: 'grid', grid: grid.map(r => [...r]) }];
       setGrid(entry.grid);
-    } else {
+    } else if (entry.type === 'selection') {
       undoStackRef.current = [...undoStackRef.current, {
         type: 'selection',
         selection: selection ? { ...selection, cells: selection.cells ? [...selection.cells] : undefined } : null,
       }];
+      setSelection(entry.selection);
+    } else {
+      undoStackRef.current = [...undoStackRef.current, {
+        type: 'grid-selection',
+        grid: grid.map(row => [...row]),
+        selection: selection ? { ...selection, cells: selection.cells ? [...selection.cells] : undefined } : null,
+      }];
+      setGrid(entry.grid);
       setSelection(entry.selection);
     }
     setHistoryVersion(v => v + 1);
@@ -748,6 +789,45 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
       toast(`已叠加选区，共 ${merged.cells?.length ?? 0} 格`, 'info');
     }
   }, [selection, selectionMode, gridWidth, gridHeight, pushSelectionHistory]);
+
+  /** 开始拖动选区内容。保留拖动起点快照，确保来回移动不会重复擦除像素。 */
+  const handleSelectionMoveStart = useCallback(() => {
+    if (!selection) return;
+    selectionMoveRef.current = {
+      grid: gridRef.current.map(row => [...row]),
+      selection: {
+        ...selection,
+        cells: selection.cells ? [...selection.cells] : undefined,
+      },
+      hasMoved: false,
+    };
+  }, [selection]);
+
+  const handleSelectionMove = useCallback((deltaRow: number, deltaCol: number) => {
+    const drag = selectionMoveRef.current;
+    if (!drag) return;
+
+    const result = moveSelectionContent(
+      drag.selection,
+      drag.grid,
+      deltaRow,
+      deltaCol,
+      gridWidth,
+      gridHeight,
+    );
+    if (result.movedRow === 0 && result.movedCol === 0) return;
+
+    if (!drag.hasMoved) {
+      pushGridSelectionHistory(drag.grid, drag.selection);
+      drag.hasMoved = true;
+    }
+    setGrid(result.grid);
+    setSelection(result.selection);
+  }, [gridWidth, gridHeight, pushGridSelectionHistory]);
+
+  const handleSelectionMoveEnd = useCallback(() => {
+    selectionMoveRef.current = null;
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1443,6 +1523,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     handleCanvasAction, handleMiddleButtonDrag,
     selection, setSelection, clipboard, setClipboard,
     selectionMode, setSelectionMode, handleSelectionChange, handleDeselect,
+    handleSelectionMoveStart, handleSelectionMove, handleSelectionMoveEnd,
     wandTolerance, setWandTolerance, wandContiguous, setWandContiguous,
     handleDetectBackground, handleInvertSelectionArea,
     handleCopySelection, handleCutSelection, handlePasteSelection,

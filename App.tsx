@@ -100,6 +100,7 @@ const AppMain: React.FC = () => {
     handleCanvasAction, handleMiddleButtonDrag,
     selection, setSelection, clipboard, setClipboard,
     selectionMode, setSelectionMode, handleSelectionChange, handleDeselect,
+    handleSelectionMoveStart, handleSelectionMove, handleSelectionMoveEnd,
     wandTolerance, setWandTolerance, wandContiguous, setWandContiguous,
     handleDetectBackground, handleInvertSelectionArea,
     handleCopySelection, handleCutSelection, handlePasteSelection,
@@ -620,7 +621,7 @@ const AppMain: React.FC = () => {
                   ))}
                 </div>
                 <p className="text-[8px] text-slate-400 leading-snug">
-                  {SELECTION_MODES.find(m => m.mode === selectionMode)?.hint}。默认加选：连续框选/魔棒自动叠加成不规则选区；想重新开始按 Esc 或「✕ 取消框选」，Ctrl+Z 可撤销每次选区操作。
+                  {SELECTION_MODES.find(m => m.mode === selectionMode)?.hint}。框选后可在选区内拖动像素；Esc 取消框选，Ctrl+Z 可撤销每次选区操作。
                 </p>
               </div>
 
@@ -1260,6 +1261,9 @@ const AppMain: React.FC = () => {
                           onZoomChange={setZoom}
                           onTouchPan={handleMiddleButtonDrag}
                           onSelectionChange={handleSelectionChange}
+                          onSelectionMoveStart={handleSelectionMoveStart}
+                          onSelectionMove={handleSelectionMove}
+                          onSelectionMoveEnd={handleSelectionMoveEnd}
                         />
                      </div>
                   </div>

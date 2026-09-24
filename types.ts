@@ -87,7 +87,7 @@ export const TOOLS_INFO: ToolInfo[] = [
   { type: ToolType.SMART_PENCIL, name: '智能画笔', icon: '✨', shortcut: 'M', description: '根据底图颜色自动切换颜色' },
   { type: ToolType.WAND, name: '魔棒', icon: '🪄', shortcut: 'W', description: '点击选中颜色相近的相连区域（适合抠图去背景）' },
   { type: ToolType.HAND, name: '拖拽', icon: '✋', shortcut: 'H', description: '拖动画布移动视图' },
-  { type: ToolType.SELECT, name: '框选', icon: '⬚', shortcut: 'S', description: '框选区域进行复制、粘贴等操作' },
+  { type: ToolType.SELECT, name: '框选', icon: '⬚', shortcut: 'S', description: '框选区域进行复制、粘贴；在选区内拖动可移动内容' },
 ];
 
 /** 移动端 2D 画布底部快捷栏（与侧栏全量工具重复，便于快速切换；智能画笔优先展示） */

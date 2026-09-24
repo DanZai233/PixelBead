@@ -158,6 +158,109 @@ export function selectionFromCells(cells: Set<string>): Selection | null {
   };
 }
 
+/** 精确判断某个格子是否在当前选区内，避免为单次判断生成整个包围盒。 */
+export function isCellInSelection(selection: Selection, row: number, col: number): boolean {
+  const key = cellKey(row, col);
+  if (selection.cells && selection.cells.length > 0) {
+    return selection.cells.includes(key);
+  }
+
+  const rMin = Math.min(selection.startRow, selection.endRow);
+  const rMax = Math.max(selection.startRow, selection.endRow);
+  const cMin = Math.min(selection.startCol, selection.endCol);
+  const cMax = Math.max(selection.startCol, selection.endCol);
+  return row >= rMin && row <= rMax && col >= cMin && col <= cMax;
+}
+
+interface MoveSelectionResult {
+  grid: string[][];
+  selection: Selection;
+  movedRow: number;
+  movedCol: number;
+}
+
+/**
+ * 移动选区内容并同步移动选区。位移会按画布边界裁剪，
+ * 选区外的内容保持不变；来源格始终从拖动开始前的原始画布读取。
+ */
+export function moveSelectionContent(
+  selection: Selection,
+  sourceGrid: string[][],
+  deltaRow: number,
+  deltaCol: number,
+  gridWidth: number,
+  gridHeight: number,
+): MoveSelectionResult {
+  const selectedCells = getSelectionCellSet(selection, gridWidth, gridHeight);
+  const nextGrid = sourceGrid.map(row => [...row]);
+
+  if (selectedCells.size === 0) {
+    return {
+      grid: nextGrid,
+      selection: {
+        ...selection,
+        cells: selection.cells ? [...selection.cells] : undefined,
+      },
+      movedRow: 0,
+      movedCol: 0,
+    };
+  }
+
+  let rMin = Infinity, rMax = -Infinity, cMin = Infinity, cMax = -Infinity;
+  for (const key of selectedCells) {
+    const [r, c] = key.split(',').map(Number);
+    rMin = Math.min(rMin, r);
+    rMax = Math.max(rMax, r);
+    cMin = Math.min(cMin, c);
+    cMax = Math.max(cMax, c);
+  }
+
+  const movedRow = Math.max(-rMin, Math.min(gridHeight - 1 - rMax, deltaRow));
+  const movedCol = Math.max(-cMin, Math.min(gridWidth - 1 - cMax, deltaCol));
+
+  if (movedRow === 0 && movedCol === 0) {
+    return {
+      grid: nextGrid,
+      selection: {
+        ...selection,
+        cells: selection.cells ? [...selection.cells] : undefined,
+      },
+      movedRow,
+      movedCol,
+    };
+  }
+
+  for (const key of selectedCells) {
+    const [r, c] = key.split(',').map(Number);
+    nextGrid[r][c] = '#FFFFFF';
+  }
+
+  const movedCells = new Set<string>();
+  for (const key of selectedCells) {
+    const [r, c] = key.split(',').map(Number);
+    const nextRow = r + movedRow;
+    const nextCol = c + movedCol;
+    nextGrid[nextRow][nextCol] = sourceGrid[r][c];
+    movedCells.add(cellKey(nextRow, nextCol));
+  }
+
+  const nextSelection: Selection = selection.cells && selection.cells.length > 0
+    ? selectionFromCells(movedCells)!
+    : {
+        startRow: selection.startRow + movedRow,
+        startCol: selection.startCol + movedCol,
+        endRow: selection.endRow + movedRow,
+        endCol: selection.endCol + movedCol,
+      };
+
+  return {
+    grid: nextGrid,
+    selection: nextSelection,
+    movedRow,
+    movedCol,
+  };
+}
+
 /**
  * 按叠加模式合并选区：
  * - replace:直接采用新选区
