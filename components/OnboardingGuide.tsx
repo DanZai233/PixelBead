@@ -27,7 +27,9 @@ const steps: Step[] = [
           {[
             { icon: '🖼️', label: '图片转拼豆' },
             { icon: '🤖', label: '智能生成' },
-            { icon: '🎨', label: '多品牌色号' },
+            { icon: '⬚', label: '选区编辑' },
+            { icon: '🎨', label: '色板映射' },
+            { icon: '📦', label: '已有颜色' },
             { icon: '📤', label: '导出分享' },
             { icon: '🧊', label: '3D 预览' },
             { icon: '🌐', label: '素材广场' },
@@ -73,7 +75,7 @@ const steps: Step[] = [
             <span className="w-7 h-7 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-xs font-black shrink-0 mt-0.5">3</span>
             <div>
               <p className="text-sm font-bold text-slate-800">选择裁切方式</p>
-              <p className="text-xs text-slate-500">支持 <strong>左上、居中、右下</strong> 三种对齐方式，选择最适合的构图。</p>
+              <p className="text-xs text-slate-500">支持 <strong>左上、居中、右下</strong> 三种对齐方式，也可以自由框选裁切区域。转换完成后可按提示映射到实际拼豆色板。</p>
             </div>
           </div>
         </div>
@@ -158,6 +160,99 @@ const steps: Step[] = [
               <p className="text-xs text-slate-500">智能生成由服务端统一提供，无需在应用内配置任何密钥。遇到问题可点击底部 <strong>帮助</strong> 查看说明。</p>
             </div>
           </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    icon: '⬚',
+    title: '选区、移动与抠图',
+    subtitle: '框选后再批量移动和编辑',
+    accent: 'from-fuchsia-500 to-pink-500',
+    content: (
+      <div className="space-y-4">
+        <div className="bg-fuchsia-50 p-4 rounded-xl">
+          <p className="text-sm text-slate-700 leading-relaxed">
+            先框选需要处理的区域，就可以整体移动、复制、剪切、清除，或者用魔棒自动识别颜色和背景。
+          </p>
+        </div>
+        <div className="space-y-3">
+          <div className="flex gap-3 items-start">
+            <span className="text-lg">⬚</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">框选后直接移动</p>
+              <p className="text-xs text-slate-500">选择 <strong>「框选」</strong> 后拖出区域，再在选区内按住拖动，选区和高亮内容会一起移动。移动可以一次撤销。</p>
+            </div>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="text-lg">➕</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">替换、加选与减选</p>
+              <p className="text-xs text-slate-500">选区面板可以切换三种模式。连续加选或配合魔棒，会形成不规则选区，适合处理复杂轮廓。</p>
+            </div>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="text-lg">🪄</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">魔棒与一键抠图</p>
+              <p className="text-xs text-slate-500">用魔棒点击相近颜色，或点「识别背景」自动选中相连背景，再按 <strong>Delete</strong> 抠掉背景。</p>
+            </div>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="text-lg">📋</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">批量操作</p>
+              <p className="text-xs text-slate-500">使用 Ctrl+C、Ctrl+V、Ctrl+X、Delete 处理选区；Ctrl+Shift+I 可反选，Esc 取消框选。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    icon: '🎨',
+    title: '色板 & 已有颜色',
+    subtitle: '把图纸映射成能买到的品牌色号',
+    accent: 'from-purple-500 to-indigo-500',
+    content: (
+      <div className="space-y-4">
+        <div className="bg-purple-50 p-4 rounded-xl">
+          <p className="text-sm text-slate-700 leading-relaxed">
+            图片导入或智能生成后，颜色可能只是屏幕上的近似色。使用色板映射，可以把它们换成实际购买得到的拼豆色号。
+          </p>
+        </div>
+        <div className="space-y-3">
+          <div className="flex gap-3 items-start">
+            <span className="text-lg">🏷️</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">选择品牌和色板</p>
+              <p className="text-xs text-slate-500">在「色板设置」选择 MARD、COCO、漫漫、盼盼或咪小窝，以及全色板、168、144、96、48 或自定义色板。</p>
+            </div>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="text-lg">⚡</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">合并与映射</p>
+              <p className="text-xs text-slate-500"><strong>合并相似颜色</strong> 用 K-Means 把颜色归并到目标颜色数；<strong>映射到色板</strong> 则把每种颜色换成品牌色板中最接近的色号。</p>
+            </div>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="text-lg">📦</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">已有颜色优先</p>
+              <p className="text-xs text-slate-500">先选择你手头已有的颜色，再执行映射。相近颜色会优先使用已有拼豆；开启严格模式后只使用已有颜色。</p>
+            </div>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="text-lg">🔎</span>
+            <div>
+              <p className="text-sm font-bold text-slate-800">展开与检查</p>
+              <p className="text-xs text-slate-500">点「展开色板」可按色系浏览和勾选，查看每个色系的已选数量与比例；色块悬停可查看色号。</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl">
+          <p className="text-xs text-amber-700"><strong>💡 推荐顺序：</strong>确定色号系统 → 勾选已有颜色 → 合并到目标颜色数 → 映射到色板 → 检查颜色统计。</p>
         </div>
       </div>
     ),

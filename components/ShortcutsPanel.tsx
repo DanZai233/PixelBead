@@ -61,6 +61,30 @@ export const ShortcutsPanel: React.FC<ShortcutsPanelProps> = ({ isOpen, onClose 
           </div>
 
           <div>
+            <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-4">常用工作流</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="p-4 bg-fuchsia-50 rounded-xl border-2 border-fuchsia-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">⬚</span>
+                  <span className="font-bold text-slate-800">选区与移动</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  框选后在选区内拖动可整体移动内容。选区面板支持替换、加选、减选；魔棒可识别相近颜色，配合 Delete 完成抠图。
+                </p>
+              </div>
+              <div className="p-4 bg-purple-50 rounded-xl border-2 border-purple-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🎨</span>
+                  <span className="font-bold text-slate-800">色板与已有颜色</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  先选择品牌色号和目标颜色数，再合并相似颜色或映射到色板。勾选已有颜色后，映射会优先使用你手头能买到的色号。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div>
             <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-4">画布操作</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border-2 border-indigo-100">
@@ -76,7 +100,7 @@ export const ShortcutsPanel: React.FC<ShortcutsPanelProps> = ({ isOpen, onClose 
                   <span className="text-2xl">✋</span>
                   <span className="font-bold text-slate-800">移动画布</span>
                 </div>
-                <p className="text-xs text-slate-600">鼠标中键拖动 或 <kbd className="px-1.5 py-0.5 bg-white rounded border border-slate-300 font-mono">Space</kbd> + 拖动</p>
+                <p className="text-xs text-slate-600">鼠标中键拖动，或选择 <strong>「拖拽」工具</strong> 后拖动</p>
               </div>
 
               <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-100">

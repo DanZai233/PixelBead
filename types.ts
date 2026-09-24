@@ -128,7 +128,6 @@ export const SHORTCUTS = [
   { key: 'S', action: '框选工具' },
   { key: 'Ctrl + 滚轮', action: '缩放画布' },
   { key: '中键拖动', action: '移动画布' },
-  { key: 'Space + 拖动', action: '移动画布' },
   { key: 'Ctrl + Shift + Z', action: '重做' },
   { key: 'Delete / Backspace', action: '清空选区' },
   { key: 'Esc', action: '取消框选（可 Ctrl+Z 撤销）' },
