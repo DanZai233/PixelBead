@@ -1,13 +1,22 @@
 {
-  "originHash" : "f74033d509bcea5fce24c3baed172c3eb2c7f10ff11b969dedf9df6afa84e51b",
+  "originHash" : "338790a640706e7cf747cedd9d583deb9d9cd74b3735880bbced83337c400082",
   "pins" : [
     {
       "identity" : "capacitor-swift-pm",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ionic-team/capacitor-swift-pm.git",
       "state" : {
-        "revision" : "6a2a3feb25fda8df2a284d0818bc9c83e57a7d56",
-        "version" : "8.3.0"
+        "revision" : "0b6882e9a3288342aacf36348e5a94e4f1dd7b13",
+        "version" : "8.5.2"
+      }
+    },
+    {
+      "identity" : "ion-ios-camera",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ionic-team/ion-ios-camera.git",
+      "state" : {
+        "revision" : "00c3dfdd6267f80db299d9c5a0bad522156b6cbc",
+        "version" : "2.0.0"
       }
     }
   ],
