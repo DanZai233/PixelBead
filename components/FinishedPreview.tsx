@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PixelStyle } from '../types';
+import { hexToRgb } from '../utils/colorUtils';
 import { pickSingleImageNative } from '../utils/pickImageNative';
 
 interface FinishedPreviewProps {
@@ -75,32 +76,73 @@ export const FinishedPreview: React.FC<FinishedPreviewProps> = ({
     color: string,
     withShadow: boolean,
   ) => {
+    const rgb = hexToRgb(color);
+    if (!rgb) return;
+    const shade = (amount: number) => `rgb(${Math.round(Math.max(0, Math.min(255, rgb.r + amount)))}, ${Math.round(Math.max(0, Math.min(255, rgb.g + amount)))}, ${Math.round(Math.max(0, Math.min(255, rgb.b + amount)))})`;
+    const centerX = x + size / 2;
+    const centerY = y + size / 2;
+    const pad = Math.max(0.35, size * 0.022);
+    const radius = size / 2 - pad;
+
     ctx.save();
     if (withShadow) {
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.32)';
-      ctx.shadowBlur = Math.max(2, size * 0.22);
-      ctx.shadowOffsetX = Math.max(1, size * 0.1);
-      ctx.shadowOffsetY = Math.max(1.5, size * 0.14);
+      ctx.shadowColor = 'rgba(15, 23, 42, 0.28)';
+      ctx.shadowBlur = Math.max(1.5, size * 0.16);
+      ctx.shadowOffsetX = Math.max(0.5, size * 0.055);
+      ctx.shadowOffsetY = Math.max(0.8, size * 0.085);
     }
-    ctx.fillStyle = color;
-    const pad = Math.max(0.5, size * 0.035);
-    if (pixelStyle === PixelStyle.CIRCLE) {
-      ctx.beginPath();
-      ctx.arc(x + size / 2, y + size / 2, size / 2 - pad, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    } else if (pixelStyle === PixelStyle.ROUNDED) {
-      ctx.beginPath();
-      ctx.roundRect(x + pad, y + pad, size - pad * 2, size - pad * 2, Math.max(2, size / 5));
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
+
+    const isCircle = pixelStyle === PixelStyle.CIRCLE;
+    const cornerRadius = isCircle ? radius : Math.max(pad, radius * (pixelStyle === PixelStyle.ROUNDED ? 0.58 : 0.12));
+    const gradient = ctx.createRadialGradient(
+      centerX - size * 0.14,
+      centerY - size * 0.17,
+      Math.max(0.4, size * 0.04),
+      centerX,
+      centerY,
+      radius,
+    );
+    gradient.addColorStop(0, shade(58));
+    gradient.addColorStop(0.42, shade(10));
+    gradient.addColorStop(0.82, shade(-14));
+    gradient.addColorStop(1, shade(-38));
+
+    ctx.beginPath();
+    if (isCircle) {
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
     } else {
-      ctx.fillRect(x + pad, y + pad, size - pad * 2, size - pad * 2);
+      ctx.roundRect(x + pad, y + pad, size - pad * 2, size - pad * 2, cornerRadius);
     }
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Vertical-view 3D beads are cylinders: a subtle top-edge highlight reads as depth
+    // without introducing a grid or outline around adjacent beads.
+    ctx.beginPath();
+    if (isCircle) {
+      ctx.arc(centerX, centerY, radius * 0.68, 0, Math.PI * 2);
+    } else {
+      ctx.roundRect(
+        x + pad + (size - pad * 2) * 0.17,
+        y + pad + (size - pad * 2) * 0.17,
+        (size - pad * 2) * 0.66,
+        (size - pad * 2) * 0.66,
+        cornerRadius * 0.72,
+      );
+    }
+    const topLight = ctx.createRadialGradient(
+      centerX - size * 0.1,
+      centerY - size * 0.12,
+      0,
+      centerX,
+      centerY,
+      radius * 0.75,
+    );
+    topLight.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
+    topLight.addColorStop(0.65, 'rgba(255, 255, 255, 0.04)');
+    topLight.addColorStop(1, 'rgba(0, 0, 0, 0.08)');
+    ctx.fillStyle = topLight;
+    ctx.fill();
     ctx.restore();
   }, [pixelStyle]);
 
@@ -201,21 +243,6 @@ export const FinishedPreview: React.FC<FinishedPreviewProps> = ({
       grad.addColorStop(1, '#e2e8f0');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
-      ctx.strokeStyle = 'rgba(100, 116, 139, 0.18)';
-      ctx.lineWidth = 1;
-      const grid = 48;
-      for (let x = grid; x < width; x += grid) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-      for (let y = grid; y < height; y += grid) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
     }
 
     const exportCell = cellSize * exportScale;
