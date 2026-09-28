@@ -23,6 +23,7 @@ export interface SavedProject {
   tags?: string[];
   favorite?: boolean;
   lastOpenedAt?: number;
+  completedCells?: string[];
 }
 
 const PROJECTS_KEY = 'pixelbead_projects_v1';
@@ -69,6 +70,10 @@ export function loadProjects(): SavedProject[] {
           tags: normalizeProjectTags(item.tags),
           favorite: item.favorite === true,
           lastOpenedAt: Number(item.lastOpenedAt) || undefined,
+          completedCells: Array.isArray(item.completedCells)
+            ? item.completedCells.filter((cell: unknown): cell is string =>
+              typeof cell === 'string' && /^\d+:\d+$/.test(cell))
+            : [],
         };
       })
       .filter((item): item is SavedProject => Boolean(item))
@@ -117,6 +122,8 @@ export function duplicateProject(project: SavedProject): SavedProject {
     backgroundImage: project.backgroundImage ? { ...project.backgroundImage } : null,
     createdAt: now,
     updatedAt: now,
+    lastOpenedAt: undefined,
+    completedCells: [],
   };
 }
 
@@ -181,5 +188,9 @@ export function parseProjectFile(content: string): SavedProject {
     updatedAt: now,
     tags: normalizeProjectTags(project.tags),
     favorite: project.favorite === true,
+    completedCells: Array.isArray(project.completedCells)
+      ? project.completedCells.filter((cell: unknown): cell is string =>
+        typeof cell === 'string' && /^\d+:\d+$/.test(cell))
+      : [],
   };
 }

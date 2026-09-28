@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { PixelStyle, ColorHex } from '../types';
 import colorSystemMapping from '../colorSystemMapping.json';
+import { generateShareImage } from '../utils/colorUtils';
 
 interface BeadPlannerViewProps {
   grid: string[][];
@@ -8,6 +9,9 @@ interface BeadPlannerViewProps {
   gridHeight: number;
   pixelStyle: PixelStyle;
   selectedColorSystem: string;
+  completedCells: string[];
+  onToggleCellCompletion: (cell: string) => void;
+  onSaveProgress: () => void;
   onClose: () => void;
 }
 
@@ -17,6 +21,9 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
   gridHeight,
   pixelStyle,
   selectedColorSystem,
+  completedCells,
+  onToggleCellCompletion,
+  onSaveProgress,
   onClose,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -32,8 +39,15 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
   const [highlightOpacity, setHighlightOpacity] = useState(90);
   const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
   const [showMobileTools, setShowMobileTools] = useState(false);
+  const [completionMode, setCompletionMode] = useState(true);
+  const [isCreatingShareImage, setIsCreatingShareImage] = useState(false);
+  const [showCompletionShare, setShowCompletionShare] = useState(false);
+  const [completionShareCanvas, setCompletionShareCanvas] = useState<HTMLCanvasElement | null>(null);
 
   const isDraggingRef = useRef(false);
+  const pointerStartRef = useRef({ x: 0, y: 0 });
+  const pointerMovedRef = useRef(false);
+  const lastCompletionToggleRef = useRef({ cell: '', time: 0 });
   const lastMousePosRef = useRef({ x: 0, y: 0 });
   const lastPinchDistanceRef = useRef(0);
   const lastZoomRef = useRef(zoom);
@@ -53,16 +67,82 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
       .sort((a, b) => b.count - a.count);
   }, [grid]);
 
+  const completedSet = React.useMemo(() => new Set(completedCells), [completedCells]);
+
+  const progressStats = React.useMemo(() => {
+    const colorProgress = new Map<string, { completed: number; total: number }>();
+    let total = 0;
+    let completed = 0;
+
+    grid.forEach((row, rowIndex) => {
+      row.forEach((color, colIndex) => {
+        if (!color || color === 'transparent' || color === '#FFFFFF' || color === '') return;
+        total += 1;
+        const current = colorProgress.get(color) || { completed: 0, total: 0 };
+        current.total += 1;
+        if (completedSet.has(`${rowIndex}:${colIndex}`)) {
+          completed += 1;
+          current.completed += 1;
+        }
+        colorProgress.set(color, current);
+      });
+    });
+
+    return {
+      total,
+      completed,
+      percent: total > 0 ? Math.round((completed / total) * 100) : 0,
+      colorProgress,
+      isComplete: total > 0 && completed === total,
+    };
+  }, [completedSet, grid]);
+
   const getColorKey = useCallback((hex: string): string => {
     if (!showColorKeys || hex === '#FFFFFF') return '';
     const mapping = colorSystemMapping[hex];
     return mapping ? mapping[selectedColorSystem] || hex : hex;
   }, [showColorKeys, selectedColorSystem]);
 
+  const drawCompletionMark = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, size: number) => {
+    const inset = Math.max(1, size * 0.08);
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.24)';
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = Math.max(1, size * 0.09);
+    ctx.beginPath();
+    ctx.roundRect(x + inset, y + inset, size - inset * 2, size - inset * 2, size * 0.2);
+    ctx.fill();
+    ctx.stroke();
+
+    if (size < 14) return;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = Math.max(2, size * 0.11);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x + size * 0.3, y + size * 0.53);
+    ctx.lineTo(x + size * 0.45, y + size * 0.68);
+    ctx.lineTo(x + size * 0.72, y + size * 0.35);
+    ctx.stroke();
+  }, []);
+
   const cellSize = baseBeadSize * (zoom / 100);
   const rulerSize = showRuler ? Math.max(20, cellSize * 0.5) : 0;
   const canvasWidth = gridWidth * cellSize + rulerSize;
   const canvasHeight = gridHeight * cellSize + rulerSize;
+
+  const toggleCompletionAtPoint = useCallback((clientX: number, clientY: number, target: Element) => {
+    const rect = target.getBoundingClientRect();
+    const col = Math.floor((clientX - rect.left - rulerSize) / cellSize);
+    const row = Math.floor((clientY - rect.top - rulerSize) / cellSize);
+    const color = grid[row]?.[col];
+    if (!color || color === 'transparent' || color === '#FFFFFF' || color === '') return;
+
+    const cell = `${row}:${col}`;
+    const now = Date.now();
+    if (lastCompletionToggleRef.current.cell === cell && now - lastCompletionToggleRef.current.time < 300) return;
+    lastCompletionToggleRef.current = { cell, time: now };
+    onToggleCellCompletion(cell);
+  }, [cellSize, grid, onToggleCellCompletion, rulerSize]);
 
   const drawPixel = useCallback((
     ctx: CanvasRenderingContext2D,
@@ -152,7 +232,11 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
       ctx.strokeText(colorKey, x + size / 2, y + size / 2);
       ctx.fillText(colorKey, x + size / 2, y + size / 2);
     }
-  }, [pixelStyle, showGridLines, showColorKeys, cellSize]);
+
+    if (!isTransparent && completedSet.has(`${Math.round(y / cellSize)}:${Math.round(x / cellSize)}`)) {
+      drawCompletionMark(ctx, x, y, size);
+    }
+  }, [cellSize, completedSet, drawCompletionMark, pixelStyle, showColorKeys, showGridLines]);
 
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -291,9 +375,11 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
   }, [isLocked]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    if (isLocked) return;
-    if (e.button === 1 || e.button === 0) {
-      isDraggingRef.current = true;
+    if (e.button !== 1 && e.button !== 0) return;
+    {
+      isDraggingRef.current = !isLocked;
+      pointerStartRef.current = { x: e.clientX, y: e.clientY };
+      pointerMovedRef.current = false;
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
     }
@@ -301,20 +387,28 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDraggingRef.current || isLocked) return;
+    if (Math.hypot(e.clientX - pointerStartRef.current.x, e.clientY - pointerStartRef.current.y) > 6) {
+      pointerMovedRef.current = true;
+    }
     const deltaX = e.clientX - lastMousePosRef.current.x;
     const deltaY = e.clientY - lastMousePosRef.current.y;
     lastMousePosRef.current = { x: e.clientX, y: e.clientY };
     setPanOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
   }, [isLocked]);
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    if (!pointerMovedRef.current && completionMode) {
+      toggleCompletionAtPoint(e.clientX, e.clientY, e.currentTarget);
+    }
     isDraggingRef.current = false;
-  }, []);
+    pointerMovedRef.current = false;
+  }, [completionMode, toggleCompletionAtPoint]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (isLocked) return;
     if (e.touches.length === 1) {
-      isDraggingRef.current = true;
+      isDraggingRef.current = !isLocked;
+      pointerStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      pointerMovedRef.current = false;
       lastMousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     } else if (e.touches.length === 2) {
       isDraggingRef.current = false;
@@ -330,6 +424,12 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (isLocked) return;
     if (e.touches.length === 1 && isDraggingRef.current) {
+      if (Math.hypot(
+        e.touches[0].clientX - pointerStartRef.current.x,
+        e.touches[0].clientY - pointerStartRef.current.y,
+      ) > 8) {
+        pointerMovedRef.current = true;
+      }
       const deltaX = e.touches[0].clientX - lastMousePosRef.current.x;
       const deltaY = e.touches[0].clientY - lastMousePosRef.current.y;
       lastMousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -347,9 +447,35 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
     }
   }, [isLocked]);
 
-  const handleTouchEnd = useCallback(() => {
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!pointerMovedRef.current && completionMode) {
+      const touch = e.changedTouches[0];
+      const canvas = canvasRef.current;
+      if (touch && canvas) {
+        toggleCompletionAtPoint(touch.clientX, touch.clientY, canvas);
+      }
+    }
     isDraggingRef.current = false;
-  }, []);
+    pointerMovedRef.current = false;
+  }, [completionMode, toggleCompletionAtPoint]);
+
+  const handleCreateCompletionShareImage = useCallback(async () => {
+    setIsCreatingShareImage(true);
+    try {
+      const canvas = await generateShareImage({
+        grid,
+        gridWidth,
+        gridHeight,
+        pixelStyle,
+        title: '拼豆完成打卡',
+        completedCells: [...completedSet],
+      });
+      setCompletionShareCanvas(canvas);
+      setShowCompletionShare(true);
+    } finally {
+      setIsCreatingShareImage(false);
+    }
+  }, [completedSet, grid, gridHeight, gridWidth, pixelStyle]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -418,6 +544,29 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
         </div>
       </div>
 
+      <div className="lg:hidden bg-slate-800/95 border-b border-slate-700 px-3 py-2 flex items-center gap-2 shrink-0">
+        <button
+          onClick={() => setCompletionMode(value => !value)}
+          className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all touch-manipulation ${completionMode ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-400'}`}
+        >
+          {completionMode ? '打点' : '仅拖动'}
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
+            <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${progressStats.percent}%` }} />
+          </div>
+          <p className="mt-1 truncate text-[10px] font-bold text-slate-400">
+            {progressStats.completed}/{progressStats.total} · {progressStats.percent}%
+          </p>
+        </div>
+        <button
+          onClick={onSaveProgress}
+          className="shrink-0 px-2.5 py-1.5 rounded-lg bg-slate-700 text-slate-300 text-[10px] font-bold transition-all touch-manipulation"
+        >
+          保存
+        </button>
+      </div>
+
       {/* 桌面端顶部工具栏 */}
       <div className="hidden lg:flex bg-slate-800 border-b border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
@@ -449,6 +598,32 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
               色号
             </button>
           </div>
+        </div>
+
+        <div className="hidden lg:flex items-center gap-4">
+          <div className="w-56">
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <span className="font-bold">拼豆进度</span>
+              <span className="font-mono">{progressStats.completed}/{progressStats.total} · {progressStats.percent}%</span>
+            </div>
+            <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-700">
+              <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${progressStats.percent}%` }} />
+            </div>
+          </div>
+
+          <button
+            onClick={() => setCompletionMode(value => !value)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${completionMode ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+          >
+            {completionMode ? '打点模式' : '仅拖动'}
+          </button>
+
+          <button
+            onClick={onSaveProgress}
+            className="px-3 py-1.5 rounded-lg bg-slate-700 text-xs font-bold text-white hover:bg-slate-600 transition-all"
+          >
+            保存进度
+          </button>
         </div>
 
         <div className="hidden lg:flex items-center gap-4">
@@ -579,6 +754,7 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
                 <div className="space-y-2">
                   {stats.map((item) => {
                     const colorKey = getColorKey(item.hex);
+                    const progress = progressStats.colorProgress.get(item.hex) || { completed: 0, total: 0 };
                     return (
                       <div
                         key={item.hex}
@@ -595,7 +771,10 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-white text-sm font-bold truncate">{colorKey || item.hex}</div>
-                          <div className="text-slate-400 text-xs">{item.count} 颗</div>
+                          <div className="text-slate-400 text-xs">{progress.completed}/{progress.total} 颗 · {Math.round((progress.completed / progress.total) * 100) || 0}%</div>
+                          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-600">
+                            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${(progress.completed / progress.total) * 100 || 0}%` }} />
+                          </div>
                         </div>
                         <div
                           className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${highlightedColor === item.hex ? 'bg-white/20' : 'bg-slate-600'}`}
@@ -616,6 +795,15 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
                   <span>尺寸: {gridWidth}x{gridHeight}</span>
                   <span>总计: {stats.reduce((a, b) => a + b.count, 0)} 颗</span>
                 </div>
+                {progressStats.isComplete && (
+                  <button
+                    onClick={handleCreateCompletionShareImage}
+                    disabled={isCreatingShareImage}
+                    className="mt-3 w-full rounded-xl bg-emerald-600 py-2.5 text-xs font-black text-white transition-all active:scale-95 disabled:opacity-60"
+                  >
+                    {isCreatingShareImage ? '生成中…' : '生成打卡分享图'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -655,6 +843,7 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
             <div className="space-y-2">
               {stats.map((item) => {
                 const colorKey = getColorKey(item.hex);
+                const progress = progressStats.colorProgress.get(item.hex) || { completed: 0, total: 0 };
                 return (
                   <div
                     key={item.hex}
@@ -671,7 +860,10 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
                     </div>
                     <div className="flex-1">
                       <div className="text-white text-xs font-bold">{colorKey || item.hex}</div>
-                      <div className="text-slate-400 text-xs">{item.count} 颗</div>
+                      <div className="text-slate-400 text-xs">{progress.completed}/{progress.total} 颗 · {Math.round((progress.completed / progress.total) * 100) || 0}%</div>
+                      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-600">
+                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${(progress.completed / progress.total) * 100 || 0}%` }} />
+                      </div>
                     </div>
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center ${highlightedColor === item.hex ? 'bg-white/20' : 'bg-slate-600'}`}
@@ -692,9 +884,65 @@ export const BeadPlannerView: React.FC<BeadPlannerViewProps> = ({
               <span>尺寸: {gridWidth}x{gridHeight}</span>
               <span>总计: {stats.reduce((a, b) => a + b.count, 0)} 颗</span>
             </div>
+            {progressStats.isComplete && (
+              <button
+                onClick={handleCreateCompletionShareImage}
+                disabled={isCreatingShareImage}
+                className="mt-3 w-full rounded-xl bg-emerald-600 py-2.5 text-xs font-black text-white transition-all hover:bg-emerald-500 disabled:opacity-60"
+              >
+                {isCreatingShareImage ? '生成中…' : '生成打卡分享图'}
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {showCompletionShare && completionShareCanvas && (
+        <div className="fixed inset-0 z-[10001] flex items-end justify-center bg-black/80 p-4 sm:items-center">
+          <div className="w-full max-w-sm rounded-3xl bg-slate-800 p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white">拼豆打卡分享图</h3>
+              <button onClick={() => setShowCompletionShare(false)} className="rounded-lg p-1.5 text-slate-400">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <img src={completionShareCanvas.toDataURL('image/png')} alt="拼豆完成打卡" className="mt-3 max-h-[45vh] w-full rounded-2xl bg-white object-contain" />
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = completionShareCanvas.toDataURL('image/png');
+                  link.download = 'pixelbead-completion.png';
+                  link.click();
+                }}
+                className="rounded-xl bg-slate-700 py-2.5 text-xs font-black text-white"
+              >
+                保存图片
+              </button>
+              <button
+                onClick={async () => {
+                  const blob = await new Promise<Blob | null>(resolve => completionShareCanvas.toBlob(resolve, 'image/png'));
+                  if (!blob) return;
+                  const file = new File([blob], 'pixelbead-completion.png', { type: 'image/png' });
+                  if (navigator.canShare?.({ files: [file] })) {
+                    await navigator.share({ files: [file], title: '拼豆完成打卡' });
+                  } else {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'pixelbead-completion.png';
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                  }
+                  setShowCompletionShare(false);
+                }}
+                className="rounded-xl bg-emerald-600 py-2.5 text-xs font-black text-white"
+              >
+                分享
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

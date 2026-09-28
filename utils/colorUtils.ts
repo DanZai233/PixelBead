@@ -418,10 +418,12 @@ export interface ShareImageData {
   gridHeight: number;
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
   title?: string;
+  completedCells?: string[];
 }
 
 export async function generateShareImage(data: ShareImageData): Promise<HTMLCanvasElement> {
-  const { grid, gridWidth, gridHeight, pixelStyle, title } = data;
+  const { grid, gridWidth, gridHeight, pixelStyle, title, completedCells = [] } = data;
+  const completedSet = new Set(completedCells);
 
   const W = 1080;
   const padding = 60;
@@ -464,6 +466,7 @@ export async function generateShareImage(data: ShareImageData): Promise<HTMLCanv
       const x = artX + col * cellSize;
       const y = artY + row * cellSize;
       ctx.fillStyle = color;
+      const isCompleted = completedSet.has(`${row}:${col}`);
       if (pixelStyle === 'CIRCLE') {
         ctx.beginPath();
         ctx.arc(x + cellSize / 2, y + cellSize / 2, cellSize / 2 - 1, 0, Math.PI * 2);
@@ -474,6 +477,16 @@ export async function generateShareImage(data: ShareImageData): Promise<HTMLCanv
         ctx.fill();
       } else {
         ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+      }
+
+      if (isCompleted) {
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.3)';
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(x + 2, y + 2, cellSize - 4, cellSize - 4, cellSize / 5);
+        ctx.fill();
+        ctx.stroke();
       }
     }
   }

@@ -193,6 +193,9 @@ const AppMain: React.FC = () => {
   const [paletteMappingOpen, setPaletteMappingOpen] = useState(false);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [currentProjectName, setCurrentProjectName] = useState('未命名作品');
+  const [plannerCompletedCells, setPlannerCompletedCells] = useState<string[]>([]);
+  const [pendingDeletedProject, setPendingDeletedProject] = useState<{ project: SavedProject; index: number; wasActive: boolean } | null>(null);
+  const deletionTimeoutRef = useRef<number | null>(null);
 
   const persistProjects = useCallback((nextProjects: SavedProject[]) => {
     const succeeded = saveProjects(nextProjects);
@@ -223,6 +226,7 @@ const AppMain: React.FC = () => {
         zoom,
         backgroundImage,
         updatedAt: now,
+        completedCells: plannerCompletedCells,
       } : project);
 
       if (persistProjects(nextProjects)) {
@@ -261,6 +265,7 @@ const AppMain: React.FC = () => {
     pixelStyle,
     projects,
     selectedColor,
+    plannerCompletedCells,
     zoom,
   ]);
 
@@ -279,6 +284,7 @@ const AppMain: React.FC = () => {
       backgroundImage,
       createdAt: now,
       updatedAt: now,
+      completedCells: plannerCompletedCells,
     };
 
     if (persistProjects([project, ...projects])) {
@@ -295,6 +301,7 @@ const AppMain: React.FC = () => {
     pixelStyle,
     projects,
     selectedColor,
+    plannerCompletedCells,
     zoom,
   ]);
 
@@ -312,6 +319,7 @@ const AppMain: React.FC = () => {
     setZoom(project.zoom);
     setPanOffset({ x: 0, y: 0 });
     setBackgroundImage(project.backgroundImage);
+    setPlannerCompletedCells(project.completedCells || []);
     setSelection(null);
     setActiveProjectId(project.id);
     setCurrentProjectName(project.name);
@@ -366,14 +374,80 @@ const AppMain: React.FC = () => {
     if (persistProjects(nextProjects)) toast('作品标签已更新。', 'success');
   }, [persistProjects, projects]);
 
-  const handleDeleteProject = useCallback((project: SavedProject) => {
-    if (!confirm(`确定删除「${project.name}」吗？删除后无法恢复。`)) return;
-    const nextProjects = projects.filter(item => item.id !== project.id);
-    if (persistProjects(nextProjects) && project.id === activeProjectId) {
-      setActiveProjectId(null);
-      setCurrentProjectName('未命名作品');
+  const commitPendingProjectDelete = useCallback(() => {
+    if (deletionTimeoutRef.current) {
+      window.clearTimeout(deletionTimeoutRef.current);
+      deletionTimeoutRef.current = null;
     }
-  }, [activeProjectId, persistProjects, projects]);
+    setPendingDeletedProject(null);
+  }, []);
+
+  const handleDeleteProject = useCallback((project: SavedProject) => {
+    const index = projects.findIndex(item => item.id === project.id);
+    if (index < 0) return;
+
+    if (deletionTimeoutRef.current) window.clearTimeout(deletionTimeoutRef.current);
+    const nextProjects = projects.filter(item => item.id !== project.id);
+    if (persistProjects(nextProjects)) {
+      setPendingDeletedProject({ project, index, wasActive: project.id === activeProjectId });
+      if (project.id === activeProjectId) {
+        setActiveProjectId(null);
+        setCurrentProjectName('未命名作品');
+      }
+      deletionTimeoutRef.current = window.setTimeout(() => {
+        setPendingDeletedProject(null);
+        deletionTimeoutRef.current = null;
+      }, 7000);
+      toast('作品已删除，7 秒内可撤销。', 'info');
+    }
+  }, [activeProjectId, persistProjects, projects, toast]);
+
+  const handleUndoProjectDelete = useCallback(() => {
+    if (!pendingDeletedProject) return;
+    const nextProjects = [...projects];
+    nextProjects.splice(Math.min(pendingDeletedProject.index, nextProjects.length), 0, pendingDeletedProject.project);
+    if (persistProjects(nextProjects)) {
+      if (pendingDeletedProject.wasActive) {
+        setActiveProjectId(pendingDeletedProject.project.id);
+        setCurrentProjectName(pendingDeletedProject.project.name);
+      }
+      commitPendingProjectDelete();
+      toast('已撤销删除。', 'success');
+    }
+  }, [
+    commitPendingProjectDelete,
+    pendingDeletedProject,
+    persistProjects,
+    projects,
+    toast,
+  ]);
+
+  const handleTogglePlannerCellCompletion = useCallback((cell: string) => {
+    setPlannerCompletedCells(current => current.includes(cell)
+      ? current.filter(item => item !== cell)
+      : [...current, cell]);
+  }, []);
+
+  const handleSavePlannerProgress = useCallback(() => {
+    if (!activeProjectId) {
+      toast('请先在「我的作品」中保存作品，再记录拼豆进度。', 'info');
+      return;
+    }
+
+    const nextProjects = projects.map(project => project.id === activeProjectId ? {
+      ...project,
+      completedCells: [...plannerCompletedCells],
+      updatedAt: Date.now(),
+    } : project);
+
+    if (persistProjects(nextProjects)) toast('拼豆进度已保存。', 'success');
+  }, [
+    activeProjectId,
+    persistProjects,
+    plannerCompletedCells,
+    projects,
+    toast,
+  ]);
 
   const handleShareProjectFile = useCallback(async (project: SavedProject) => {
     const result = await shareProjectFile(project);
@@ -1887,6 +1961,9 @@ const AppMain: React.FC = () => {
           gridHeight={gridHeight}
           pixelStyle={pixelStyle}
           selectedColorSystem={selectedColorSystem}
+          completedCells={plannerCompletedCells}
+          onToggleCellCompletion={handleTogglePlannerCellCompletion}
+          onSaveProgress={handleSavePlannerProgress}
           onClose={() => setIsPlannerViewOpen(false)}
         />
       )}
@@ -2368,6 +2445,8 @@ const AppMain: React.FC = () => {
           onToggleFavorite={handleToggleProjectFavorite}
           onUpdateTags={handleUpdateProjectTags}
           onDelete={handleDeleteProject}
+          pendingDelete={pendingDeletedProject}
+          onUndoDelete={handleUndoProjectDelete}
           onShareFile={handleShareProjectFile}
           onImportFile={handleImportProjectFile}
         />

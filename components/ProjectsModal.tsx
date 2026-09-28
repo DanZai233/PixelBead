@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SavedProject } from '../utils/projectStorage';
+import {
+  createProjectThumbnail,
+  getProjectThumbnail,
+  saveProjectThumbnail,
+} from '../utils/thumbnailCache';
 
 interface ProjectsModalProps {
   projects: SavedProject[];
@@ -15,6 +20,8 @@ interface ProjectsModalProps {
   onToggleFavorite: (project: SavedProject) => void;
   onUpdateTags: (project: SavedProject, tags: string | string[]) => void;
   onDelete: (project: SavedProject) => void;
+  pendingDelete: { project: SavedProject; index: number; wasActive: boolean } | null;
+  onUndoDelete: () => void;
   onShareFile: (project: SavedProject) => void;
   onImportFile: (file: File) => void;
 }
@@ -65,33 +72,48 @@ const formatRelativeProjectTime = (timestamp: number) => {
 };
 
 const ProjectThumbnail: React.FC<{ project: SavedProject }> = ({ project }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const context = canvas.getContext('2d');
-    if (!context) return;
+    let cancelled = false;
+    setIsLoading(true);
+    setThumbnail(null);
 
-    const maxSize = 160;
-    const scale = Math.max(1, Math.floor(maxSize / Math.max(project.gridWidth, project.gridHeight)));
-    canvas.width = project.gridWidth * scale;
-    canvas.height = project.gridHeight * scale;
-    context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, canvas.width, canvas.height);
+    const loadThumbnail = async () => {
+      const cached = await getProjectThumbnail(project.id, project.updatedAt);
+      if (cancelled) return;
+      if (cached) {
+        setThumbnail(cached);
+        setIsLoading(false);
+        return;
+      }
 
-    project.grid.forEach((row, rowIndex) => {
-      row.forEach((color, colIndex) => {
-        if (color === '#FFFFFF') return;
-        context.fillStyle = color;
-        context.fillRect(colIndex * scale, rowIndex * scale, scale, scale);
-      });
-    });
+      const generated = await createProjectThumbnail(project);
+      if (cancelled || !generated) {
+        setIsLoading(false);
+        return;
+      }
+      await saveProjectThumbnail(project.id, project.updatedAt, generated);
+      if (cancelled) return;
+      setThumbnail(generated);
+      setIsLoading(false);
+    };
+
+    loadThumbnail();
+
+    return () => {
+      cancelled = true;
+    };
   }, [project]);
 
   return (
     <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-inner sm:h-28 sm:w-28">
-      <canvas ref={canvasRef} className="h-full w-full object-contain" />
+      {thumbnail ? (
+        <img src={thumbnail} alt="" className="h-full w-full object-contain" />
+      ) : (
+        <div className={`h-full w-full bg-slate-100 transition-opacity ${isLoading ? 'animate-pulse' : ''}`} />
+      )}
     </div>
   );
 };
@@ -351,6 +373,8 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
   onToggleFavorite,
   onUpdateTags,
   onDelete,
+  pendingDelete,
+  onUndoDelete,
   onShareFile,
   onImportFile,
 }) => {
@@ -361,6 +385,7 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
+  const [deletingProject, setDeletingProject] = useState<SavedProject | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -431,7 +456,7 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
       onClick={event => { if (event.target === event.currentTarget) onClose(); }}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-2xl sm:rounded-[2rem]"
+        className="relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-2xl sm:rounded-[2rem]"
         onClick={event => event.stopPropagation()}
       >
         <div className="shrink-0 border-b border-slate-100 px-5 pt-5 pb-4">
@@ -561,6 +586,21 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
             </div>
           )}
 
+          {pendingDelete && (
+            <div className="mb-4 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-black text-amber-800">已删除「{pendingDelete.project.name}」</p>
+                <p className="text-[11px] text-amber-600">7 秒内可撤销删除。</p>
+              </div>
+              <button
+                onClick={onUndoDelete}
+                className="shrink-0 rounded-xl bg-amber-500 px-3 py-2 text-xs font-black text-white active:scale-95"
+              >
+                撤销
+              </button>
+            </div>
+          )}
+
           {projects.length === 0 ? (
             <div className="rounded-3xl border-2 border-dashed border-slate-200 px-6 py-14 text-center">
               <p className="text-sm font-black text-slate-700">还没有保存的作品</p>
@@ -588,13 +628,41 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
                   onDuplicate={onDuplicate}
                   onToggleFavorite={onToggleFavorite}
                   onUpdateTags={onUpdateTags}
-                  onDelete={onDelete}
+                  onDelete={setDeletingProject}
                   onShareFile={onShareFile}
                 />
               ))}
             </div>
           )}
         </div>
+
+        {deletingProject && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 p-5">
+            <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
+              <h3 className="text-base font-black text-slate-900">删除作品</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                确定删除「{deletingProject.name}」吗？删除后 7 秒内可以撤销。
+              </p>
+              <div className="mt-5 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setDeletingProject(null)}
+                  className="rounded-xl bg-slate-100 py-2.5 text-sm font-black text-slate-700 active:scale-95"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => {
+                    onDelete(deletingProject);
+                    setDeletingProject(null);
+                  }}
+                  className="rounded-xl bg-red-600 py-2.5 text-sm font-black text-white active:scale-95"
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
