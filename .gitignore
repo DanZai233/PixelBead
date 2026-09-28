@@ -33,4 +33,5 @@ dist-ssr
 ios/App/Pods/
 ios/App/App/public/
 ios/App/App/capacitor.config.json
+build/
 assets/
