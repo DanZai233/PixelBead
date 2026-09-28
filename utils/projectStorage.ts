@@ -20,6 +20,9 @@ export interface SavedProject {
   backgroundImage?: ProjectBackground | null;
   createdAt: number;
   updatedAt: number;
+  tags?: string[];
+  favorite?: boolean;
+  lastOpenedAt?: number;
 }
 
 const PROJECTS_KEY = 'pixelbead_projects_v1';
@@ -63,6 +66,9 @@ export function loadProjects(): SavedProject[] {
             : null,
           createdAt: Number(item.createdAt) || Date.now(),
           updatedAt: Number(item.updatedAt) || Number(item.createdAt) || Date.now(),
+          tags: normalizeProjectTags(item.tags),
+          favorite: item.favorite === true,
+          lastOpenedAt: Number(item.lastOpenedAt) || undefined,
         };
       })
       .filter((item): item is SavedProject => Boolean(item))
@@ -88,6 +94,17 @@ export function createProjectId(): string {
 export function normalizeProjectName(name: string): string {
   const clean = name.trim().replace(/\s+/g, ' ').slice(0, 60);
   return clean || '未命名作品';
+}
+
+export function normalizeProjectTags(value: unknown): string[] {
+  const rawValues = Array.isArray(value)
+    ? value
+    : typeof value === 'string' ? value.split(/[,，]/) : [];
+
+  return [...new Set(rawValues
+    .map(item => String(item).trim().replace(/^#/, '').slice(0, 12))
+    .filter(Boolean))]
+    .slice(0, 6);
 }
 
 export function duplicateProject(project: SavedProject): SavedProject {
@@ -162,5 +179,7 @@ export function parseProjectFile(content: string): SavedProject {
       : null,
     createdAt: Number(project.createdAt) || now,
     updatedAt: now,
+    tags: normalizeProjectTags(project.tags),
+    favorite: project.favorite === true,
   };
 }

@@ -12,12 +12,14 @@ interface ProjectsModalProps {
   onSaveAsNew: (name: string) => void;
   onDuplicate: (project: SavedProject) => void;
   onRename: (project: SavedProject, name: string) => void;
+  onToggleFavorite: (project: SavedProject) => void;
+  onUpdateTags: (project: SavedProject, tags: string | string[]) => void;
   onDelete: (project: SavedProject) => void;
   onShareFile: (project: SavedProject) => void;
   onImportFile: (file: File) => void;
 }
 
-type ProjectSort = 'updated' | 'created' | 'name';
+type ProjectSort = 'opened' | 'updated' | 'created' | 'name';
 
 const getProjectStats = (project: SavedProject) => {
   const colorCounts = new Map<string, number>();
@@ -47,6 +49,19 @@ const formatProjectDate = (timestamp: number) => {
     month: '2-digit',
     day: '2-digit',
   });
+};
+
+const formatRelativeProjectTime = (timestamp: number) => {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '未知时间';
+
+  const elapsed = Date.now() - timestamp;
+  if (elapsed < 60 * 1000) return '刚刚';
+  if (elapsed < 60 * 60 * 1000) return `${Math.floor(elapsed / (60 * 1000))} 分钟前`;
+  if (elapsed < 24 * 60 * 60 * 1000) return `${Math.floor(elapsed / (60 * 60 * 1000))} 小时前`;
+  if (elapsed < 7 * 24 * 60 * 60 * 1000) return `${Math.floor(elapsed / (24 * 60 * 60 * 1000))} 天前`;
+
+  return formatProjectDate(timestamp);
 };
 
 const ProjectThumbnail: React.FC<{ project: SavedProject }> = ({ project }) => {
@@ -92,6 +107,8 @@ const ProjectCard: React.FC<{
   cancelRename: () => void;
   onOpenProject: (project: SavedProject) => void;
   onDuplicate: (project: SavedProject) => void;
+  onToggleFavorite: (project: SavedProject) => void;
+  onUpdateTags: (project: SavedProject, tags: string | string[]) => void;
   onDelete: (project: SavedProject) => void;
   onShareFile: (project: SavedProject) => void;
 }> = ({
@@ -105,10 +122,21 @@ const ProjectCard: React.FC<{
   cancelRename,
   onOpenProject,
   onDuplicate,
+  onToggleFavorite,
+  onUpdateTags,
   onDelete,
   onShareFile,
 }) => {
   const { beadCount, palette } = useMemo(() => getProjectStats(project), [project]);
+  const [tagEditorOpen, setTagEditorOpen] = useState(false);
+  const [tagDraft, setTagDraft] = useState('');
+  const recentTime = project.lastOpenedAt ?? project.updatedAt;
+
+  const submitTagDraft = () => {
+    if (!tagDraft.trim()) return;
+    onUpdateTags(project, [...(project.tags || []), tagDraft]);
+    setTagDraft('');
+  };
 
   return (
     <div
@@ -152,6 +180,24 @@ const ProjectCard: React.FC<{
               <p className="min-w-0 flex-1 truncate text-sm font-black text-slate-900" title={project.name}>
                 {project.name}
               </p>
+              <button
+                onClick={() => onToggleFavorite(project)}
+                title={project.favorite ? '取消收藏' : '收藏并置顶'}
+                className={`shrink-0 rounded-lg p-1 transition-all active:scale-90 ${
+                  project.favorite
+                    ? 'bg-amber-100 text-amber-500'
+                    : 'text-slate-300 hover:bg-slate-100 hover:text-amber-400'
+                }`}
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill={project.favorite ? 'currentColor' : 'none'}
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.05 3.69c.32-.84 1.58-.84 1.9 0l1.8 4.68a1 1 0 00.58.6l4.94 1.6c.87.28.87 1.51 0 1.79l-4.94 1.6a1 1 0 00-.58.6l-1.8 4.68c-.32.84-1.58.84-1.9 0l-1.8-4.68a1 1 0 00-.58-.6l-4.94-1.6c-.87-.28-.87-1.51 0-1.79l4.94-1.6a1 1 0 00.58-.6l1.8-4.68z" />
+                </svg>
+              </button>
               {isActive && (
                 <span className="shrink-0 rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-black text-white">
                   当前
@@ -167,10 +213,73 @@ const ProjectCard: React.FC<{
             <span className="rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-700">
               {beadCount.toLocaleString()} 豆
             </span>
-            <span className="rounded-lg bg-sky-50 px-2 py-1 text-[10px] font-bold text-sky-700">
-              更新 {formatProjectDate(project.updatedAt)}
+            <span
+              className="rounded-lg bg-sky-50 px-2 py-1 text-[10px] font-bold text-sky-700"
+              title={`更新 ${formatProjectDate(project.updatedAt)}`}
+            >
+              {project.lastOpenedAt ? '打开' : '更新'} {formatRelativeProjectTime(recentTime)}
             </span>
           </div>
+
+          {(project.tags?.length || tagEditorOpen) ? (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {project.tags?.map(tag => (
+                <span
+                  key={tag}
+                  className="group flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600"
+                >
+                  #{tag}
+                  <button
+                    onClick={() => onUpdateTags(project, project.tags?.filter(item => item !== tag) || [])}
+                    className="text-slate-300 transition-colors hover:text-red-500 group-hover:text-red-400"
+                    title={`删除标签 ${tag}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              <button
+                onClick={() => setTagEditorOpen(open => !open)}
+                className="rounded-lg border border-dashed border-slate-200 px-2 py-1 text-[10px] font-bold text-slate-400 transition-colors hover:border-indigo-200 hover:text-indigo-500"
+              >
+                {tagEditorOpen ? '收起' : '+ 标签'}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setTagEditorOpen(true)}
+              className="mt-2 rounded-lg border border-dashed border-slate-200 px-2 py-1 text-[10px] font-bold text-slate-400 transition-colors hover:border-indigo-200 hover:text-indigo-500"
+            >
+              + 添加标签
+            </button>
+          )}
+
+          {tagEditorOpen && (
+            <div className="mt-2 flex items-center gap-1.5">
+              <input
+                value={tagDraft}
+                onChange={event => setTagDraft(event.target.value)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    submitTagDraft();
+                  }
+                  if (event.key === 'Escape') {
+                    setTagDraft('');
+                    setTagEditorOpen(false);
+                  }
+                }}
+                placeholder="输入标签，回车添加"
+                className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-[11px] font-bold outline-none focus:border-indigo-400"
+              />
+              <button
+                onClick={submitTagDraft}
+                className="shrink-0 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-[11px] font-black text-white active:scale-95"
+              >
+                添加
+              </button>
+            </div>
+          )}
 
           <div className="mt-auto pt-3">
             <p className="text-[10px] font-bold text-slate-400">主色调</p>
@@ -239,6 +348,8 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
   onSaveAsNew,
   onDuplicate,
   onRename,
+  onToggleFavorite,
+  onUpdateTags,
   onDelete,
   onShareFile,
   onImportFile,
@@ -246,6 +357,8 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
   const [nameDraft, setNameDraft] = useState(currentName);
   const [searchDraft, setSearchDraft] = useState('');
   const [sortType, setSortType] = useState<ProjectSort>('updated');
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -266,15 +379,39 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
   const filteredProjects = useMemo(() => {
     const keyword = searchDraft.trim().toLowerCase();
     const matched = keyword
-      ? projects.filter(project => project.name.toLowerCase().includes(keyword))
+      ? projects.filter(project => {
+          const haystack = [project.name, ...(project.tags || [])].join(' ').toLowerCase();
+          return haystack.includes(keyword);
+        })
       : [...projects];
 
-    return matched.sort((left, right) => {
+    const tagFiltered = activeTag
+      ? matched.filter(project => project.tags?.includes(activeTag))
+      : matched;
+    const favoriteFiltered = favoritesOnly
+      ? tagFiltered.filter(project => project.favorite)
+      : tagFiltered;
+
+    return favoriteFiltered.sort((left, right) => {
+      if (left.favorite !== right.favorite) return left.favorite ? -1 : 1;
       if (sortType === 'name') return left.name.localeCompare(right.name, 'zh-CN');
       if (sortType === 'created') return right.createdAt - left.createdAt;
+      if (sortType === 'opened') {
+        return (right.lastOpenedAt ?? right.updatedAt) - (left.lastOpenedAt ?? left.updatedAt);
+      }
       return right.updatedAt - left.updatedAt;
     });
-  }, [projects, searchDraft, sortType]);
+  }, [activeTag, favoritesOnly, projects, searchDraft, sortType]);
+
+  const allTags = useMemo(() => {
+    const counts = new Map<string, number>();
+    projects.forEach(project => {
+      project.tags?.forEach(tag => counts.set(tag, (counts.get(tag) || 0) + 1));
+    });
+    return [...counts.entries()]
+      .sort((left, right) => right[1] - left[1])
+      .map(([tag]) => tag);
+  }, [projects]);
 
   const startRename = (project: SavedProject) => {
     setRenamingId(project.id);
@@ -376,6 +513,7 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
                 className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-black text-slate-600 outline-none focus:border-indigo-400"
               >
                 <option value="updated">最近更新</option>
+                <option value="opened">最近打开</option>
                 <option value="created">最近创建</option>
                 <option value="name">名称排序</option>
               </select>
@@ -398,6 +536,30 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
               </button>
             </div>
           </div>
+
+          {(favoritesOnly || allTags.length > 0) && (
+            <div className="mb-4 flex flex-wrap items-center gap-1.5">
+              <button
+                onClick={() => setFavoritesOnly(value => !value)}
+                className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black transition-all ${
+                  favoritesOnly ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+              >
+                ★ 收藏
+              </button>
+              {allTags.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => setActiveTag(current => (current === tag ? null : tag))}
+                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black transition-all ${
+                    activeTag === tag ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  }`}
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          )}
 
           {projects.length === 0 ? (
             <div className="rounded-3xl border-2 border-dashed border-slate-200 px-6 py-14 text-center">
@@ -424,6 +586,8 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
                   cancelRename={cancelRename}
                   onOpenProject={onOpenProject}
                   onDuplicate={onDuplicate}
+                  onToggleFavorite={onToggleFavorite}
+                  onUpdateTags={onUpdateTags}
                   onDelete={onDelete}
                   onShareFile={onShareFile}
                 />

@@ -1,8 +1,10 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
   DEFAULT_COLORS, ColorHex, ColorSystem,
+  PaletteMappingRow,
 } from '../types';
 import {
+  colorDistance,
   mergeSimilarColors,
   reduceGridColors,
   mapColorsToPalette,
@@ -56,6 +58,8 @@ export function useEditorPalette({
   setSelectedPalettePreset,
 }: UseEditorPaletteParams) {
   const [expandedColorGroups, setExpandedColorGroups] = useState<Set<string>>(new Set());
+  const [mappingRows, setMappingRows] = useState<PaletteMappingRow[]>([]);
+  const [mappingSourceGrid, setMappingSourceGrid] = useState<string[][]>([]);
 
   // ── 我的已有颜色:用户手头已有的拼豆色号,映射时优先使用 ──
   const [ownedColors, setOwnedColors] = useState<ColorHex[]>(loadOwnedColors);
@@ -195,14 +199,62 @@ export function useEditorPalette({
   const mapGridToPalette = useCallback((maxColors?: number) => {
     const fallbackPalette = createFullPaletteFromMapping(colorSystemMapping, selectedColorSystem, maxColors);
 
-    if (ownedColors.length === 0) {
-      setGrid(prev => mapColorsToPalette(prev, fallbackPalette));
-    } else {
-      const ownedPalette = ownedColors.map(hex => ({ hex, key: getSystemKey(hex) }));
-      setGrid(prev => mapColorsToPaletteWithOwned(prev, ownedPalette, fallbackPalette, ownedOnlyMode));
-    }
-    pushUndo(gridRef.current);
-  }, [selectedColorSystem, ownedColors, ownedOnlyMode, getSystemKey, pushUndo, gridRef, setGrid]);
+    const sourceGrid = grid;
+    const nextGrid = ownedColors.length === 0
+      ? mapColorsToPalette(sourceGrid, fallbackPalette)
+      : mapColorsToPaletteWithOwned(sourceGrid, ownedColors.map(hex => ({ hex, key: getSystemKey(hex) })), fallbackPalette, ownedOnlyMode);
+
+    const rows: PaletteMappingRow[] = [];
+    const sourcePositions = new Map<string, Array<{ row: number; col: number }>>();
+    const sourceTargets = new Map<string, string>();
+
+    sourceGrid.forEach((row, rowIndex) => {
+      row.forEach((sourceHex, colIndex) => {
+        if (!sourceHex || sourceHex === '#FFFFFF') return;
+        const targetHex = nextGrid[rowIndex]?.[colIndex] || sourceHex;
+        sourceTargets.set(sourceHex, targetHex);
+        const positions = sourcePositions.get(sourceHex) || [];
+        positions.push({ row: rowIndex, col: colIndex });
+        sourcePositions.set(sourceHex, positions);
+      });
+    });
+
+    sourceTargets.forEach((targetHex, sourceHex) => {
+      const mapping = colorSystemMapping[targetHex as keyof typeof colorSystemMapping];
+      rows.push({
+        sourceHex,
+        targetHex,
+        key: mapping?.[selectedColorSystem] || targetHex,
+        count: sourcePositions.get(sourceHex)?.length || 0,
+        positions: sourcePositions.get(sourceHex) || [],
+        distance: colorDistance(sourceHex, targetHex),
+      });
+    });
+
+    rows.sort((left, right) => right.distance - left.distance || right.count - left.count);
+    setMappingRows(rows);
+    setMappingSourceGrid(sourceGrid.map(row => [...row]));
+    setGrid(nextGrid);
+    pushUndo(sourceGrid);
+  }, [grid, selectedColorSystem, ownedColors, ownedOnlyMode, getSystemKey, pushUndo, setGrid]);
+
+  const handleReplaceMappingColor = useCallback((sourceHex: string, targetHex: string) => {
+    setGrid(prev => prev.map((row, rowIndex) => row.map((color, colIndex) => {
+      const originalColor = mappingSourceGrid[rowIndex]?.[colIndex];
+      return originalColor === sourceHex ? targetHex : color;
+    })));
+
+    setMappingRows(prev => prev.map(row => {
+      if (row.sourceHex !== sourceHex) return row;
+      const mapping = colorSystemMapping[targetHex as keyof typeof colorSystemMapping];
+      return {
+        ...row,
+        targetHex,
+        key: mapping?.[selectedColorSystem] || targetHex,
+        distance: colorDistance(row.sourceHex, targetHex),
+      };
+    }));
+  }, [mappingSourceGrid, selectedColorSystem, setGrid]);
 
   const handleMapToPalette = useCallback(() => {
     if (ownedColors.length > 0 && !ownedOnlyMode) {
@@ -246,6 +298,8 @@ export function useEditorPalette({
     allColors,
     getColorKey,
     displayStats,
+    mappingRows,
+    handleReplaceMappingColor,
     handleMergeSimilarColors,
     handleMapToPalette,
     handlePalettePresetChange,

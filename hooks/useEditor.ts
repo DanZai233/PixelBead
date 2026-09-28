@@ -1337,7 +1337,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
 
   // ── 调色板逻辑（色板分组/映射/我的已有颜色）已拆分至 useEditorPalette ──
   const {
-    paletteGroups, paletteColors, allColors, getColorKey, displayStats,
+    paletteGroups, paletteColors, allColors, getColorKey, displayStats, mappingRows, handleReplaceMappingColor,
     handleMergeSimilarColors, handleMapToPalette, handlePalettePresetChange, mapGridToPalette,
     expandedColorGroups, setExpandedColorGroups, toggleColorGroup,
     ownedColors, toggleOwnedColor, addOwnedColor, clearOwnedColors, addCanvasColors,
@@ -1572,7 +1572,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     isPalettePanelOpen, setIsPalettePanelOpen,
     highlightedColor, setHighlightedColor,
     highlightOpacity, setHighlightOpacity,
-    paletteGroups, paletteColors, allColors, getColorKey, displayStats,
+    paletteGroups, paletteColors, allColors, getColorKey, displayStats, mappingRows, handleReplaceMappingColor,
     colorSystemOptions,
     handleMergeSimilarColors, handleMapToPalette, handlePalettePresetChange, handleRemoveBackground, handleRestoreSelection,
     handleResize, handleCustomSize, resetGrid,

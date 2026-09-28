@@ -8,6 +8,15 @@ export interface PaletteColor {
   count?: number;
 }
 
+export interface PaletteMappingRow {
+  sourceHex: string;
+  targetHex: string;
+  key: string;
+  count: number;
+  positions: Array<{ row: number; col: number }>;
+  distance: number;
+}
+
 export interface BeadGrid {
   name: string;
   description: string;
