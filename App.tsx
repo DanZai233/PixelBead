@@ -1713,7 +1713,6 @@ const AppMain: React.FC = () => {
                   grid={grid}
                   gridWidth={gridWidth}
                   gridHeight={gridHeight}
-                  pixelStyle={pixelStyle}
                 />
               </div>
             ) : null}

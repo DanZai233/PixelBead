@@ -1,13 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PixelStyle } from '../types';
-import { hexToRgb } from '../utils/colorUtils';
 import { pickSingleImageNative } from '../utils/pickImageNative';
 
 interface FinishedPreviewProps {
   grid: string[][];
   gridWidth: number;
   gridHeight: number;
-  pixelStyle: PixelStyle;
 }
 
 const IMAGE_ACCEPT = 'image/png,image/jpeg,image/jpg,image/heic,image/webp,image/gif';
@@ -16,7 +13,6 @@ export const FinishedPreview: React.FC<FinishedPreviewProps> = ({
   grid,
   gridWidth,
   gridHeight,
-  pixelStyle,
 }) => {
   const stageRef = useRef<HTMLDivElement>(null);
   const artCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -25,7 +21,7 @@ export const FinishedPreview: React.FC<FinishedPreviewProps> = ({
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; artX: number; artY: number } | null>(null);
 
   const [bgSrc, setBgSrc] = useState<string | null>(null);
-  const [shadowEnabled, setShadowEnabled] = useState(true);
+  const [lightEnabled, setLightEnabled] = useState(true);
   const [artScale, setArtScale] = useState(1);
   const [artX, setArtX] = useState(0);
   const [artY, setArtY] = useState(0);
@@ -68,100 +64,67 @@ export const FinishedPreview: React.FC<FinishedPreviewProps> = ({
   const artWidth = gridWidth * cellSize;
   const artHeight = gridHeight * cellSize;
 
-  const drawBead = useCallback((
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    size: number,
-    color: string,
-    withShadow: boolean,
-  ) => {
-    const rgb = hexToRgb(color);
-    if (!rgb) return;
-    const shade = (amount: number) => `rgb(${Math.round(Math.max(0, Math.min(255, rgb.r + amount)))}, ${Math.round(Math.max(0, Math.min(255, rgb.g + amount)))}, ${Math.round(Math.max(0, Math.min(255, rgb.b + amount)))})`;
-    const centerX = x + size / 2;
-    const centerY = y + size / 2;
-    const pad = Math.max(0.35, size * 0.022);
-    const radius = size / 2 - pad;
-
-    ctx.save();
-    if (withShadow) {
-      ctx.shadowColor = 'rgba(15, 23, 42, 0.28)';
-      ctx.shadowBlur = Math.max(1.5, size * 0.16);
-      ctx.shadowOffsetX = Math.max(0.5, size * 0.055);
-      ctx.shadowOffsetY = Math.max(0.8, size * 0.085);
+  const coloredCells = useMemo(() => {
+    const cells: Array<{ row: number; col: number; color: string }> = [];
+    for (let row = 0; row < gridHeight; row++) {
+      for (let col = 0; col < gridWidth; col++) {
+        const color = grid[row][col];
+        const transparent = color === 'transparent' || color === '#FFFFFF' || color === '';
+        if (!transparent) cells.push({ row, col, color });
+      }
     }
-
-    const isCircle = pixelStyle === PixelStyle.CIRCLE;
-    const cornerRadius = isCircle ? radius : Math.max(pad, radius * (pixelStyle === PixelStyle.ROUNDED ? 0.58 : 0.12));
-    const gradient = ctx.createRadialGradient(
-      centerX - size * 0.14,
-      centerY - size * 0.17,
-      Math.max(0.4, size * 0.04),
-      centerX,
-      centerY,
-      radius,
-    );
-    gradient.addColorStop(0, shade(58));
-    gradient.addColorStop(0.42, shade(10));
-    gradient.addColorStop(0.82, shade(-14));
-    gradient.addColorStop(1, shade(-38));
-
-    ctx.beginPath();
-    if (isCircle) {
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    } else {
-      ctx.roundRect(x + pad, y + pad, size - pad * 2, size - pad * 2, cornerRadius);
-    }
-    ctx.fillStyle = gradient;
-    ctx.fill();
-
-    // Vertical-view 3D beads are cylinders: a subtle top-edge highlight reads as depth
-    // without introducing a grid or outline around adjacent beads.
-    ctx.beginPath();
-    if (isCircle) {
-      ctx.arc(centerX, centerY, radius * 0.68, 0, Math.PI * 2);
-    } else {
-      ctx.roundRect(
-        x + pad + (size - pad * 2) * 0.17,
-        y + pad + (size - pad * 2) * 0.17,
-        (size - pad * 2) * 0.66,
-        (size - pad * 2) * 0.66,
-        cornerRadius * 0.72,
-      );
-    }
-    const topLight = ctx.createRadialGradient(
-      centerX - size * 0.1,
-      centerY - size * 0.12,
-      0,
-      centerX,
-      centerY,
-      radius * 0.75,
-    );
-    topLight.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
-    topLight.addColorStop(0.65, 'rgba(255, 255, 255, 0.04)');
-    topLight.addColorStop(1, 'rgba(0, 0, 0, 0.08)');
-    ctx.fillStyle = topLight;
-    ctx.fill();
-    ctx.restore();
-  }, [pixelStyle]);
+    return cells;
+  }, [grid, gridWidth, gridHeight]);
 
   const drawArt = useCallback((
     ctx: CanvasRenderingContext2D,
     offsetX: number,
     offsetY: number,
     size: number,
-    withShadow: boolean,
+    withLight: boolean,
   ) => {
-    for (let row = 0; row < gridHeight; row++) {
-      for (let col = 0; col < gridWidth; col++) {
-        const color = grid[row][col];
-        const transparent = color === 'transparent' || color === '#FFFFFF' || color === '';
-        if (transparent) continue;
-        drawBead(ctx, offsetX + col * size, offsetY + row * size, size, color, withShadow);
-      }
+    const artPath = new Path2D();
+    coloredCells.forEach(({ row, col }) => {
+      artPath.rect(offsetX + col * size, offsetY + row * size, size, size);
+    });
+
+    if (withLight) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(15, 23, 42, 0.26)';
+      ctx.shadowBlur = size * 0.8;
+      ctx.shadowOffsetX = size * 0.16;
+      ctx.shadowOffsetY = size * 0.24;
+      ctx.fillStyle = '#0f172a';
+      ctx.fill(artPath);
+      ctx.restore();
     }
-  }, [grid, gridWidth, gridHeight, drawBead]);
+
+    coloredCells.forEach(({ row, col, color }) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(offsetX + col * size, offsetY + row * size, size, size);
+    });
+
+    if (!withLight) return;
+
+    const artPixelWidth = gridWidth * size;
+    const artPixelHeight = gridHeight * size;
+    const overallLight = ctx.createLinearGradient(
+      offsetX - size * 0.2,
+      offsetY - size * 0.28,
+      offsetX + artPixelWidth + size * 0.16,
+      offsetY + artPixelHeight + size * 0.28,
+    );
+    overallLight.addColorStop(0, 'rgba(255, 255, 255, 0.17)');
+    overallLight.addColorStop(0.38, 'rgba(255, 255, 255, 0.03)');
+    overallLight.addColorStop(0.74, 'rgba(15, 23, 42, 0.05)');
+    overallLight.addColorStop(1, 'rgba(15, 23, 42, 0.14)');
+
+    ctx.save();
+    ctx.clip(artPath);
+    ctx.fillStyle = overallLight;
+    ctx.fillRect(offsetX, offsetY, artPixelWidth, artPixelHeight);
+    ctx.restore();
+  }, [coloredCells, gridWidth, gridHeight]);
 
   useEffect(() => {
     const canvas = artCanvasRef.current;
@@ -175,8 +138,8 @@ export const FinishedPreview: React.FC<FinishedPreviewProps> = ({
     if (!ctx) return;
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, artWidth, artHeight);
-    drawArt(ctx, 0, 0, cellSize, shadowEnabled);
-  }, [artWidth, artHeight, cellSize, drawArt, shadowEnabled]);
+    drawArt(ctx, 0, 0, cellSize, lightEnabled);
+  }, [artWidth, artHeight, cellSize, drawArt, lightEnabled]);
 
   const handleBgUpload = useCallback((file: File | null) => {
     if (!file) return;
@@ -248,7 +211,7 @@ export const FinishedPreview: React.FC<FinishedPreviewProps> = ({
     const exportCell = cellSize * exportScale;
     const offsetX = (width - artWidth * exportScale) / 2 + artX * exportScale;
     const offsetY = (height - artHeight * exportScale) / 2 + artY * exportScale;
-    drawArt(ctx, offsetX, offsetY, exportCell, shadowEnabled);
+    drawArt(ctx, offsetX, offsetY, exportCell, lightEnabled);
 
     const fileName = `finished-preview-${gridWidth}x${gridHeight}-${Date.now()}.png`;
     const url = canvas.toDataURL('image/png');
@@ -256,7 +219,7 @@ export const FinishedPreview: React.FC<FinishedPreviewProps> = ({
     setExportUrl(url);
     setExportName(fileName);
     setExportOpen(true);
-  }, [stageSize, cellSize, artWidth, artHeight, artX, artY, drawArt, shadowEnabled, gridWidth, gridHeight, exportUrl]);
+  }, [stageSize, cellSize, artWidth, artHeight, artX, artY, drawArt, lightEnabled, gridWidth, gridHeight, exportUrl]);
 
   const handleDownload = useCallback(() => {
     if (!exportUrl) return;
@@ -300,11 +263,11 @@ export const FinishedPreview: React.FC<FinishedPreviewProps> = ({
           <label className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-xl cursor-pointer touch-manipulation">
             <input
               type="checkbox"
-              checked={shadowEnabled}
-              onChange={(e) => setShadowEnabled(e.target.checked)}
+              checked={lightEnabled}
+              onChange={(e) => setLightEnabled(e.target.checked)}
               className="w-4 h-4 accent-indigo-600"
             />
-            <span className="text-xs font-black text-slate-700">阴影</span>
+            <span className="text-xs font-black text-slate-700">光照</span>
           </label>
         </div>
 
