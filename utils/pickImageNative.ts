@@ -11,7 +11,8 @@ function isUserDenied(message: string): boolean {
 
 /**
  * 原生端单张选图：系统弹窗可选「相册」或「拍照」。
- * 使用 Uri：避免 DataUrl 大图内存问题；webPath 可在 WebView 中直接作 img.src。
+ * 使用 DataUrl：选中的图片既能在 WebView 中预览，也能作为图生图参考数据
+ * 直接上传给服务端。iOS 的 webPath 只是本地 WebView 路径，无法被上游服务读取。
  */
 export async function pickSingleImageNative(): Promise<string | null> {
   if (!Capacitor.isNativePlatform()) return null;
@@ -20,7 +21,8 @@ export async function pickSingleImageNative(): Promise<string | null> {
     const photo = await Camera.getPhoto({
       quality: 90,
       allowEditing: false,
-      resultType: CameraResultType.Uri,
+      resultType: CameraResultType.DataUrl,
+      width: 1600,
       source: CameraSource.Prompt,
       correctOrientation: true,
       promptLabelHeader: '选择图片来源',
@@ -28,7 +30,7 @@ export async function pickSingleImageNative(): Promise<string | null> {
       promptLabelPicture: '拍照',
       promptLabelCancel: '取消',
     });
-    return photo.webPath ?? null;
+    return photo.dataUrl ?? null;
   } catch (e: unknown) {
     const message =
       e && typeof e === 'object' && 'message' in e && typeof (e as { message: unknown }).message === 'string'

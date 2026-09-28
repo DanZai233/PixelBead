@@ -70,7 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const apiKey = process.env.PIXELBEAD_AI_API_KEY;
-  const baseUrl = (process.env.PIXELBEAD_AI_API_BASE || 'https://ark.cn-beijing.volces.com/api/v3').replace(//$/, '');
+  const baseUrl = (process.env.PIXELBEAD_AI_API_BASE || 'https://ark.cn-beijing.volces.com/api/v3').replace(/\/$/, '');
   const model = process.env.PIXELBEAD_AI_IMAGE_MODEL || 'doubao-seedream-5-0-260128';
 
   if (!apiKey?.trim()) {
