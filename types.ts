@@ -198,3 +198,13 @@ export const BRUSH_SIZES = [
   { value: 4, name: '4x4' },
   { value: 5, name: '5x5' },
 ];
+
+/** 对称绘制模式：水平镜像 / 垂直镜像 / 四象限 */
+export type SymmetryMode = 'none' | 'horizontal' | 'vertical' | 'both';
+
+export const SYMMETRY_MODES: Array<{ value: SymmetryMode; name: string; icon: string }> = [
+  { value: 'none', name: '关闭', icon: '⛔' },
+  { value: 'horizontal', name: '左右', icon: '↔️' },
+  { value: 'vertical', name: '上下', icon: '↕️' },
+  { value: 'both', name: '四向', icon: '✳️' },
+];

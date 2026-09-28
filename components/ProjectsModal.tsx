@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SavedProject } from '../utils/projectStorage';
+import { EmptyState } from './EmptyState';
 import {
   createProjectThumbnail,
   getProjectThumbnail,
@@ -602,15 +603,25 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
           )}
 
           {projects.length === 0 ? (
-            <div className="rounded-3xl border-2 border-dashed border-slate-200 px-6 py-14 text-center">
-              <p className="text-sm font-black text-slate-700">还没有保存的作品</p>
-              <p className="mt-1 text-xs text-slate-500">画到一半也可以先保存，下次打开继续画。</p>
-            </div>
+            <EmptyState
+              icon="🗂️"
+              title="还没有保存的作品"
+              description="画到一半也可以先保存，下次打开继续画。"
+              actionLabel="导入作品文件"
+              onAction={() => importInputRef.current?.click()}
+            />
           ) : filteredProjects.length === 0 ? (
-            <div className="rounded-3xl border-2 border-dashed border-slate-200 px-6 py-14 text-center">
-              <p className="text-sm font-black text-slate-700">没有找到匹配的作品</p>
-              <p className="mt-1 text-xs text-slate-500">试试其他关键词，或清空搜索查看全部作品。</p>
-            </div>
+            <EmptyState
+              icon="🔍"
+              title="没有找到匹配的作品"
+              description="试试其他关键词，或清空筛选查看全部作品。"
+              actionLabel="清空筛选"
+              onAction={() => {
+                setSearchDraft('');
+                setFavoritesOnly(false);
+                setActiveTag(null);
+              }}
+            />
           ) : (
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
               {filteredProjects.map(project => (

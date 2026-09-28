@@ -88,6 +88,8 @@ export interface ExportImageData {
   mirror?: boolean;
   watermarkEnabled?: boolean;
   watermarkText?: string;
+  startRow?: number;
+  startCol?: number;
 }
 
 function loadLogo(): Promise<HTMLImageElement> {
@@ -100,7 +102,7 @@ function loadLogo(): Promise<HTMLImageElement> {
 }
 
 export async function generateExportImage(data: ExportImageData): Promise<HTMLCanvasElement> {
-  const { grid, gridWidth, gridHeight, pixelStyle, colorSystem, colorSystemMapping, showGuideLines, mirror, watermarkEnabled, watermarkText } = data;
+  const { grid, gridWidth, gridHeight, pixelStyle, colorSystem, colorSystemMapping, showGuideLines, mirror, watermarkEnabled, watermarkText, startRow = 0, startCol = 0 } = data;
   
   const mirroredGrid = mirror ? grid.map(row => [...row].reverse()) : grid;
   const uniqueColors = getUniqueColors(mirroredGrid);
@@ -210,7 +212,7 @@ export async function generateExportImage(data: ExportImageData): Promise<HTMLCa
     ctx.fillStyle = isEven ? '#FFFFFF' : '#000000';
     ctx.fillRect(x, gridOffsetY - rulerSize, cellSize, rulerSize);
     ctx.fillStyle = isEven ? '#000000' : '#FFFFFF';
-    ctx.fillText(col.toString(), x + cellSize / 2, gridOffsetY - rulerSize / 2);
+    ctx.fillText((startCol + col).toString(), x + cellSize / 2, gridOffsetY - rulerSize / 2);
   }
   
   ctx.font = '9px Arial';
@@ -223,7 +225,7 @@ export async function generateExportImage(data: ExportImageData): Promise<HTMLCa
     ctx.fillStyle = isEven ? '#FFFFFF' : '#000000';
     ctx.fillRect(gridOffsetX - rulerSize, y, rulerSize, cellSize);
     ctx.fillStyle = isEven ? '#000000' : '#FFFFFF';
-    ctx.fillText(row.toString(), gridOffsetX - rulerSize / 2, y + cellSize / 2);
+    ctx.fillText((startRow + row).toString(), gridOffsetX - rulerSize / 2, y + cellSize / 2);
   }
   
   for (let row =0; row < gridHeight; row++) {

@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import {
   ToolType, DEFAULT_COLORS, PixelStyle,
   TOOLS_INFO, MOBILE_2D_DOCK_TOOLS, PIXEL_STYLES, ColorHex, ViewType, VIEW_TYPES,
-  ColorSystem, PaletteColor, PALETTE_PRESETS, Selection, BRUSH_SIZES, ToolInfo, SELECTION_MODES
+  ColorSystem, PaletteColor, PALETTE_PRESETS, Selection, BRUSH_SIZES, ToolInfo, SELECTION_MODES, SYMMETRY_MODES
 } from './types';
 import { generatePixelArtImage } from './services/aiService';
 import {
@@ -116,6 +116,8 @@ const AppMain: React.FC = () => {
     selectionMode, setSelectionMode, handleSelectionChange, handleDeselect,
     handleSelectionMoveStart, handleSelectionMove, handleSelectionMoveEnd,
     wandTolerance, setWandTolerance, wandContiguous, setWandContiguous,
+    symmetryMode, setSymmetryMode,
+    handleRotateGrid, handleFlipGrid, handleScaleGrid,
     handleDetectBackground, handleInvertSelectionArea,
     handleCopySelection, handleCutSelection, handlePasteSelection,
     handleInvertSelection, handleExcludeColorFromSelection, handleClearSelection,
@@ -141,6 +143,7 @@ const AppMain: React.FC = () => {
     exportPreviewName, setExportPreviewName,
     handleExportImage, handleConfirmExport,
     handleShareImageExport,
+    isExportingPdf, isExportingSvg, handleExportPdf, handleExportSvg,
     isSharing, setIsSharing, shareUrl, setShareUrl,
     shareModalOpen, setShareModalOpen,
     shareLinkImportOpen, setShareLinkImportOpen,
@@ -185,6 +188,17 @@ const AppMain: React.FC = () => {
     ownedColors, toggleOwnedColor, addOwnedColor, clearOwnedColors, addCanvasColors,
     ownedOnlyMode, setOwnedOnlyMode, ownedGuideDismissed, dismissOwnedGuide,
   } = useEditor(toast);
+
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const savedTheme = localStorage.getItem('pixelbead_theme');
+    if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('pixelbead_theme', theme);
+  }, [theme]);
 
   const { history, addToHistory, removeFromHistory, clearHistory } = useGenerationHistory();
 
@@ -599,6 +613,13 @@ const AppMain: React.FC = () => {
 
           <div className="flex items-center gap-1 md:gap-1.5 lg:gap-2">
             <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="shrink-0 p-1.5 md:p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all touch-manipulation"
+              title={theme === 'dark' ? '切换亮色模式' : '切换暗色模式'}
+            >
+              <span className="block w-4 h-4 md:w-5 md:h-5 text-base leading-none md:text-lg">{theme === 'dark' ? '☀️' : '🌙'}</span>
+            </button>
+            <button
               onClick={undo}
               disabled={!canUndo}
               className="shrink-0 p-1.5 md:p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
@@ -863,6 +884,37 @@ const AppMain: React.FC = () => {
                   {size.value}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm space-y-3">
+            <div className="flex justify-between items-center">
+              <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">画布编辑</h2>
+              <span className="text-[9px] text-slate-400">{gridWidth}×{gridHeight}</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <button onClick={() => handleRotateGrid('cw')} className="py-2 rounded-lg bg-slate-50 text-[10px] font-black text-slate-500 hover:bg-slate-100" title="顺时针旋转">↻</button>
+              <button onClick={() => handleRotateGrid('ccw')} className="py-2 rounded-lg bg-slate-50 text-[10px] font-black text-slate-500 hover:bg-slate-100" title="逆时针旋转">↺</button>
+              <button onClick={() => handleFlipGrid('horizontal')} className="py-2 rounded-lg bg-slate-50 text-[10px] font-black text-slate-500 hover:bg-slate-100" title="水平翻转">↔️</button>
+              <button onClick={() => handleFlipGrid('vertical')} className="py-2 rounded-lg bg-slate-50 text-[10px] font-black text-slate-500 hover:bg-slate-100" title="垂直翻转">↕️</button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[0.5, 1.5, 2].map(factor => (
+                <button key={factor} onClick={() => handleScaleGrid(factor)} className="py-2 rounded-lg bg-slate-50 text-[10px] font-black text-slate-500 hover:bg-slate-100">
+                  {factor}x
+                </button>
+              ))}
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-2">对称绘制</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {SYMMETRY_MODES.map(mode => (
+                  <button key={mode.value} onClick={() => setSymmetryMode(mode.value)} className={`py-2 rounded-lg text-[9px] font-black transition-all ${symmetryMode === mode.value ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}>
+                    <span className="block">{mode.icon}</span>
+                    {mode.name}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -2341,6 +2393,23 @@ const AppMain: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 导出图纸
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => void handleExportPdf()}
+                disabled={isExportingPdf}
+                className="py-3 md:py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl md:rounded-2xl font-black text-sm shadow-lg active:scale-95 transition-all disabled:opacity-60"
+              >
+                {isExportingPdf ? '生成中...' : '多页 PDF 图纸'}
+              </button>
+              <button
+                onClick={() => void handleExportSvg()}
+                disabled={isExportingSvg}
+                className="py-3 md:py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl md:rounded-2xl font-black text-sm shadow-lg active:scale-95 transition-all disabled:opacity-60"
+              >
+                {isExportingSvg ? '生成中...' : 'SVG 矢量图纸'}
               </button>
             </div>
 

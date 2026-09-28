@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import {
   ToolType, DEFAULT_COLORS, PixelStyle,
   TOOLS_INFO, ColorHex, ViewType,
-  ColorSystem, PaletteColor, Selection, SelectionMode, BRUSH_SIZES,
+  ColorSystem, PaletteColor, Selection, SelectionMode, BRUSH_SIZES, SymmetryMode,
 } from '../types';
 import { generatePixelArtImage } from '../services/aiService';
 import {
@@ -22,6 +22,8 @@ import {
 } from '../utils/colorSystemUtils';
 import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from '../utils/colorUtils';
 import { addOuterBlackOutline } from '../utils/outlineUtils';
+import { flipGridHorizontal, flipGridVertical, mirrorCell, rotateGridClockwise, rotateGridCounterClockwise, scaleGrid } from '../utils/gridTransforms';
+import { generateMultiPagePdf, generateSvgExport } from '../utils/exportUtils';
 import { useEditorPalette } from './useEditorPalette';
 import { wandSelectCells, getSelectionCellSet, mergeSelectionCells, detectBackgroundCells, invertSelectionCells, selectionFromCells, moveSelectionContent } from '../utils/selectionUtils';
 import colorSystemMapping from '../colorSystemMapping.json';
@@ -119,6 +121,8 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [exportSelectionOnly, setExportSelectionOnly] = useState(false);
   const [exportWatermarkEnabled, setExportWatermarkEnabled] = useState(false);
   const [exportWatermarkText, setExportWatermarkText] = useState('拼豆糕手');
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingSvg, setIsExportingSvg] = useState(false);
   // ── Share & Material Gallery State ──
   const [exportPreviewUrl, setExportPreviewUrl] = useState<string | null>(null);
   const [exportPreviewBlob, setExportPreviewBlob] = useState<Blob | null>(null);
@@ -144,6 +148,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('add');
   const [clipboard, setClipboard] = useState<string[][] | null>(null);
   const [brushSize, setBrushSize] = useState(1);
+  const [symmetryMode, setSymmetryMode] = useState<SymmetryMode>('none');
   const [wandTolerance, setWandTolerance] = useState(5);
   const [wandContiguous, setWandContiguous] = useState(true);
 
@@ -992,7 +997,10 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
       let shouldDraw = false;
 
       if (currentTool === ToolType.PENCIL || currentTool === ToolType.SMART_PENCIL) {
-        for (const [r, c] of cellsToDraw) {
+        const targetCells = cellsToDraw.flatMap(([r, c]) =>
+          symmetryMode === 'none' ? [[r, c] as [number, number]] : mirrorCell(r, c, symmetryMode, gridWidth, gridHeight)
+        );
+        for (const [r, c] of targetCells) {
           if (r >= 0 && r < gridHeight && c >= 0 && c < gridWidth) {
             if (newGrid[r][c] !== colorToUse) {
               shouldDraw = true;
@@ -1002,7 +1010,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
         }
         if (!shouldDraw) return prev;
         pushUndo(prev);
-        for (const [r, c] of cellsToDraw) {
+        for (const [r, c] of targetCells) {
           if (r >= 0 && r < gridHeight && c >= 0 && c < gridWidth) {
             newGrid[r][c] = colorToUse;
           }
@@ -1041,7 +1049,40 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
       }
       return newGrid;
     });
-  }, [selectedColor, currentTool, gridWidth, gridHeight, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo, selectedColorSystem, brushSize, wandTolerance, wandContiguous, selection, selectionMode, pushSelectionHistory]);
+  }, [selectedColor, currentTool, gridWidth, gridHeight, grid, shapeStart, getLineCells, getRectCells, getCircleCells, pushUndo, selectedColorSystem, brushSize, wandTolerance, wandContiguous, selection, selectionMode, pushSelectionHistory, symmetryMode]);
+
+  const handleRotateGrid = useCallback((direction: 'cw' | 'ccw') => {
+    const nextGrid = direction === 'cw' ? rotateGridClockwise(gridRef.current) : rotateGridCounterClockwise(gridRef.current);
+    pushUndo(gridRef.current);
+    setGrid(nextGrid);
+    setGridWidth(gridHeight);
+    setGridHeight(gridWidth);
+    setSelection(null);
+    toast(direction === 'cw' ? '已顺时针旋转画布' : '已逆时针旋转画布', 'success');
+  }, [gridWidth, gridHeight, pushUndo]);
+
+  const handleFlipGrid = useCallback((direction: 'horizontal' | 'vertical') => {
+    const nextGrid = direction === 'horizontal' ? flipGridHorizontal(gridRef.current) : flipGridVertical(gridRef.current);
+    pushUndo(gridRef.current);
+    setGrid(nextGrid);
+    toast(direction === 'horizontal' ? '已水平翻转画布' : '已垂直翻转画布', 'success');
+  }, [pushUndo]);
+
+  const handleScaleGrid = useCallback((factor: number) => {
+    const nextWidth = Math.min(200, Math.max(4, Math.round(gridWidth * factor)));
+    const nextHeight = Math.min(200, Math.max(4, Math.round(gridHeight * factor)));
+    if (nextWidth === gridWidth && nextHeight === gridHeight) {
+      toast('画布尺寸已经是目标大小', 'info');
+      return;
+    }
+    const nextGrid = scaleGrid(gridRef.current, nextWidth, nextHeight);
+    pushUndo(gridRef.current);
+    setGrid(nextGrid);
+    setGridWidth(nextWidth);
+    setGridHeight(nextHeight);
+    setSelection(null);
+    toast(`画布已缩放为 ${nextWidth}×${nextHeight}`, 'success');
+  }, [gridWidth, gridHeight, pushUndo]);
 
   const handleMiddleButtonDrag = useCallback((deltaX: number, deltaY: number) => {
     setPanOffset(prev => ({
@@ -1331,6 +1372,67 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     setExportModalOpen(false);
   }, [grid, gridWidth, gridHeight, exportPixelStyle]);
 
+  const saveExportFile = useCallback(async (blob: Blob, fileName: string) => {
+    try {
+      const file = new File([blob], fileName, { type: blob.type });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file] });
+        return;
+      }
+    } catch { /* fall back to download below */ }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const handleExportPdf = useCallback(async () => {
+    setIsExportingPdf(true);
+    try {
+      const blob = await generateMultiPagePdf({
+        grid, gridWidth, gridHeight, pixelStyle: exportPixelStyle,
+        colorSystem: selectedColorSystem,
+        colorSystemMapping: colorSystemMapping as Record<string, Record<string, string>>,
+        showGuideLines: exportShowGuideLines,
+        mirror: exportMirror,
+        watermarkEnabled: exportWatermarkEnabled,
+        watermarkText: exportWatermarkText,
+      });
+      await saveExportFile(blob, `pixel-bead-${gridWidth}x${gridHeight}-pages.pdf`);
+      toast('多页 PDF 图纸已生成', 'success');
+      setExportModalOpen(false);
+    } catch (error) {
+      console.error(error);
+      toast('PDF 导出失败，请重试', 'error');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }, [grid, gridWidth, gridHeight, exportPixelStyle, selectedColorSystem, exportShowGuideLines, exportMirror, exportWatermarkEnabled, exportWatermarkText, saveExportFile]);
+
+  const handleExportSvg = useCallback(async () => {
+    setIsExportingSvg(true);
+    try {
+      const blob = generateSvgExport({
+        grid, gridWidth, gridHeight, pixelStyle: exportPixelStyle,
+        colorSystem: selectedColorSystem,
+        colorSystemMapping: colorSystemMapping as Record<string, Record<string, string>>,
+        showGuideLines: exportShowGuideLines,
+        mirror: exportMirror,
+      });
+      await saveExportFile(blob, `pixel-bead-${gridWidth}x${gridHeight}.svg`);
+      toast('SVG 矢量图纸已导出', 'success');
+      setExportModalOpen(false);
+    } catch (error) {
+      console.error(error);
+      toast('SVG 导出失败，请重试', 'error');
+    } finally {
+      setIsExportingSvg(false);
+    }
+  }, [grid, gridWidth, gridHeight, exportPixelStyle, selectedColorSystem, exportShowGuideLines, exportMirror, saveExportFile]);
+
   const baseBeadSize = 28;
   const boardDimension = Math.max(gridWidth, gridHeight) * (baseBeadSize * (zoom / 100));
 
@@ -1544,6 +1646,8 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     selectionMode, setSelectionMode, handleSelectionChange, handleDeselect,
     handleSelectionMoveStart, handleSelectionMove, handleSelectionMoveEnd,
     wandTolerance, setWandTolerance, wandContiguous, setWandContiguous,
+    symmetryMode, setSymmetryMode,
+    handleRotateGrid, handleFlipGrid, handleScaleGrid,
     handleDetectBackground, handleInvertSelectionArea,
     handleCopySelection, handleCutSelection, handlePasteSelection,
     handleInvertSelection, handleExcludeColorFromSelection, handleClearSelection,
@@ -1569,6 +1673,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     exportPreviewName, setExportPreviewName,
     handleExportImage, handleConfirmExport,
     handleShareImageExport,
+    isExportingPdf, isExportingSvg, handleExportPdf, handleExportSvg,
     isSharing, setIsSharing, shareUrl, setShareUrl,
     shareModalOpen, setShareModalOpen,
     shareLinkImportOpen, setShareLinkImportOpen,
