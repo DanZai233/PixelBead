@@ -166,6 +166,7 @@ const AppMain: React.FC = () => {
     paletteGroups, paletteColors, allColors, getColorKey, displayStats, mappingRows, handleReplaceMappingColor,
     colorSystemOptions,
     handleMergeSimilarColors, handleMapToPalette, handlePalettePresetChange, handleRemoveBackground, handleRestoreSelection,
+    handleAddOuterOutline,
     handleResize, handleCustomSize, resetGrid,
     joystickMove, setJoystickMove, joystickZoom, setJoystickZoom,
     joystickMoveRef, joystickZoomRef,
@@ -1179,6 +1180,20 @@ const AppMain: React.FC = () => {
                 )}
               </div>
             )}
+          </div>
+
+          <div className="bg-slate-900 rounded-3xl p-4 md:p-5 text-white shadow-xl space-y-2 md:space-y-3">
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-300">自动描边</h2>
+            <button
+              type="button"
+              onClick={handleAddOuterOutline}
+              className="w-full py-2 md:py-2.5 bg-white text-slate-900 rounded-xl font-black text-xs transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
+            >
+              ⚫ 添加外层黑色描边
+            </button>
+            <p className="text-[8px] text-white/60 leading-relaxed">
+              只沿作品外轮廓补一圈黑色豆，不填充内部镂空，也不覆盖已有颜色。可用 Ctrl+Z 撤销。
+            </p>
           </div>
 
           <div className="bg-purple-600 rounded-3xl p-4 md:p-5 text-white shadow-xl space-y-2 md:space-y-3">

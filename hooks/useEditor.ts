@@ -21,6 +21,7 @@ import {
   findClosestColor,
 } from '../utils/colorSystemUtils';
 import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from '../utils/colorUtils';
+import { addOuterBlackOutline } from '../utils/outlineUtils';
 import { useEditorPalette } from './useEditorPalette';
 import { wandSelectCells, getSelectionCellSet, mergeSelectionCells, detectBackgroundCells, invertSelectionCells, selectionFromCells, moveSelectionContent } from '../utils/selectionUtils';
 import colorSystemMapping from '../colorSystemMapping.json';
@@ -1410,6 +1411,24 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     setGrid(newGrid);
   }, [grid, selection, gridWidth, gridHeight, pushUndo]);
 
+  const handleAddOuterOutline = useCallback(() => {
+    const hasContent = grid.some(row => row.some(color => color !== '#FFFFFF'));
+    if (!hasContent) {
+      toast('画布为空，无法添加描边', 'error');
+      return;
+    }
+
+    const { grid: outlinedGrid, addedCount } = addOuterBlackOutline(grid);
+    if (addedCount === 0) {
+      toast('没有可添加外描边的空白位置', 'info');
+      return;
+    }
+
+    pushUndo(gridRef.current);
+    setGrid(outlinedGrid);
+    toast(`已添加外描边，新增 ${addedCount} 颗黑色豆`, 'success');
+  }, [grid, pushUndo]);
+
   const closeImportResultModal = useCallback(() => setImportResultModalOpen(false), []);
 
   const handleImportMapPalette = useCallback((maxColors: number) => {
@@ -1575,6 +1594,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     paletteGroups, paletteColors, allColors, getColorKey, displayStats, mappingRows, handleReplaceMappingColor,
     colorSystemOptions,
     handleMergeSimilarColors, handleMapToPalette, handlePalettePresetChange, handleRemoveBackground, handleRestoreSelection,
+    handleAddOuterOutline,
     handleResize, handleCustomSize, resetGrid,
     joystickMove, setJoystickMove, joystickZoom, setJoystickZoom,
     joystickMoveRef, joystickZoomRef,
