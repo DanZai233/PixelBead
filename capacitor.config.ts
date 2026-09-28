@@ -5,9 +5,9 @@ const config: CapacitorConfig = {
   appName: '拼豆糕手',
   webDir: 'dist',
   ios: {
-    contentInset: 'automatic',
+    contentInset: 'never',
     preferredContentMode: 'mobile',
-    scrollEnabled: true,
+    scrollEnabled: false,
   },
   server: {
     allowNavigation: [

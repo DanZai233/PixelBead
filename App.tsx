@@ -38,6 +38,17 @@ import { AdminPanel } from './components/AdminPanel';
 import { VirtualJoystick } from './components/VirtualJoystick';
 import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from './utils/colorUtils';
 import {
+  SavedProject,
+  createProjectId,
+  duplicateProject,
+  loadProjects,
+  normalizeProjectName,
+  parseProjectFile,
+  saveProjects,
+  shareProjectFile,
+} from './utils/projectStorage';
+import { ProjectsModal } from './components/ProjectsModal';
+import {
   mergeSimilarColors,
   mapColorsToPalette,
   createPaletteFromGrid,
@@ -173,6 +184,170 @@ const AppMain: React.FC = () => {
 
   const { history, addToHistory, removeFromHistory, clearHistory } = useGenerationHistory();
 
+  const [projects, setProjects] = useState<SavedProject[]>(() => loadProjects());
+  const [projectsModalOpen, setProjectsModalOpen] = useState(false);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [currentProjectName, setCurrentProjectName] = useState('未命名作品');
+
+  const persistProjects = useCallback((nextProjects: SavedProject[]) => {
+    const succeeded = saveProjects(nextProjects);
+    setProjects(nextProjects);
+    if (!succeeded) toast('保存失败：本地存储空间不足，请删除部分作品后重试。', 'error');
+    return succeeded;
+  }, [toast]);
+
+  const handleSaveProject = useCallback((rawName: string) => {
+    const name = normalizeProjectName(rawName);
+    const now = Date.now();
+
+    if (activeProjectId) {
+      const existing = projects.find(project => project.id === activeProjectId);
+      if (!existing) {
+        toast('找不到当前作品，请使用「另存新作品」。', 'error');
+        return;
+      }
+
+      const nextProjects = projects.map(project => project.id === activeProjectId ? {
+        ...project,
+        name,
+        grid: grid.map(row => [...row]),
+        gridWidth,
+        gridHeight,
+        pixelStyle,
+        selectedColor,
+        zoom,
+        backgroundImage,
+        updatedAt: now,
+      } : project);
+
+      if (persistProjects(nextProjects)) {
+        setCurrentProjectName(name);
+        toast('作品进度已保存。', 'success');
+      }
+      return;
+    }
+
+    const project: SavedProject = {
+      id: createProjectId(),
+      name,
+      grid: grid.map(row => [...row]),
+      gridWidth,
+      gridHeight,
+      pixelStyle,
+      selectedColor,
+      zoom,
+      backgroundImage,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    if (persistProjects([project, ...projects])) {
+      setActiveProjectId(project.id);
+      setCurrentProjectName(project.name);
+      toast('作品已保存，下次可从「我的作品」继续。', 'success');
+    }
+  }, [
+    activeProjectId,
+    backgroundImage,
+    grid,
+    gridHeight,
+    gridWidth,
+    persistProjects,
+    pixelStyle,
+    projects,
+    selectedColor,
+    zoom,
+  ]);
+
+  const handleSaveProjectAsNew = useCallback((rawName: string) => {
+    const name = normalizeProjectName(rawName);
+    const now = Date.now();
+    const project: SavedProject = {
+      id: createProjectId(),
+      name,
+      grid: grid.map(row => [...row]),
+      gridWidth,
+      gridHeight,
+      pixelStyle,
+      selectedColor,
+      zoom,
+      backgroundImage,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    if (persistProjects([project, ...projects])) {
+      setActiveProjectId(project.id);
+      setCurrentProjectName(project.name);
+      toast('已另存为新作品。', 'success');
+    }
+  }, [
+    backgroundImage,
+    grid,
+    gridHeight,
+    gridWidth,
+    persistProjects,
+    pixelStyle,
+    projects,
+    selectedColor,
+    zoom,
+  ]);
+
+  const handleOpenProject = useCallback((project: SavedProject) => {
+    setGrid(project.grid.map(row => [...row]));
+    setGridWidth(project.gridWidth);
+    setGridHeight(project.gridHeight);
+    setPixelStyle(project.pixelStyle);
+    setSelectedColor(project.selectedColor);
+    setZoom(project.zoom);
+    setPanOffset({ x: 0, y: 0 });
+    setBackgroundImage(project.backgroundImage);
+    setSelection(null);
+    setActiveProjectId(project.id);
+    setCurrentProjectName(project.name);
+    setProjectsModalOpen(false);
+    toast('作品已打开，可以继续创作。', 'success');
+  }, [setGrid, setGridHeight, setGridWidth, setPixelStyle, setSelectedColor, setZoom, toast]);
+
+  const handleDuplicateProject = useCallback((project: SavedProject) => {
+    const copy = duplicateProject(project);
+    if (persistProjects([copy, ...projects])) toast('已创建作品副本。', 'success');
+  }, [persistProjects, projects]);
+
+  const handleRenameProject = useCallback((project: SavedProject, rawName: string) => {
+    const name = normalizeProjectName(rawName);
+    const nextProjects = projects.map(item => item.id === project.id
+      ? { ...item, name, updatedAt: Date.now() }
+      : item);
+    if (persistProjects(nextProjects) && project.id === activeProjectId) {
+      setCurrentProjectName(name);
+    }
+  }, [activeProjectId, persistProjects, projects]);
+
+  const handleDeleteProject = useCallback((project: SavedProject) => {
+    if (!confirm(`确定删除「${project.name}」吗？删除后无法恢复。`)) return;
+    const nextProjects = projects.filter(item => item.id !== project.id);
+    if (persistProjects(nextProjects) && project.id === activeProjectId) {
+      setActiveProjectId(null);
+      setCurrentProjectName('未命名作品');
+    }
+  }, [activeProjectId, persistProjects, projects]);
+
+  const handleShareProjectFile = useCallback(async (project: SavedProject) => {
+    const result = await shareProjectFile(project);
+    if (result === 'shared') return;
+    toast('已生成作品文件。', 'success');
+  }, [toast]);
+
+  const handleImportProjectFile = useCallback(async (file: File) => {
+    try {
+      const project = parseProjectFile(await file.text());
+      if (persistProjects([project, ...projects])) toast('作品文件已导入。', 'success');
+    } catch {
+      toast('导入失败：不是有效的拼豆作品文件。', 'error');
+    }
+  }, [persistProjects, projects, toast]);
+
   // Auto-save to history when AI generates
   const prevGeneratedRef = useRef<string | null>(null);
   useEffect(() => {
@@ -211,7 +386,7 @@ const AppMain: React.FC = () => {
   }, [showAIResultModal, tryShow]);
 
   return (
-    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-[#F1F5F9] text-slate-900 select-none overflow-hidden h-screen max-lg:h-[100dvh] max-lg:max-h-[100dvh]">
+    <div className="h-full flex flex-col bg-[#F1F5F9] text-slate-900 select-none overflow-hidden">
       <header className="bg-white border-b border-slate-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between gap-2 z-[100] shadow-sm shrink-0 overflow-x-auto overflow-y-hidden no-scrollbar">
         <div className="flex items-center gap-2 md:gap-3">
           <button 
@@ -461,6 +636,29 @@ const AppMain: React.FC = () => {
               <input type="number" min="4" max="200" value={customHeight} onChange={(e) => setCustomHeight(e.target.value)} placeholder="高" className="flex-1 px-2 py-2 text-xs font-black text-center border border-slate-200 rounded-lg outline-none focus:border-indigo-500" />
               <button onClick={() => { handleCustomSize(); setIsMobileLeftOpen(false); }} className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-black">确定</button>
             </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">当前作品</p>
+                <p className="mt-0.5 truncate text-sm font-black text-slate-900" title={currentProjectName}>
+                  {currentProjectName}
+                </p>
+              </div>
+              <button
+                onClick={() => setProjectsModalOpen(true)}
+                className="shrink-0 px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-black active:scale-95 transition-all"
+              >
+                我的作品
+              </button>
+            </div>
+            <button
+              onClick={() => handleSaveProject(currentProjectName)}
+              className="mt-2 w-full py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-black active:scale-95 transition-all"
+            >
+              {activeProjectId ? '保存当前进度' : '保存为新作品'}
+            </button>
           </div>
 
           <div className="space-y-3 md:hidden">
@@ -1390,30 +1588,36 @@ const AppMain: React.FC = () => {
               </div>
             </div>
           )}
-          <div className="flex items-center justify-around px-2 py-1.5">
-            <button onClick={handleExportImage} className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+          <div className="flex items-center justify-around px-1 py-1.5">
+            <button onClick={handleExportImage} className="flex flex-1 flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
               <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               <span className="text-[9px] font-bold text-slate-600">导出</span>
             </button>
-            <button onClick={handleShare} disabled={isSharing} className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation disabled:opacity-50">
+            <button onClick={handleShare} disabled={isSharing} className="flex flex-1 flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation disabled:opacity-50">
               <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
               <span className="text-[9px] font-bold text-slate-600">{isSharing ? '生成中' : '分享'}</span>
             </button>
-            <button type="button" onClick={() => setShareLinkImportOpen(true)} className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+            <button type="button" onClick={() => setShareLinkImportOpen(true)} className="flex flex-1 flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
               <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
               <span className="text-[9px] font-bold text-slate-600">链接</span>
             </button>
-            <button onClick={() => setMaterialGalleryOpen(true)} className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+            <button onClick={() => setMaterialGalleryOpen(true)} className="flex flex-1 flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
               <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
               <span className="text-[9px] font-bold text-slate-600">广场</span>
             </button>
-            <button onClick={() => setIsPlannerViewOpen(true)} className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+            <button onClick={() => setIsPlannerViewOpen(true)} className="flex flex-1 flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
               <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               <span className="text-[9px] font-bold text-slate-600">拼豆</span>
             </button>
-            <button onClick={() => setHelpModalOpen(true)} className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+            <button onClick={() => setHelpModalOpen(true)} className="flex flex-1 flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
               <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               <span className="text-[9px] font-bold text-slate-600">帮助</span>
+            </button>
+            <button onClick={() => setProjectsModalOpen(true)} className="flex flex-1 flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+              <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7a2 2 0 012-2h3.586a2 2 0 011.414.586L11.414 7H19a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+              </svg>
+              <span className="text-[9px] font-bold text-slate-600">作品</span>
             </button>
           </div>
         </div>
@@ -2060,6 +2264,24 @@ const AppMain: React.FC = () => {
           clearOwnedColors={clearOwnedColors}
           ownedOnlyMode={ownedOnlyMode}
           setOwnedOnlyMode={setOwnedOnlyMode}
+        />
+      )}
+
+      {projectsModalOpen && (
+        <ProjectsModal
+          projects={projects}
+          activeProjectId={activeProjectId}
+          currentName={currentProjectName}
+          currentCanvasSize={`${gridWidth} × ${gridHeight}`}
+          onClose={() => setProjectsModalOpen(false)}
+          onOpenProject={handleOpenProject}
+          onSaveCurrent={handleSaveProject}
+          onSaveAsNew={handleSaveProjectAsNew}
+          onDuplicate={handleDuplicateProject}
+          onRename={handleRenameProject}
+          onDelete={handleDeleteProject}
+          onShareFile={handleShareProjectFile}
+          onImportFile={handleImportProjectFile}
         />
       )}
 
