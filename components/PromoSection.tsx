@@ -29,6 +29,22 @@ const promoLinks = [
     type: 'web' as const,
   },
   {
+    id: 'imuse',
+    title: 'Aicho Muse · 声创',
+    subtitle: 'AI 声音创作伴侣',
+    url: 'https://imuse.chat',
+    icon: 'https://imuse.chat/icon-192.png',
+    type: 'web' as const,
+  },
+  {
+    id: 'imuse-letter',
+    title: '缪斯信笺',
+    subtitle: '写一封信 · 听一声回音',
+    url: 'https://letter.imuse.chat',
+    icon: 'https://letter.imuse.chat/icon-192.png',
+    type: 'web' as const,
+  },
+  {
     id: 'color-danzai',
     title: '灵韵配色',
     subtitle: 'AI 配色灵感',
