@@ -437,7 +437,7 @@ export async function generateShareImage(data: ShareImageData): Promise<HTMLCanv
   const W = 1080;
   const padding = 60;
   const headerH = 160;
-  const footerH = 190;
+  const footerH = 220;
   const artArea = W - padding * 2;
   const cellSize = Math.floor(artArea / Math.max(gridWidth, gridHeight));
   const artW = gridWidth * cellSize;
@@ -543,7 +543,7 @@ export async function generateShareImage(data: ShareImageData): Promise<HTMLCanv
   ctx.stroke();
 
   // 底部二维码 + 引导文案，左右成组居中
-  const qrSize = 140;
+  const qrSize = 170;
   const qrGap = 28;
   const headline = '扫码获取完整图纸';
   const subline = 'pindou.danzaii.cn';

@@ -25,6 +25,8 @@ export interface CompressedSharePayload {
 }
 
 export const SHARE_EXPIRE_HOURS = 24 * 7;
+/** 分享图（小红书等长期展示场景）专用有效期：90 天，避免印在图上的二维码很快失效 */
+export const SHARE_IMAGE_EXPIRE_HOURS = 24 * 90;
 export const SHARE_MAX_JSON_BYTES = 1024 * 1024;
 
 export function compressShareGrid(grid: string[][]): { palette: string[]; rle: number[] } {

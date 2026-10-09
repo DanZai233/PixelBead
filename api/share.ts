@@ -26,7 +26,15 @@ interface CompressedSharePayload {
 }
 
 const SHARE_EXPIRE_HOURS = 24 * 7;
+/** 分享图等长期展示场景的上限：90 天（须与 lib/shareCodec.ts 保持一致） */
+const SHARE_IMAGE_EXPIRE_HOURS = 24 * 90;
 const SHARE_MAX_JSON_BYTES = 1024 * 1024;
+
+/** 将客户端请求的有效期夹取到允许范围，默认 7 天 */
+function resolveExpireHours(raw: unknown): number {
+  const h = typeof raw === 'number' && Number.isFinite(raw) ? raw : SHARE_EXPIRE_HOURS;
+  return Math.min(Math.max(Math.round(h), 1), SHARE_IMAGE_EXPIRE_HOURS);
+}
 
 function compressShareGrid(grid: string[][]): { palette: string[]; rle: number[] } {
   const colorToIdx = new Map<string, number>();
@@ -158,7 +166,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'POST') {
-      const { grid, gridWidth, gridHeight, pixelStyle } = req.body || {};
+      const { grid, gridWidth, gridHeight, pixelStyle, expireHours } = req.body || {};
       if (
         typeof gridWidth !== 'number' ||
         typeof gridHeight !== 'number' ||
@@ -178,6 +186,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const key = `bead:${Date.now()}:${Math.random().toString(36).substring(2, 9)}`;
       const now = Date.now();
+      const expire = resolveExpireHours(expireHours);
       const { palette, rle } = compressShareGrid(grid as string[][]);
       const compressed: CompressedSharePayload = {
         v: 2,
@@ -187,7 +196,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         gridHeight: h,
         pixelStyle: pixelStyle as ShareData['pixelStyle'],
         createdAt: now,
-        expiresAt: now + SHARE_EXPIRE_HOURS * 60 * 60 * 1000,
+        expiresAt: now + expire * 60 * 60 * 1000,
       };
       const dataStr = JSON.stringify(compressed);
       const byteLen = Buffer.byteLength(dataStr, 'utf8');
@@ -195,7 +204,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(413).json({ error: '数据过大' });
       }
 
-      await redis.set(key, dataStr, { ex: SHARE_EXPIRE_HOURS * 60 * 60 });
+      await redis.set(key, dataStr, { ex: expire * 60 * 60 });
       return res.status(201).json({ key });
     }
 

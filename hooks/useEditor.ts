@@ -21,6 +21,7 @@ import {
   findClosestColor,
 } from '../utils/colorSystemUtils';
 import { generateExportImage, generateShareImage, generateShareCaption, getUniqueColors } from '../utils/colorUtils';
+import { SHARE_IMAGE_EXPIRE_HOURS } from '../lib/shareCodec';
 import { addOuterBlackOutline } from '../utils/outlineUtils';
 import { flipGridHorizontal, flipGridVertical, mirrorCell, rotateGridClockwise, rotateGridCounterClockwise, scaleGrid } from '../utils/gridTransforms';
 import { generateMultiPagePdf, generateSvgExport } from '../utils/exportUtils';
@@ -1355,9 +1356,21 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   }, [grid, gridWidth, gridHeight, exportPixelStyle, exportShowGuideLines, exportMirror, selectedColorSystem, exportSelectionOnly, selection, exportWatermarkEnabled, exportWatermarkText]);
 
   const handleShareImageExport = useCallback(async () => {
+    // 生成分享图时顺带创建作品分享链接，让图上的二维码直达这张作品
+    let qrContent: string | undefined;
+    try {
+      const key = await saveToUpstash(grid, gridWidth, gridHeight, exportPixelStyle, {
+        expireHours: SHARE_IMAGE_EXPIRE_HOURS,
+      });
+      if (key) qrContent = generateShareUrl(key, 'https://pindou.danzaii.cn');
+    } catch (error) {
+      console.error('生成分享链接失败，二维码回退到官网:', error);
+    }
+
     const canvas = await generateShareImage({
       grid, gridWidth, gridHeight,
       pixelStyle: exportPixelStyle,
+      qrContent,
     });
     const fileName = `share-${gridWidth}x${gridHeight}.png`;
     const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'));

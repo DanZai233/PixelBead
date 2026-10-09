@@ -6,6 +6,7 @@ import {
   decompressShareGrid,
   jsonByteLength,
   SHARE_EXPIRE_HOURS,
+  SHARE_IMAGE_EXPIRE_HOURS,
   SHARE_MAX_JSON_BYTES,
   type CompressedSharePayload,
   type ShareData,
@@ -32,13 +33,23 @@ function apiBaseTrimmed(): string {
 
 export type { ShareData };
 
-const EXPIRE_SECONDS = SHARE_EXPIRE_HOURS * 60 * 60;
+export interface SaveShareOptions {
+  /** 链接有效期（小时）。默认 7 天；分享图等长期展示场景可传更长（上限 90 天） */
+  expireHours?: number;
+}
+
+/** 将请求的有效期夹取到允许范围内，默认 7 天 */
+function resolveExpireHours(hours?: number): number {
+  const h = typeof hours === 'number' && Number.isFinite(hours) ? hours : SHARE_EXPIRE_HOURS;
+  return Math.min(Math.max(Math.round(h), 1), SHARE_IMAGE_EXPIRE_HOURS);
+}
 
 async function saveShareViaHttpApi(
   grid: string[][],
   gridWidth: number,
   gridHeight: number,
-  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED'
+  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED',
+  expireHours: number,
 ): Promise<string | null> {
   const base = apiBaseTrimmed();
   if (!base) return null;
@@ -46,7 +57,7 @@ async function saveShareViaHttpApi(
     const res = await fetch(`${base}/api/share`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ grid, gridWidth, gridHeight, pixelStyle }),
+      body: JSON.stringify({ grid, gridWidth, gridHeight, pixelStyle, expireHours }),
     });
     if (!res.ok) {
       let detail = '';
@@ -84,7 +95,8 @@ async function saveShareDirectRedis(
   grid: string[][],
   gridWidth: number,
   gridHeight: number,
-  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED'
+  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED',
+  expireHours: number,
 ): Promise<string | null> {
   if (!hasDirectRedis) return null;
   try {
@@ -101,7 +113,7 @@ async function saveShareDirectRedis(
       gridHeight,
       pixelStyle,
       createdAt: now,
-      expiresAt: now + SHARE_EXPIRE_HOURS * 60 * 60 * 1000,
+      expiresAt: now + expireHours * 60 * 60 * 1000,
     };
 
     const dataStr = JSON.stringify(compressed);
@@ -113,7 +125,7 @@ async function saveShareDirectRedis(
     }
 
     await redis.set(key, dataStr, {
-      ex: EXPIRE_SECONDS,
+      ex: expireHours * 60 * 60,
     });
 
     return key;
@@ -163,18 +175,21 @@ export async function saveToUpstash(
   grid: string[][],
   gridWidth: number,
   gridHeight: number,
-  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED'
+  pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED',
+  options?: SaveShareOptions,
 ): Promise<string | null> {
+  const expireHours = resolveExpireHours(options?.expireHours);
+
   if (Capacitor.isNativePlatform()) {
-    const viaApi = await saveShareViaHttpApi(grid, gridWidth, gridHeight, pixelStyle);
+    const viaApi = await saveShareViaHttpApi(grid, gridWidth, gridHeight, pixelStyle, expireHours);
     if (viaApi) return viaApi;
-    return saveShareDirectRedis(grid, gridWidth, gridHeight, pixelStyle);
+    return saveShareDirectRedis(grid, gridWidth, gridHeight, pixelStyle, expireHours);
   }
 
   if (hasDirectRedis) {
-    return saveShareDirectRedis(grid, gridWidth, gridHeight, pixelStyle);
+    return saveShareDirectRedis(grid, gridWidth, gridHeight, pixelStyle, expireHours);
   }
-  return saveShareViaHttpApi(grid, gridWidth, gridHeight, pixelStyle);
+  return saveShareViaHttpApi(grid, gridWidth, gridHeight, pixelStyle, expireHours);
 }
 
 export async function loadFromUpstash(key: string): Promise<ShareData | null> {
