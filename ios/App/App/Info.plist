@@ -30,10 +30,6 @@
 	<string>当您主动将拼豆作品导出或保存为图片时，应用可将图片写入系统相册，方便您在微信、小红书等平台分享。除您确认的保存操作外，应用不会擅自向相册写入内容。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>拼豆糕手需要访问您的照片图库，以便您从相册中选取图片：将照片转换为拼豆像素网格图纸、作为「智能生成」功能的参考示意图、或导入为画布背景底图。例如：选择已保存的拼豆设计截图以继续编辑，或选用实拍照片生成图纸。</string>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
-	<key>UIMainStoryboardFile</key>
-	<string>Main</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -53,6 +49,10 @@
 			</array>
 		</dict>
 	</dict>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>
