@@ -1,4 +1,8 @@
 import { ColorHex } from '../types';
+import { drawQrToCanvas } from './qrCode';
+
+/** 分享图二维码指向的站点 */
+const SHARE_SITE_URL = 'https://pindou.danzaii.cn';
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -421,16 +425,19 @@ export interface ShareImageData {
   pixelStyle: 'CIRCLE' | 'SQUARE' | 'ROUNDED';
   title?: string;
   completedCells?: string[];
+  /** 分享图二维码内容，默认指向官网 */
+  qrContent?: string;
 }
 
 export async function generateShareImage(data: ShareImageData): Promise<HTMLCanvasElement> {
   const { grid, gridWidth, gridHeight, pixelStyle, title, completedCells = [] } = data;
+  const qrContent = data.qrContent?.trim() || SHARE_SITE_URL;
   const completedSet = new Set(completedCells);
 
   const W = 1080;
   const padding = 60;
   const headerH = 160;
-  const footerH = 120;
+  const footerH = 190;
   const artArea = W - padding * 2;
   const cellSize = Math.floor(artArea / Math.max(gridWidth, gridHeight));
   const artW = gridWidth * cellSize;
@@ -528,21 +535,45 @@ export async function generateShareImage(data: ShareImageData): Promise<HTMLCanv
   });
 
   const footerY = H - footerH + 20;
-  ctx.fillStyle = '#64748b';
-  ctx.font = '20px "PingFang SC", "Microsoft YaHei", Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('扫码或搜索「拼豆糕手」获取完整图纸', W / 2, footerY + 10);
-
-  ctx.fillStyle = '#cbd5e1';
-  ctx.font = '18px "PingFang SC", "Microsoft YaHei", Arial';
-  ctx.fillText('pindou.danzaii.cn', W / 2, footerY + 45);
-
   ctx.strokeStyle = '#e2e8f0';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(padding, footerY - 10);
   ctx.lineTo(W - padding, footerY - 10);
   ctx.stroke();
+
+  // 底部二维码 + 引导文案，左右成组居中
+  const qrSize = 140;
+  const qrGap = 28;
+  const headline = '扫码获取完整图纸';
+  const subline = 'pindou.danzaii.cn';
+  const tagline = '或 App Store 搜索「拼豆糕手」';
+  ctx.font = 'bold 26px "PingFang SC", "Microsoft YaHei", Arial';
+  const headlineW = ctx.measureText(headline).width;
+  ctx.font = '20px "PingFang SC", "Microsoft YaHei", Arial';
+  const sublineW = ctx.measureText(subline).width;
+  ctx.font = '18px "PingFang SC", "Microsoft YaHei", Arial';
+  const taglineW = ctx.measureText(tagline).width;
+  const textW = Math.max(headlineW, sublineW, taglineW);
+
+  const groupW = qrSize + qrGap + textW;
+  const groupX = (W - groupW) / 2;
+  const qrY = footerY + 6;
+
+  drawQrToCanvas(ctx, qrContent, groupX, qrY, qrSize, { level: 'M', quietZone: 2 });
+
+  const textX = groupX + qrSize + qrGap;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#1e293b';
+  ctx.font = 'bold 26px "PingFang SC", "Microsoft YaHei", Arial';
+  ctx.fillText(headline, textX, qrY + 30);
+  ctx.fillStyle = '#64748b';
+  ctx.font = '20px "PingFang SC", "Microsoft YaHei", Arial';
+  ctx.fillText(subline, textX, qrY + 76);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '18px "PingFang SC", "Microsoft YaHei", Arial';
+  ctx.fillText(tagline, textX, qrY + 114);
 
   return canvas;
 }

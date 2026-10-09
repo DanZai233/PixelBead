@@ -1,7 +1,7 @@
-import qrcode from 'qrcode-generator';
 import type { ColorHex } from '../types';
 import { hexToRgb } from './colorUtils';
 import { getBitmapFont, getGlyph, measureGlyphLine } from './pixelFonts';
+import { createQrMatrix } from './qrCode';
 
 /** 空白格统一使用 #FFFFFF，与画布/导出逻辑保持一致 */
 export const EMPTY_CELL: ColorHex = '#FFFFFF';
@@ -229,13 +229,8 @@ export function buildQrGrid(options: QrBuildOptions): BuildResult {
   if (!content) return { ok: false, error: '先输入网址或文字内容' };
 
   try {
-    // 让中文等非 ASCII 内容按 UTF-8 编码，避免乱码
-    qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
-    const qr = qrcode(0, options.errorCorrectionLevel);
-    qr.addData(content, 'Byte');
-    qr.make();
-
-    const moduleCount = qr.getModuleCount();
+    const matrix = createQrMatrix(content, options.errorCorrectionLevel);
+    const moduleCount = matrix.count;
     const quiet = Math.max(0, Math.min(8, Math.round(options.quietZone)));
     const scale = Math.max(1, Math.min(8, Math.round(options.scale)));
     const modules = moduleCount + quiet * 2;
@@ -252,7 +247,7 @@ export function buildQrGrid(options: QrBuildOptions): BuildResult {
         const isDark =
           moduleRow >= 0 && moduleRow < moduleCount &&
           moduleCol >= 0 && moduleCol < moduleCount &&
-          qr.isDark(moduleRow, moduleCol);
+          matrix.isDark(moduleRow, moduleCol);
         row.push(
           isDark
             ? resolveStrokeColor(options.foreground, y, x, size, size)
