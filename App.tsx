@@ -24,6 +24,7 @@ import { ColorPicker } from './components/ColorPicker';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { PromoSection } from './components/PromoSection';
 import { MaterialGallery } from './components/MaterialGallery';
+import { CreativeToolsModal } from './components/CreativeToolsModal';
 import { HelpModal } from './components/HelpModal';
 import { ToastProvider, useToast } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -62,8 +63,11 @@ import {
 import colorSystemMapping from './colorSystemMapping.json';
 import { Capacitor } from '@capacitor/core';
 import { pickSingleImageNative } from './utils/pickImageNative';
+import type { CreativeGrid } from './utils/creativeUtils';
 
 const IMAGE_FILE_ACCEPT = 'image/png,image/jpeg,image/jpg,image/heic,image/webp,image/gif';
+/** 记住当前画布对应的作品，重启后「保存当前进度」不会变成另存新作品 */
+const ACTIVE_PROJECT_KEY = 'pixelbead_active_project_v1';
 
 const App: React.FC = () => {
   const [isAdminRoute, setIsAdminRoute] = useState(() => window.location.hash === '#admin');
@@ -90,8 +94,10 @@ const AppMain: React.FC = () => {
   const { toast } = useToast();
   const [ownedHexInput, setOwnedHexInput] = useState('');
   const [ownedPaletteOpen, setOwnedPaletteOpen] = useState(false);
+  const [creativeToolsOpen, setCreativeToolsOpen] = useState(false);
   const {
     grid, setGrid, gridWidth, setGridWidth, gridHeight, setGridHeight,
+    pushUndo,
     customWidth, setCustomWidth, customHeight, setCustomHeight,
     showCustomInput, setShowCustomInput, brushSize, setBrushSize,
     undo, redo, canUndo, canRedo,
@@ -206,11 +212,27 @@ const AppMain: React.FC = () => {
   const [projectsModalOpen, setProjectsModalOpen] = useState(false);
   const [purchaseListOpen, setPurchaseListOpen] = useState(false);
   const [paletteMappingOpen, setPaletteMappingOpen] = useState(false);
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
-  const [currentProjectName, setCurrentProjectName] = useState('未命名作品');
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(() => {
+    try {
+      const stored = localStorage.getItem(ACTIVE_PROJECT_KEY);
+      return stored && projects.some(item => item.id === stored) ? stored : null;
+    } catch {
+      return null;
+    }
+  });
+  const [currentProjectName, setCurrentProjectName] = useState(
+    () => projects.find(item => item.id === activeProjectId)?.name ?? '未命名作品',
+  );
   const [plannerCompletedCells, setPlannerCompletedCells] = useState<string[]>([]);
   const [pendingDeletedProject, setPendingDeletedProject] = useState<{ project: SavedProject; index: number; wasActive: boolean } | null>(null);
   const deletionTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    try {
+      if (activeProjectId) localStorage.setItem(ACTIVE_PROJECT_KEY, activeProjectId);
+      else localStorage.removeItem(ACTIVE_PROJECT_KEY);
+    } catch {}
+  }, [activeProjectId]);
 
   const persistProjects = useCallback((nextProjects: SavedProject[]) => {
     const succeeded = saveProjects(nextProjects);
@@ -320,6 +342,91 @@ const AppMain: React.FC = () => {
     zoom,
   ]);
 
+  /**
+   * 新建画布：先把当前画布自动存进「我的作品」，再清空开始新的作品。
+   * 当前画布为空时不产生多余的空作品。
+   */
+  const handleNewCanvas = useCallback((): boolean => {
+    const hasContent = grid.some(row => row.some(cell => cell !== '#FFFFFF'));
+    const existing = activeProjectId
+      ? projects.find(project => project.id === activeProjectId)
+      : undefined;
+    const name = normalizeProjectName(currentProjectName);
+
+    const prompt = hasContent
+      ? existing
+        ? `将把「${name}」的当前进度存进「我的作品」，然后新建一张空白画布。继续吗？`
+        : `将把当前画布存进「我的作品」（名称：${name}），然后新建一张空白画布。继续吗？`
+      : '当前画布还是空白的，直接新建一张空白画布吗？';
+    if (!confirm(prompt)) return false;
+
+    if (hasContent) {
+      const now = Date.now();
+      const nextProjects = existing
+        ? projects.map(project => project.id === existing.id ? {
+          ...project,
+          name,
+          grid: grid.map(row => [...row]),
+          gridWidth,
+          gridHeight,
+          pixelStyle,
+          selectedColor,
+          zoom,
+          backgroundImage,
+          updatedAt: now,
+          completedCells: plannerCompletedCells,
+        } : project)
+        : [{
+          id: createProjectId(),
+          name,
+          grid: grid.map(row => [...row]),
+          gridWidth,
+          gridHeight,
+          pixelStyle,
+          selectedColor,
+          zoom,
+          backgroundImage,
+          createdAt: now,
+          updatedAt: now,
+          completedCells: plannerCompletedCells,
+        } as SavedProject, ...projects];
+
+      // 存储失败时中止，避免画布被清空却什么都没留下
+      if (!persistProjects(nextProjects)) return false;
+    }
+
+    pushUndo(grid);
+    setGrid(Array(gridHeight).fill(null).map(() => Array(gridWidth).fill('#FFFFFF')));
+    setSelection(null);
+    setPanOffset({ x: 0, y: 0 });
+    setPlannerCompletedCells([]);
+    setActiveProjectId(null);
+    setCurrentProjectName('未命名作品');
+    toast(
+      hasContent ? '已新建空白画布，之前的作品在「我的作品」里。' : '已新建空白画布。',
+      'success',
+    );
+    return true;
+  }, [
+    activeProjectId,
+    backgroundImage,
+    currentProjectName,
+    grid,
+    gridHeight,
+    gridWidth,
+    persistProjects,
+    pixelStyle,
+    plannerCompletedCells,
+    projects,
+    pushUndo,
+    setGrid,
+    setPanOffset,
+    setSelection,
+    selectedColor,
+    toast,
+    zoom,
+  ]);
+
   const handleOpenProject = useCallback((project: SavedProject) => {
     const openedAt = Date.now();
     const nextProjects = projects.map(item => item.id === project.id
@@ -349,6 +456,37 @@ const AppMain: React.FC = () => {
     setGridWidth,
     setPixelStyle,
     setSelectedColor,
+    setZoom,
+    toast,
+  ]);
+
+  const handleApplyCreativeGrid = useCallback((result: CreativeGrid) => {
+    const hasContent = grid.some(row => row.some(cell => cell !== '#FFFFFF'));
+    if (hasContent && !confirm('画布上已有内容，填入会覆盖当前作品，确定继续吗？')) {
+      return;
+    }
+    pushUndo(grid);
+    setGridWidth(result.width);
+    setGridHeight(result.height);
+    setGrid(result.grid.map(row => [...row]));
+    setSelection(null);
+    setPanOffset({ x: 0, y: 0 });
+    const maxSize = Math.max(result.width, result.height);
+    if (maxSize >= 80) setZoom(35);
+    else if (maxSize >= 48) setZoom(50);
+    else setZoom(80);
+    setViewType(ViewType.TWO_D);
+    setCreativeToolsOpen(false);
+    toast('图纸已填入画布，可以继续编辑啦。', 'success');
+  }, [
+    grid,
+    pushUndo,
+    setGrid,
+    setGridHeight,
+    setGridWidth,
+    setPanOffset,
+    setSelection,
+    setViewType,
     setZoom,
     toast,
   ]);
@@ -718,6 +856,16 @@ const AppMain: React.FC = () => {
                </svg>
                <span className="hidden 2xl:inline">拼豆</span>
              </button>
+             <button
+               onClick={() => setCreativeToolsOpen(true)}
+               className="hidden lg:flex shrink-0 bg-gradient-to-r from-fuchsia-500 to-indigo-600 hover:from-fuchsia-600 hover:to-indigo-700 text-white px-2.5 xl:px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 items-center gap-2"
+               title="创意小工具：二维码 / 文字图纸"
+             >
+               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2v2h-2zM18 14h2v2h-2z" />
+               </svg>
+               <span className="hidden 2xl:inline">创意</span>
+             </button>
 
             <div className="hidden lg:flex shrink-0 gap-2">
               <button
@@ -797,6 +945,16 @@ const AppMain: React.FC = () => {
             >
               {activeProjectId ? '保存当前进度' : '保存为新作品'}
             </button>
+            <button
+              onClick={handleNewCanvas}
+              className="mt-2 w-full py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-black active:scale-95 transition-all"
+              title="把当前画布自动存进「我的作品」，然后开始一张空白画布"
+            >
+              新建画布
+            </button>
+            <p className="mt-1.5 text-[9px] leading-relaxed text-slate-400">
+              新建画布会自动把当前画布存进「我的作品」，不会丢内容。
+            </p>
             <button
               onClick={() => setPurchaseListOpen(true)}
               className="mt-2 w-full py-2.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-black active:scale-95 transition-all"
@@ -1572,13 +1730,14 @@ const AppMain: React.FC = () => {
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">自动保存</span>
                 <span className="text-[9px] font-bold text-emerald-500">已启用</span>
               </div>
-              <p className="text-[9px] text-slate-400">画布会自动保存，下次打开自动恢复</p>
+              <p className="text-[9px] text-slate-400">画布会自动暂存，下次打开自动恢复；点「保存」或「新建画布」才会进入「我的作品」</p>
             </div>
             <button
               onClick={resetGrid}
               className="w-full py-3 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-all"
+              title="只清空画布，不存进「我的作品」"
             >
-              清空当前画布
+              清空当前画布（不保存）
             </button>
             <PromoSection />
           </div>
@@ -1803,6 +1962,10 @@ const AppMain: React.FC = () => {
             <button onClick={() => setMaterialGalleryOpen(true)} className="flex flex-1 flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
               <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
               <span className="text-[9px] font-bold text-slate-600">广场</span>
+            </button>
+            <button onClick={() => setCreativeToolsOpen(true)} className="flex flex-1 flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
+              <svg className="w-5 h-5 text-fuchsia-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2v2h-2zM18 14h2v2h-2z" /></svg>
+              <span className="text-[9px] font-bold text-slate-600">创意</span>
             </button>
             <button onClick={() => setIsPlannerViewOpen(true)} className="flex flex-1 flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl active:bg-slate-100 transition-all touch-manipulation">
               <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -2478,6 +2641,13 @@ const AppMain: React.FC = () => {
         />
       )}
 
+      {creativeToolsOpen && (
+        <CreativeToolsModal
+          onClose={() => setCreativeToolsOpen(false)}
+          onApply={handleApplyCreativeGrid}
+        />
+      )}
+
       {ownedPaletteOpen && (
         <OwnedPaletteModal
           onClose={() => setOwnedPaletteOpen(false)}
@@ -2523,6 +2693,7 @@ const AppMain: React.FC = () => {
           onOpenProject={handleOpenProject}
           onSaveCurrent={handleSaveProject}
           onSaveAsNew={handleSaveProjectAsNew}
+          onNewCanvas={handleNewCanvas}
           onDuplicate={handleDuplicateProject}
           onRename={handleRenameProject}
           onToggleFavorite={handleToggleProjectFavorite}

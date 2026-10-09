@@ -1622,6 +1622,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
 
   return {
     grid, setGrid, gridWidth, setGridWidth, gridHeight, setGridHeight,
+    pushUndo,
     customWidth, setCustomWidth, customHeight, setCustomHeight,
     showCustomInput, setShowCustomInput, brushSize, setBrushSize,
     undo, redo, canUndo, canRedo,

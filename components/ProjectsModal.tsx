@@ -16,6 +16,8 @@ interface ProjectsModalProps {
   onOpenProject: (project: SavedProject) => void;
   onSaveCurrent: (name: string) => void;
   onSaveAsNew: (name: string) => void;
+  /** 返回 true 表示确实新建了画布（用户可能取消） */
+  onNewCanvas: () => boolean;
   onDuplicate: (project: SavedProject) => void;
   onRename: (project: SavedProject, name: string) => void;
   onToggleFavorite: (project: SavedProject) => void;
@@ -369,6 +371,7 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
   onOpenProject,
   onSaveCurrent,
   onSaveAsNew,
+  onNewCanvas,
   onDuplicate,
   onRename,
   onToggleFavorite,
@@ -509,6 +512,13 @@ export const ProjectsModal: React.FC<ProjectsModalProps> = ({
               className="rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-black text-slate-700 transition-all active:scale-95"
             >
               另存新作品
+            </button>
+            <button
+              onClick={() => { if (onNewCanvas()) onClose(); }}
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-black text-slate-500 transition-all active:scale-95"
+              title="把当前画布自动存进「我的作品」，然后开始一张空白画布"
+            >
+              新建画布
             </button>
           </div>
         </div>
