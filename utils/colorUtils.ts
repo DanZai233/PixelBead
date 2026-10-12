@@ -427,17 +427,20 @@ export interface ShareImageData {
   completedCells?: string[];
   /** 分享图二维码内容，默认指向官网 */
   qrContent?: string;
+  /** 是否绘制二维码，默认 true；小红书等平台可关闭以规避限流 */
+  showQr?: boolean;
 }
 
 export async function generateShareImage(data: ShareImageData): Promise<HTMLCanvasElement> {
   const { grid, gridWidth, gridHeight, pixelStyle, title, completedCells = [] } = data;
+  const showQr = data.showQr !== false;
   const qrContent = data.qrContent?.trim() || SHARE_SITE_URL;
   const completedSet = new Set(completedCells);
 
   const W = 1080;
   const padding = 60;
   const headerH = 160;
-  const footerH = 220;
+  const footerH = showQr ? 220 : 130;
   const artArea = W - padding * 2;
   const cellSize = Math.floor(artArea / Math.max(gridWidth, gridHeight));
   const artW = gridWidth * cellSize;
@@ -542,38 +545,50 @@ export async function generateShareImage(data: ShareImageData): Promise<HTMLCanv
   ctx.lineTo(W - padding, footerY - 10);
   ctx.stroke();
 
-  // 底部二维码 + 引导文案，左右成组居中
-  const qrSize = 170;
-  const qrGap = 28;
-  const headline = '扫码获取完整图纸';
-  const subline = 'pindou.danzaii.cn';
-  const tagline = '或 App Store 搜索「拼豆糕手」';
-  ctx.font = 'bold 26px "PingFang SC", "Microsoft YaHei", Arial';
-  const headlineW = ctx.measureText(headline).width;
-  ctx.font = '20px "PingFang SC", "Microsoft YaHei", Arial';
-  const sublineW = ctx.measureText(subline).width;
-  ctx.font = '18px "PingFang SC", "Microsoft YaHei", Arial';
-  const taglineW = ctx.measureText(tagline).width;
-  const textW = Math.max(headlineW, sublineW, taglineW);
+  if (showQr) {
+    // 底部二维码 + 引导文案，左右成组居中
+    const qrSize = 170;
+    const qrGap = 28;
+    const headline = '扫码获取完整图纸';
+    const subline = 'pindou.danzaii.cn';
+    const tagline = '或 App Store 搜索「拼豆糕手」';
+    ctx.font = 'bold 26px "PingFang SC", "Microsoft YaHei", Arial';
+    const headlineW = ctx.measureText(headline).width;
+    ctx.font = '20px "PingFang SC", "Microsoft YaHei", Arial';
+    const sublineW = ctx.measureText(subline).width;
+    ctx.font = '18px "PingFang SC", "Microsoft YaHei", Arial';
+    const taglineW = ctx.measureText(tagline).width;
+    const textW = Math.max(headlineW, sublineW, taglineW);
 
-  const groupW = qrSize + qrGap + textW;
-  const groupX = (W - groupW) / 2;
-  const qrY = footerY + 6;
+    const groupW = qrSize + qrGap + textW;
+    const groupX = (W - groupW) / 2;
+    const qrY = footerY + 6;
 
-  drawQrToCanvas(ctx, qrContent, groupX, qrY, qrSize, { level: 'M', quietZone: 2 });
+    drawQrToCanvas(ctx, qrContent, groupX, qrY, qrSize, { level: 'M', quietZone: 2 });
 
-  const textX = groupX + qrSize + qrGap;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#1e293b';
-  ctx.font = 'bold 26px "PingFang SC", "Microsoft YaHei", Arial';
-  ctx.fillText(headline, textX, qrY + 30);
-  ctx.fillStyle = '#64748b';
-  ctx.font = '20px "PingFang SC", "Microsoft YaHei", Arial';
-  ctx.fillText(subline, textX, qrY + 76);
-  ctx.fillStyle = '#94a3b8';
-  ctx.font = '18px "PingFang SC", "Microsoft YaHei", Arial';
-  ctx.fillText(tagline, textX, qrY + 114);
+    const textX = groupX + qrSize + qrGap;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 26px "PingFang SC", "Microsoft YaHei", Arial';
+    ctx.fillText(headline, textX, qrY + 30);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '20px "PingFang SC", "Microsoft YaHei", Arial';
+    ctx.fillText(subline, textX, qrY + 76);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '18px "PingFang SC", "Microsoft YaHei", Arial';
+    ctx.fillText(tagline, textX, qrY + 114);
+  } else {
+    // 不含二维码时只保留居中文案
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#64748b';
+    ctx.font = '20px "PingFang SC", "Microsoft YaHei", Arial';
+    ctx.fillText('拼豆糕手 · 在线拼豆图纸工具', W / 2, footerY + 32);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '18px "PingFang SC", "Microsoft YaHei", Arial';
+    ctx.fillText('pindou.danzaii.cn', W / 2, footerY + 68);
+  }
 
   return canvas;
 }

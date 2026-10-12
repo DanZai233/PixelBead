@@ -122,6 +122,8 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [exportSelectionOnly, setExportSelectionOnly] = useState(false);
   const [exportWatermarkEnabled, setExportWatermarkEnabled] = useState(false);
   const [exportWatermarkText, setExportWatermarkText] = useState('拼豆糕手');
+  // 小红书分享图默认不带二维码：平台会限流带二维码的图片
+  const [exportShareWithQr, setExportShareWithQr] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingSvg, setIsExportingSvg] = useState(false);
   // ── Share & Material Gallery State ──
@@ -1356,21 +1358,24 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   }, [grid, gridWidth, gridHeight, exportPixelStyle, exportShowGuideLines, exportMirror, selectedColorSystem, exportSelectionOnly, selection, exportWatermarkEnabled, exportWatermarkText]);
 
   const handleShareImageExport = useCallback(async () => {
-    // 生成分享图时顺带创建作品分享链接，让图上的二维码直达这张作品
+    // 带二维码时顺带创建作品分享链接，让二维码直达这张作品
     let qrContent: string | undefined;
-    try {
-      const key = await saveToUpstash(grid, gridWidth, gridHeight, exportPixelStyle, {
-        expireHours: SHARE_IMAGE_EXPIRE_HOURS,
-      });
-      if (key) qrContent = generateShareUrl(key, 'https://pindou.danzaii.cn');
-    } catch (error) {
-      console.error('生成分享链接失败，二维码回退到官网:', error);
+    if (exportShareWithQr) {
+      try {
+        const key = await saveToUpstash(grid, gridWidth, gridHeight, exportPixelStyle, {
+          expireHours: SHARE_IMAGE_EXPIRE_HOURS,
+        });
+        if (key) qrContent = generateShareUrl(key, 'https://pindou.danzaii.cn');
+      } catch (error) {
+        console.error('生成分享链接失败，二维码回退到官网:', error);
+      }
     }
 
     const canvas = await generateShareImage({
       grid, gridWidth, gridHeight,
       pixelStyle: exportPixelStyle,
       qrContent,
+      showQr: exportShareWithQr,
     });
     const fileName = `share-${gridWidth}x${gridHeight}.png`;
     const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'));
@@ -1383,7 +1388,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     setExportPreviewBlob(blob);
     setExportPreviewName(fileName);
     setExportModalOpen(false);
-  }, [grid, gridWidth, gridHeight, exportPixelStyle]);
+  }, [grid, gridWidth, gridHeight, exportPixelStyle, exportShareWithQr]);
 
   const saveExportFile = useCallback(async (blob: Blob, fileName: string) => {
     try {
@@ -1682,6 +1687,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     exportSelectionOnly, setExportSelectionOnly,
     exportWatermarkEnabled, setExportWatermarkEnabled,
     exportWatermarkText, setExportWatermarkText,
+    exportShareWithQr, setExportShareWithQr,
     exportPreviewUrl, setExportPreviewUrl,
     exportPreviewBlob, setExportPreviewBlob,
     exportPreviewName, setExportPreviewName,

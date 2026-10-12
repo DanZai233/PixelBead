@@ -144,6 +144,7 @@ const AppMain: React.FC = () => {
     exportSelectionOnly, setExportSelectionOnly,
     exportWatermarkEnabled, setExportWatermarkEnabled,
     exportWatermarkText, setExportWatermarkText,
+    exportShareWithQr, setExportShareWithQr,
     exportPreviewUrl, setExportPreviewUrl,
     exportPreviewBlob, setExportPreviewBlob,
     exportPreviewName, setExportPreviewName,
@@ -2572,6 +2573,23 @@ const AppMain: React.FC = () => {
                 className="py-3 md:py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl md:rounded-2xl font-black text-sm shadow-lg active:scale-95 transition-all disabled:opacity-60"
               >
                 {isExportingSvg ? '生成中...' : 'SVG 矢量图纸'}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-2xl bg-slate-100 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-black text-slate-700">图片带二维码</p>
+                <p className="text-[10px] font-medium text-slate-400">小红书可能限流带二维码的图片</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={exportShareWithQr}
+                aria-label="图片带二维码"
+                onClick={() => setExportShareWithQr((v) => !v)}
+                className={`relative shrink-0 w-12 h-7 rounded-full transition-colors ${exportShareWithQr ? 'bg-indigo-600' : 'bg-slate-300'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${exportShareWithQr ? 'translate-x-5' : ''}`} />
               </button>
             </div>
 
