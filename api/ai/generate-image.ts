@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { getAiDb, imageBucket, requestInfo, storeImage } from '../../server/aiRecords.js';
+import type { Db, ObjectId } from 'mongodb';
 
 /**
  * 服务端图像生成（密钥与上游地址仅环境变量，不暴露给客户端）
@@ -52,9 +54,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const clientInfo = requestInfo(req);
   // Rate limit: max 20 req/min per IP
   {
-    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 'unknown';
+    const clientIp = clientInfo.ip;
     if (!(globalThis as any)._pixelbeadRateStore) (globalThis as any)._pixelbeadRateStore = new Map();
     const rs = (globalThis as any)._pixelbeadRateStore as Map<string, { count: number; resetAt: number }>;
     const now = Date.now();
@@ -77,7 +80,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(503).json({ error: '智能生成功能暂未开放' });
   }
 
-  const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+  let body;
+  try {
+    body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error();
+  } catch {
+    return res.status(400).json({ error: '请求格式不正确' });
+  }
   const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : '';
   const referenceImage = typeof body.referenceImage === 'string' ? body.referenceImage.trim() : '';
 
@@ -87,7 +96,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (prompt.length > 4000) {
     return res.status(400).json({ error: '描述过长' });
   }
+  if (referenceImage && (!/^data:image\/(?:png|jpeg|webp);base64,[a-zA-Z0-9+/=\s]+$/.test(referenceImage)
+    || referenceImage.length > 6 * 1024 * 1024)) {
+    return res.status(400).json({ error: '参考图格式不支持或图片过大，请使用 PNG、JPEG 或 WebP 图片' });
+  }
 
+  const startedAt = Date.now();
+  let db: Db;
+  let recordId: ObjectId;
+  let referenceImageId: ObjectId | undefined;
+  try {
+    db = await getAiDb();
+    if (referenceImage) referenceImageId = await storeImage(db, referenceImage, 'reference');
+    const record = await db.collection('ai_generations').insertOne({
+      prompt, model, mode: referenceImage ? 'image' : 'text',
+      referenceImageId, createdAt: startedAt, status: 'pending',
+      request: clientInfo,
+    });
+    recordId = record.insertedId;
+  } catch {
+    if (referenceImageId && db) {
+      await imageBucket(db).delete(referenceImageId).catch(() => {});
+    }
+    console.error('AI record initialization failed');
+    return res.status(503).json({ error: '智能生成暂时不可用，请稍后重试' });
+  }
+
+  const fail = async (error: string) => {
+    await db.collection('ai_generations').updateOne({ _id: recordId }, {
+      $set: { status: 'failed', error, durationMs: Date.now() - startedAt },
+    }).catch(() => console.error('AI failure record update failed'));
+    return res.status(502).json({ error });
+  };
 
   const requestBody: Record<string, unknown> = {
     model,
@@ -112,6 +152,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(requestBody),
+      signal: AbortSignal.timeout(90_000),
     });
 
     const responseText = await upstream.text();
@@ -123,25 +164,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       data = JSON.parse(responseText) as typeof data;
     } catch {
-      return res.status(502).json({ error: '生成服务暂时不可用，请稍后重试' });
+      return await fail('生成服务暂时不可用，请稍后重试');
     }
 
-    console.error('Seedream upstream status:', upstream.status, 'body sample:', responseText.slice(0, 300));
-
     if (!upstream.ok) {
-      return res.status(502).json({ error: mapUpstreamError(data) });
+      return await fail(mapUpstreamError(data));
     }
 
     const firstImage = data.data?.[0];
     let b64Json = firstImage?.b64_json ?? data.output?.b64_json;
     if (!b64Json) {
-      return res.status(502).json({ error: '未获取到图像，请重试' });
+      return await fail('未获取到图像，请重试');
     }
 
+    const imageDataUrl = `data:image/png;base64,${b64Json}`;
+    let imageId: ObjectId | undefined;
+    try {
+      imageId = await storeImage(db, imageDataUrl, `${recordId}-generated`);
+      await db.collection('ai_generations').updateOne({ _id: recordId }, {
+        $set: { status: 'success', imageId, durationMs: Date.now() - startedAt },
+      });
+    } catch {
+      await db.collection('ai_generations').updateOne({ _id: recordId }, {
+        $set: {
+          status: 'archive_failed', error: '生成成功，但生成图片云端保存失败',
+          ...(imageId ? { imageId } : {}), durationMs: Date.now() - startedAt,
+        },
+      }).catch(() => console.error('AI archive failure record update failed'));
+      console.error('AI image archive failed');
+    }
     return res.status(200).json({
-      imageDataUrl: `data:image/png;base64,${b64Json}`,
+      imageDataUrl,
     });
   } catch {
-    return res.status(502).json({ error: '生成服务暂时不可用，请稍后重试' });
+    return await fail('生成服务暂时不可用，请稍后重试');
   }
 }

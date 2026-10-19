@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AdminFeedbackPanel } from './AdminFeedbackPanel';
+import { AdminAiPanel } from './AdminAiPanel';
 
 interface AdminMaterial {
   id: string;
@@ -28,7 +29,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'materials' | 'feedback'>('materials');
+  const [activeTab, setActiveTab] = useState<'materials' | 'feedback' | 'ai'>('materials');
 
   const [materials, setMaterials] = useState<AdminMaterial[]>([]);
   const [total, setTotal] = useState(0);
@@ -72,10 +73,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     sessionStorage.removeItem('admin_token');
     setToken(null);
-  };
+  }, []);
 
   const loadMaterials = useCallback(async () => {
     if (!token) return;
@@ -213,10 +214,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex flex-wrap gap-3 items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-lg">🔧</div>
-            <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-0.5">
+            <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-0.5 overflow-x-auto">
               <button
                 onClick={() => { setActiveTab('materials'); setPage(1); }}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'materials' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
@@ -229,6 +230,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
               >
                 用户反馈
               </button>
+              <button
+                onClick={() => setActiveTab('ai')}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${activeTab === 'ai' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+              >
+                AI 生图记录
+              </button>
             </div>
           </div>
           <div>
@@ -236,7 +243,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
               拼豆糕手后台
             </h1>
             <p className="text-xs text-slate-400">
-              {activeTab === 'materials' ? `共 ${total} 个素材` : '用户反馈中心'}
+              {activeTab === 'materials' ? `共 ${total} 个素材` : activeTab === 'ai' ? 'AI 生图记录' : '用户反馈中心'}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -251,7 +258,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-6">
-        {activeTab === 'feedback' ? (
+        {activeTab === 'ai' ? (
+          <AdminAiPanel token={token} onLogout={handleLogout} />
+        ) : activeTab === 'feedback' ? (
           <AdminFeedbackPanel token={token} onLogout={handleLogout} />
         ) : (
           <>

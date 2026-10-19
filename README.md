@@ -218,6 +218,7 @@ npm run cap:sync    # 等价于 vite build --mode capacitor + cap sync ios
 - **框架**: React 19 + TypeScript
 - **构建工具**: Vite 6
 - **智能生成**: 服务端代理，密钥仅 Vercel 环境变量
+- **AI 生图记录**: 使用现有 `MONGODB_URI`，记录保存在 `pixelbead.ai_generations`，参考图和生成图通过 GridFS 保存在 `ai_images.files` / `ai_images.chunks`，无自动过期。管理员在 `#admin` 的「AI 生图记录」中按描述、IP、状态筛选，查看或下载图片，删除时一并清理图片。记录包含请求 IP、User-Agent、语言及部署平台提供的地区信息；设备信息由 User-Agent 推断。数据库不可用时暂停新生成；图片存储失败会标记「图片留存失败」，仍将生成结果返回用户。仅部署后的新请求会被记录，不会补录历史生成。
 - **部署平台**: Vercel
 - **存储服务**: Upstash Redis（分享链接）、MongoDB Atlas（素材广场）
 - **样式**: Tailwind CSS（CDN 加载）
