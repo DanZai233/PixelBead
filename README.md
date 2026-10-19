@@ -219,6 +219,9 @@ npm run cap:sync    # 等价于 vite build --mode capacitor + cap sync ios
 - **构建工具**: Vite 6
 - **智能生成**: 服务端代理，密钥仅 Vercel 环境变量
 - **AI 生图记录**: 使用现有 `MONGODB_URI`，记录保存在 `pixelbead.ai_generations`，参考图和生成图通过 GridFS 保存在 `ai_images.files` / `ai_images.chunks`，无自动过期。管理员在 `#admin` 的「AI 生图记录」中按描述、IP、状态筛选，查看或下载图片，删除时一并清理图片。记录包含请求 IP、User-Agent、语言及部署平台提供的地区信息；设备信息由 User-Agent 推断。数据库不可用时暂停新生成；图片存储失败会标记「图片留存失败」，仍将生成结果返回用户。仅部署后的新请求会被记录，不会补录历史生成。
+- **AI 用量审计**: 同一后台的「用量统计」默认展示近 30 天请求数、活跃独立 IP、已生成数、成功率、失败/超时/生成中、平均成功耗时、设备/地区/模型/错误分布以及分页 IP 使用明细。支持北京时间起止日期（含结束当天）、生成方式、状态、描述或 IP 筛选，点击 IP 可查看对应记录。每日趋势和 CSV 最多展示最近 366 个有请求的日期，汇总及 IP 分页覆盖整个筛选范围。图片留存失败计入已生成；pending 超过 3 分钟视为超时，成功率为已生成 /（已生成 + 失败 + 超时），排除生成中；平均耗时只计已生成请求。独立 IP 不代表真实用户，未知 IP 不计入 IP 数。统计仅基于已留存的 AI 请求，不含页面访问、校验失败或限流拒绝；删除记录会影响统计，无计费金额推算。接口 `GET /api/admin/ai-generations?view=stats` 沿用管理员鉴权及禁止缓存。
+
+AI 记录和统计回归测试：`node --import tsx --test tests/ai-generations.test.mjs tests/ai-usage.test.mjs`（通过内存 MongoDB 查询引擎验证聚合口径，不连接生产数据库）。
 - **部署平台**: Vercel
 - **存储服务**: Upstash Redis（分享链接）、MongoDB Atlas（素材广场）
 - **样式**: Tailwind CSS（CDN 加载）

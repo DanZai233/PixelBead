@@ -14,6 +14,7 @@ export function getAiDb(): Promise<Db> {
       await client.connect();
       const db = client.db('pixelbead');
       await db.collection('ai_generations').createIndex({ createdAt: -1, _id: -1 });
+      await db.collection('ai_generations').createIndex({ 'request.ip': 1, createdAt: -1 });
       return db;
     })().catch(error => { connection = undefined; throw error; });
   }

@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { ObjectId } from 'mongodb';
 import { pipeline } from 'node:stream/promises';
 import { getAiDb, imageBucket, verifyAdmin } from '../../server/aiRecords.js';
+import { getUsageStats, usageFilter } from '../../server/aiUsage.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -45,14 +46,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'DELETE') return res.status(400).json({ error: '缺少记录 ID' });
     const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit), 10) || 15));
-    const search = typeof req.query.search === 'string' ? req.query.search.trim().slice(0, 200) : '';
-    const status = typeof req.query.status === 'string' ? req.query.status : '';
-    const filter: Record<string, unknown> = {};
-    if (search) {
-      const literal = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      filter.$or = [{ prompt: { $regex: literal, $options: 'i' } }, { 'request.ip': search }];
-    }
-    if (['pending', 'success', 'failed', 'archive_failed'].includes(status)) filter.status = status;
+    let filter;
+    try { filter = usageFilter(req.query); }
+    catch (error) { return res.status(400).json({ error: error instanceof Error ? error.message : '筛选条件无效' }); }
+    if (req.query.view === 'stats') return res.status(200).json(await getUsageStats(db, filter, page));
     const [records, total] = await Promise.all([
       col.find(filter).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).toArray(),
       col.countDocuments(filter),

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { Readable, Writable } from 'node:stream';
 import { MongoClient, GridFSBucket, ObjectId } from 'mongodb';
+import { aggregate } from 'mingo';
 import generate from '../api/ai/generate-image.ts';
 import admin from '../api/admin/ai-generations.ts';
 
@@ -23,6 +24,7 @@ test('AI generation archive and private admin access', async t => {
   const dataUrl = `data:image/png;base64,${image.toString('base64')}`;
   let lastFilter;
   const collection = {
+    aggregate: pipeline => ({ toArray: async () => aggregate(records, pipeline) }),
     createIndex: async () => {},
     insertOne: async record => {
       const _id = new ObjectId();
@@ -158,7 +160,7 @@ test('AI generation archive and private admin access', async t => {
   await t.test('requires valid, unexpired admin auth for list, image and deletion', async () => {
     for (const auth of [undefined, token(Date.now() - 100), token(Date.now() + 10000, 'wrong-secret')]) {
       for (const [method, query] of [
-        ['GET', {}], ['GET', { id: records[0]._id.toString(), image: 'generated' }],
+        ['GET', {}], ['GET', { view: 'stats' }], ['GET', { id: records[0]._id.toString(), image: 'generated' }],
         ['DELETE', { id: records[0]._id.toString() }],
       ]) {
         const res = response();
@@ -182,6 +184,19 @@ test('AI generation archive and private admin access', async t => {
     assert.equal(lastFilter.$or[0].prompt.$regex, '\\.\\*');
     assert.equal(lastFilter.status, 'success');
     assert.equal('imageId' in res.body.records[0], false);
+  });
+  await t.test('serves private usage aggregates and rejects invalid audit filters', async () => {
+    const res = response();
+    await admin(request('GET', {}, { view: 'stats' }, token()), res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.summary.requests, 4);
+    assert.equal(res.body.summary.generated, 2);
+    assert.equal(res.body.summary.uniqueIps, 1);
+    assert.equal(res.headers['Cache-Control'], 'private, no-store');
+    assert.equal('prompt' in res.body.users[0], false);
+    const invalid = response();
+    await admin(request('GET', {}, { view: 'stats', start: '2026-02-30' }, token()), invalid);
+    assert.equal(invalid.statusCode, 400);
   });
   await t.test('streams archived image and deletes record with both image files', async () => {
     const id = records[0]._id.toString();

@@ -211,7 +211,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
 
   // Admin dashboard
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="h-full overflow-y-auto bg-slate-50">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex flex-wrap gap-3 items-center justify-between">
