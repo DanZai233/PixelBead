@@ -513,7 +513,7 @@ export const ImageCropSelector: React.FC<ImageCropSelectorProps> = ({
              disabled={!crop}
              className="flex-[2] py-3 md:py-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 disabled:cursor-not-allowed text-white rounded-xl md:rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-all"
            >
-             确认并转换
+             预览裁切
            </button>
          </div>
       </div>

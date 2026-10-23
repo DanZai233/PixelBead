@@ -20,6 +20,8 @@ import { BeadSliceViewer } from './components/BeadSliceViewer';
 import { BeadPlannerView } from './components/BeadPlannerView';
 import { FinishedPreview } from './components/FinishedPreview';
 import { ImageCropSelector } from './components/ImageCropSelector';
+import { ImageSizePreview, type ConversionSize } from './components/ImageSizePreview';
+import type { ImageCrop } from './utils/imageConversion';
 import { ColorPicker } from './components/ColorPicker';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { PromoSection } from './components/PromoSection';
@@ -195,6 +197,18 @@ const AppMain: React.FC = () => {
     ownedColors, toggleOwnedColor, addOwnedColor, clearOwnedColors, addCanvasColors,
     ownedOnlyMode, setOwnedOnlyMode, ownedGuideDismissed, dismissOwnedGuide,
   } = useEditor(toast);
+
+  const [importSize, setImportSize] = useState<ConversionSize>({ width: gridWidth, height: gridHeight });
+  const [importCrop, setImportCrop] = useState<ImageCrop>();
+  useEffect(() => {
+    if (pendingImage) {
+      setImportSize({ width: gridWidth, height: gridHeight });
+      setImportCrop(undefined);
+      setCropOffset({ x: 0, y: 0 });
+      setCustomCrop(null);
+      setUseAdvancedCrop(false);
+    }
+  }, [pendingImage]);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const savedTheme = localStorage.getItem('pixelbead_theme');
@@ -2080,12 +2094,15 @@ const AppMain: React.FC = () => {
 
       {pendingImage && (
         <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 md:p-6 backdrop-blur-sm">
-          <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 max-w-lg w-full shadow-2xl space-y-6 md:space-y-8">
+          <div className="bg-white rounded-[2rem] p-5 md:p-6 max-w-lg w-full max-h-[92dvh] overflow-y-auto shadow-2xl space-y-4">
             <div className="text-center space-y-2">
-              <h3 className="text-xl md:text-2xl font-black text-slate-900 italic">裁切选择</h3>
-              <p className="text-xs md:text-sm text-slate-400 font-medium">请选择图像在 1:1 画布中的对齐位置</p>
+              <h3 className="text-xl font-black text-slate-900">图片转拼豆</h3>
             </div>
             
+            <ImageSizePreview image={pendingImage} size={importSize} onSize={size => {
+              if (size.width / size.height !== importSize.width / importSize.height) setImportCrop(undefined);
+              setImportSize(size);
+            }} currentWidth={gridWidth} currentHeight={gridHeight} xAlign={cropOffset.x} yAlign={cropOffset.y} crop={importCrop} />
             <div className="flex gap-2 mb-4">
               <button
                 onClick={() => setUseAdvancedCrop(!useAdvancedCrop)}
@@ -2118,31 +2135,24 @@ const AppMain: React.FC = () => {
               </div>
             ) : (
               <>
-                <div className="aspect-square bg-slate-100 rounded-2xl md:rounded-3xl overflow-hidden relative border-4 border-slate-200 flex items-center justify-center">
-                   <img src={pendingImage} alt="Preview" className="max-w-none max-h-none opacity-50 absolute w-full h-full object-contain" />
-                   <div className="z-10 text-[9px] md:text-[10px] font-black bg-slate-900 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-full uppercase tracking-widest">预览 1:1 区域</div>
-                </div>
-
                 <div className="grid grid-cols-3 gap-2 md:gap-3">
-                  <button onClick={() => setCropOffset({x: -1, y: -1})} className="p-3 md:p-4 bg-slate-50 hover:bg-slate-100 rounded-xl md:rounded-2xl font-bold text-[10px] md:text-xs">左上</button>
-                  <button onClick={() => setCropOffset({x: 0, y: 0})} className="p-3 md:p-4 bg-indigo-50 border-2 border-indigo-500 text-indigo-700 rounded-xl md:rounded-2xl font-bold text-[10px] md:text-xs">居中</button>
-                  <button onClick={() => setCropOffset({x: 1, y: 1})} className="p-3 md:p-4 bg-slate-50 hover:bg-slate-100 rounded-xl md:rounded-2xl font-bold text-[10px] md:text-xs">右下</button>
+                  {[-1, 0, 1].map((offset, i) => <button key={offset} aria-pressed={!importCrop && cropOffset.x === offset} onClick={() => { setImportCrop(undefined); setCropOffset({ x: offset, y: offset }); }} className={`p-3 rounded-lg font-bold text-xs ${!importCrop && cropOffset.x === offset ? 'bg-indigo-50 ring-2 ring-indigo-500 text-indigo-700' : 'bg-slate-50 text-slate-600'}`}>{['左上', '居中', '右下'][i]}</button>)}
                 </div>
-
+              </>
+            )}
                 <div className="flex gap-2 md:gap-4">
                   <button onClick={() => {
                     setPendingImage(null);
                     setUseAdvancedCrop(false);
-                  }} className="flex-1 py-3 md:py-4 bg-slate-100 text-slate-500 rounded-xl md:rounded-2xl font-black text-sm">取消</button>
+                  }} disabled={isProcessingImage} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-lg font-black text-sm">取消</button>
                   <button
-                    onClick={() => applyImageToGrid(pendingImage, gridWidth, gridHeight, cropOffset.x, cropOffset.y)}
+                    disabled={isProcessingImage}
+                    onClick={() => void applyImageToGrid(pendingImage, importSize.width, importSize.height, cropOffset.x, cropOffset.y, importCrop)}
                     className="flex-[2] py-3 md:py-4 bg-emerald-500 text-white rounded-xl md:rounded-2xl font-black text-sm shadow-xl active:scale-95"
                   >
-                    确认并转换
+                    {isProcessingImage ? '转换中...' : '确认并转换'}
                   </button>
                 </div>
-              </>
-            )}
           </div>
         </div>
       )}
@@ -2150,12 +2160,12 @@ const AppMain: React.FC = () => {
       {customCrop && pendingImage && (
         <ImageCropSelector
           imageSrc={pendingImage}
-          gridWidth={gridWidth}
-          gridHeight={gridHeight}
+          gridWidth={importSize.width}
+          gridHeight={importSize.height}
           onConfirm={(x, y, width, height) => {
-            applyImageToGrid(pendingImage, gridWidth, gridHeight, 0, 0, { x, y, width, height });
+            setImportCrop({ x, y, width, height });
+            setUseAdvancedCrop(false);
             setCustomCrop(null);
-            setPendingImage(null);
           }}
           onCancel={() => setCustomCrop(null)}
         />
@@ -2740,6 +2750,11 @@ const AppMain: React.FC = () => {
           gridHeight={gridHeight}
           history={history}
           onClose={closeAIResultModal}
+          onApply={async size => {
+            const applied = await applyImageToGrid(aiGeneratedImage, size.width, size.height, 0, 0, undefined, false);
+            if (applied) closeAIResultModal();
+            return applied;
+          }}
           onPublishToGallery={(prefillTitle: string) => {
             closeAIResultModal();
             setMaterialTitle(prefillTitle);

@@ -30,6 +30,7 @@ import { wandSelectCells, getSelectionCellSet, mergeSelectionCells, detectBackgr
 import colorSystemMapping from '../colorSystemMapping.json';
 import { Capacitor } from '@capacitor/core';
 import { pickSingleImageNative } from '../utils/pickImageNative';
+import { rasterizeImage, type ImageCrop } from '../utils/imageConversion';
 
 // ═══════════════════════════════════════════
 // SECTION: Grid State & History
@@ -460,6 +461,17 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const undo = useCallback(() => {
     if (undoStackRef.current.length === 0) return;
     const entry = undoStackRef.current.pop()!;
+    if (entry.type !== 'selection') {
+      if (entry.grid.length !== grid.length || entry.grid[0].length !== grid[0].length) {
+        sourceImageCacheRef.current = null;
+        preRemovalGridRef.current = null;
+        setHasSourceImage(false);
+        setHasBgRemovalRestore(false);
+        setSelection(null);
+      }
+      setGridWidth(entry.grid[0].length);
+      setGridHeight(entry.grid.length);
+    }
     if (entry.type === 'grid') {
       redoStackRef.current = [...redoStackRef.current, { type: 'grid', grid: grid.map(r => [...r]) }];
       setGrid(entry.grid);
@@ -484,6 +496,17 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const redo = useCallback(() => {
     if (redoStackRef.current.length === 0) return;
     const entry = redoStackRef.current.pop()!;
+    if (entry.type !== 'selection') {
+      if (entry.grid.length !== grid.length || entry.grid[0].length !== grid[0].length) {
+        sourceImageCacheRef.current = null;
+        preRemovalGridRef.current = null;
+        setHasSourceImage(false);
+        setHasBgRemovalRestore(false);
+        setSelection(null);
+      }
+      setGridWidth(entry.grid[0].length);
+      setGridHeight(entry.grid.length);
+    }
     if (entry.type === 'grid') {
       undoStackRef.current = [...undoStackRef.current, { type: 'grid', grid: grid.map(r => [...r]) }];
       setGrid(entry.grid);
@@ -543,85 +566,48 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     }
   }, [gridWidth, gridHeight, pushUndo]);
 
-  const applyImageToGrid = useCallback((imageSrc: string, width: number, height: number, xAlign: number = 0, yAlign: number = 0, customCrop?: { x: number; y: number; width: number; height: number }) => {
+  const applyImageToGrid = useCallback((imageSrc: string, width: number, height: number, xAlign = 0, yAlign = 0, customCrop?: ImageCrop, showResult = true): Promise<boolean> => new Promise(resolve => {
+    setIsProcessingImage(true);
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      try {
+        const { pixels: fullImageData, grid: newGrid } = rasterizeImage(img, width, height, xAlign, yAlign, customCrop);
 
-      let sourceX = 0;
-      let sourceY = 0;
-      let sourceDrawWidth = img.width;
-      let sourceDrawHeight = img.height;
+        // 缓存原始像素数据，供后续去背景使用
+        sourceImageCacheRef.current = {
+          data: new Uint8ClampedArray(fullImageData.data),
+          width,
+          height,
+        };
+        setHasSourceImage(true);
+        preRemovalGridRef.current = null;
+        setHasBgRemovalRestore(false);
 
-      if (customCrop) {
-        sourceX = customCrop.x;
-        sourceY = customCrop.y;
-        sourceDrawWidth = customCrop.width;
-        sourceDrawHeight = customCrop.height;
-      } else {
-        const targetRatio = width / height;
-        const sourceRatio = img.width / img.height;
-
-        if (sourceRatio > targetRatio) {
-          sourceDrawWidth = img.height * targetRatio;
-          sourceDrawHeight = img.height;
-          if (xAlign === -1) sourceX = 0;
-          else if (xAlign === 1) sourceX = img.width - sourceDrawWidth;
-          else sourceX = (img.width - sourceDrawWidth) / 2;
-        } else {
-          sourceDrawWidth = img.width;
-          sourceDrawHeight = img.width / targetRatio;
-          if (yAlign === -1) sourceY = 0;
-          else if (yAlign === 1) sourceY = img.height - sourceDrawHeight;
-          else sourceY = (img.height - sourceDrawHeight) / 2;
-        }
+        pushUndo(gridRef.current);
+        setGridWidth(width);
+        setGridHeight(height);
+        setGrid(newGrid);
+        setSelection(null);
+        setPanOffset({ x: 0, y: 0 });
+        setZoom(Math.max(width, height) >= 80 ? 35 : Math.max(width, height) >= 48 ? 50 : 80);
+        setPendingImage(null);
+        setCustomCrop(null);
+        setIsProcessingImage(false);
+        setImportResultModalOpen(showResult);
+        resolve(true);
+      } catch {
+        setIsProcessingImage(false);
+        toast('图片转换失败，请重新选择图片', 'error');
+        resolve(false);
       }
-
-      ctx.drawImage(img, sourceX, sourceY, sourceDrawWidth, sourceDrawHeight, 0, 0, width, height);
-      const fullImageData = ctx.getImageData(0, 0, width, height);
-
-      // 缓存原始像素数据，供后续去背景使用
-      sourceImageCacheRef.current = {
-        data: new Uint8ClampedArray(fullImageData.data),
-        width,
-        height,
-      };
-      setHasSourceImage(true);
-      preRemovalGridRef.current = null;
-      setHasBgRemovalRestore(false);
-
-      const imageData = fullImageData.data;
-      const newGrid: string[][] = [];
-      for (let i = 0; i < height; i++) {
-        const row: string[] = [];
-        for (let j = 0; j < width; j++) {
-          const index = (i * width + j) * 4;
-          const r = imageData[index];
-          const g = imageData[index + 1];
-          const b = imageData[index + 2];
-          const a = imageData[index + 3];
-
-          if (a < 128) {
-            row.push('#FFFFFF');
-          } else {
-            const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
-            row.push(hex);
-          }
-        }
-        newGrid.push(row);
-      }
-      pushUndo(gridRef.current);
-      setGrid(newGrid);
-      setPendingImage(null);
+    };
+    img.onerror = () => {
       setIsProcessingImage(false);
-      setImportResultModalOpen(true);
+      toast('图片加载失败，请重新选择图片', 'error');
+      resolve(false);
     };
     img.src = imageSrc;
-  }, [pushUndo]);
+  }), [pushUndo, toast]);
 
   const handleCopySelection = useCallback(() => {
     if (!selection) return;
@@ -1117,7 +1103,6 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
     setIsGenerating(true);
     try {
       const base64 = await generatePixelArtImage(aiPrompt, aiReferenceImage || undefined);
-      applyImageToGrid(base64, gridWidth, gridHeight, 0, 0);
       setAiGeneratedImage(base64);
       setShowAIResultModal(true);
       // 不自动清空：用户可能需要修改描述或参考图后重试

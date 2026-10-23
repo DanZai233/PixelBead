@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { GenHistoryItem } from '../hooks/useGenerationHistory';
+import { ImageSizePreview, type ConversionSize } from './ImageSizePreview';
 
 interface AIResultModalProps {
   imageDataUrl: string;
@@ -9,6 +10,7 @@ interface AIResultModalProps {
   gridHeight: number;
   history: GenHistoryItem[];
   onClose: () => void;
+  onApply: (size: ConversionSize) => Promise<boolean>;
   onPublishToGallery: (prefillTitle: string) => void;
   onRemoveHistory: (id: string) => void;
   onClearHistory: () => void;
@@ -22,11 +24,22 @@ export const AIResultModal: React.FC<AIResultModalProps> = ({
   gridHeight,
   history,
   onClose,
+  onApply,
   onPublishToGallery,
   onRemoveHistory,
   onClearHistory,
 }) => {
   const [view, setView] = useState<'result' | 'history'>('result');
+  const [size, setSize] = useState<ConversionSize>({ width: gridWidth, height: gridHeight });
+  const [applying, setApplying] = useState(false);
+  const apply = async (publish = false) => {
+    setApplying(true);
+    try {
+      if (await onApply(size)) {
+        if (publish) onPublishToGallery(prompt || 'AI 生成作品');
+      }
+    } finally { setApplying(false); }
+  };
 
   const handleDownload = () => {
     const a = document.createElement('a');
@@ -38,7 +51,7 @@ export const AIResultModal: React.FC<AIResultModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/80 z-[1100] flex items-end sm:items-center justify-center p-0 sm:p-6 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      onClick={(e) => { if (!applying && e.target === e.currentTarget) onClose(); }}>
       <div className="bg-white rounded-t-[2rem] sm:rounded-[2.5rem] w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl"
         style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}
         onClick={e => e.stopPropagation()}>
@@ -54,7 +67,7 @@ export const AIResultModal: React.FC<AIResultModalProps> = ({
               onClick={() => setView('history')}>
               历史记录 {history.length > 0 ? '(' + history.length + ')' : ''}</button>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-600">
+          <button disabled={applying} aria-label="关闭生成结果" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-600">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
@@ -62,19 +75,20 @@ export const AIResultModal: React.FC<AIResultModalProps> = ({
         {view === 'result' ? (
           <div className="px-5 pb-6 space-y-4">
             {/* Image preview */}
-            <div className="bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center" style={{ minHeight: '200px', maxHeight: '320px' }}>
-              <img src={imageDataUrl} alt="AI 生成结果" className="w-full h-full object-contain" />
-            </div>
+            <ImageSizePreview image={imageDataUrl} size={size} onSize={setSize} currentWidth={gridWidth} currentHeight={gridHeight} />
 
             {/* Quick info */}
             <div className="flex items-center gap-3 text-xs text-slate-500 bg-slate-50 rounded-xl px-4 py-3">
-              <span className="font-mono">{gridWidth}×{gridHeight}</span>
+              <span className="font-mono">{size.width}×{size.height}</span>
               {prompt && <span className="truncate max-w-[200px]">"{prompt}"</span>}
               {referenceImage && <span className="text-indigo-500">📷 图生图</span>}
             </div>
 
             {/* Action buttons */}
             <div className="space-y-2.5">
+              <button disabled={applying} onClick={() => void apply()} className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-sm disabled:opacity-50">
+                {applying ? '应用中...' : '应用到画布'}
+              </button>
               <button
                 onClick={handleDownload}
                 className="w-full py-3 bg-indigo-500 hover:bg-indigo-400 text-white rounded-2xl font-black text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2">
@@ -83,7 +97,8 @@ export const AIResultModal: React.FC<AIResultModalProps> = ({
               </button>
 
               <button
-                onClick={() => onPublishToGallery(prompt || 'AI 生成作品')}
+                disabled={applying}
+                onClick={() => void apply(true)}
                 className="w-full py-3 bg-purple-500 hover:bg-purple-400 text-white rounded-2xl font-black text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 发布到素材广场
