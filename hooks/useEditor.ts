@@ -75,7 +75,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const [showAIResultModal, setShowAIResultModal] = useState(false);
   const [importResultModalOpen, setImportResultModalOpen] = useState(false);
   const [showGridLines, setShowGridLines] = useState(true);
-  const [zoom, setZoom] = useState(saved?.zoom ?? 80);
+  const [zoom, setZoom] = useState(Math.round(saved?.zoom ?? 80));
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
@@ -294,6 +294,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   useEffect(() => {
     let animationFrameId: number;
     let lastTime = performance.now();
+    let zoomRemainder = 0;
 
     const updateJoystickState = () => {
       const currentTime = performance.now();
@@ -311,7 +312,15 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
       if (joystickZoomRef.current !== 0) {
         const zoomSpeed = 0.1;
         const deltaZoom = deltaTime * zoomSpeed * joystickZoomRef.current;
-        setZoom(prev => Math.min(Math.max(prev + deltaZoom, 10), 400));
+        if (zoomRemainder * deltaZoom < 0) zoomRemainder = 0;
+        zoomRemainder += deltaZoom;
+        const zoomStep = Math.trunc(zoomRemainder);
+        if (zoomStep !== 0) {
+          zoomRemainder -= zoomStep;
+          setZoom(prev => Math.min(Math.max(Math.round(prev) + zoomStep, 10), 400));
+        }
+      } else {
+        zoomRemainder = 0;
       }
 
       lastTime = currentTime;
