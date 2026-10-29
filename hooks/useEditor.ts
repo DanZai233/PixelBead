@@ -149,7 +149,7 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
 
   const [selection, setSelection] = useState<Selection | null>(null);
   // 默认加选：第一次框选生成选区，后续框选/魔棒自动叠加为不规则选区
-  const [selectionMode, setSelectionMode] = useState<SelectionMode>('add');
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>('replace');
   const [clipboard, setClipboard] = useState<string[][] | null>(null);
   const [brushSize, setBrushSize] = useState(1);
   const [symmetryMode, setSymmetryMode] = useState<SymmetryMode>('none');
@@ -175,9 +175,19 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   const undoStackRef = useRef<HistoryEntry[]>([]);
   const redoStackRef = useRef<HistoryEntry[]>([]);
   const gridRef = useRef(grid);
+  const floatingSelectionRef = useRef<{
+    sourceGrid: string[][];
+    sourceSelection: Selection;
+    grid: string[][];
+    selection: Selection;
+    row: number;
+    col: number;
+  } | null>(null);
   const selectionMoveRef = useRef<{
     grid: string[][];
     selection: Selection;
+    startRow: number;
+    startCol: number;
     hasMoved: boolean;
   } | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -797,34 +807,56 @@ function loadSavedCanvas(): { grid: string[][]; gridWidth: number; gridHeight: n
   /** 开始拖动选区内容。保留拖动起点快照，确保来回移动不会重复擦除像素。 */
   const handleSelectionMoveStart = useCallback(() => {
     if (!selection) return;
+    let floating = floatingSelectionRef.current;
+    // Keep the original pixels beneath a selection across separate drags.
+    // Any other grid or selection edit commits the previous floating content.
+    if (!floating || floating.grid !== gridRef.current || floating.selection !== selection) {
+      floating = {
+        sourceGrid: gridRef.current.map(row => [...row]),
+        sourceSelection: { ...selection, cells: selection.cells ? [...selection.cells] : undefined },
+        grid: gridRef.current,
+        selection,
+        row: 0,
+        col: 0,
+      };
+      floatingSelectionRef.current = floating;
+    }
     selectionMoveRef.current = {
       grid: gridRef.current.map(row => [...row]),
       selection: {
         ...selection,
         cells: selection.cells ? [...selection.cells] : undefined,
       },
+      startRow: floating.row,
+      startCol: floating.col,
       hasMoved: false,
     };
   }, [selection]);
 
   const handleSelectionMove = useCallback((deltaRow: number, deltaCol: number) => {
     const drag = selectionMoveRef.current;
-    if (!drag) return;
+    const floating = floatingSelectionRef.current;
+    if (!drag || !floating) return;
 
     const result = moveSelectionContent(
-      drag.selection,
-      drag.grid,
-      deltaRow,
-      deltaCol,
+      floating.sourceSelection,
+      floating.sourceGrid,
+      drag.startRow + deltaRow,
+      drag.startCol + deltaCol,
       gridWidth,
       gridHeight,
     );
-    if (result.movedRow === 0 && result.movedCol === 0) return;
+    if (result.movedRow === floating.row && result.movedCol === floating.col) return;
 
     if (!drag.hasMoved) {
       pushGridSelectionHistory(drag.grid, drag.selection);
       drag.hasMoved = true;
     }
+    floating.row = result.movedRow;
+    floating.col = result.movedCol;
+    floating.grid = result.grid;
+    floating.selection = result.selection;
+    gridRef.current = result.grid;
     setGrid(result.grid);
     setSelection(result.selection);
   }, [gridWidth, gridHeight, pushGridSelectionHistory]);
